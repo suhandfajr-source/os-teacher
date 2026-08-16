@@ -1,13 +1,145 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// -------------------------------------------------
+// BETTER AUTH SCHEMA
+// -------------------------------------------------
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  sessions      Session[]
+  accounts      Account[]
+
+  teacherProfile TeacherProfile?
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+// -------------------------------------------------
+// TEACHER SETUP SCHEMA (DEV STAGE 01)
+// -------------------------------------------------
+
+model TeacherProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolName          String
+  preferredName       String?
+  onboardingCompleted Boolean  @default(false)
+
+  academicPeriods  AcademicPeriod[]
+  subjects         Subject[]
+  classes          Class[]
+  teachingContexts TeachingContext[]
+
+  @@map("teacher_profile")
+}
+
+model AcademicPeriod {
+  id               String           @id @default(cuid())
+  teacherProfileId String
+  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  year             String
+  semester         String
+  status           String           // e.g., "ACTIVE", "INACTIVE"
+  teachingContexts TeachingContext[]
+
+  @@map("academic_period")
+}
+
+model Subject {
+  id               String           @id @default(cuid())
+  teacherProfileId String
+  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  name             String
+  shortName        String?
+  teachingContexts TeachingContext[]
+
+  @@map("subject")
+}
+
+model Class {
+  id               String           @id @default(cuid())
+  teacherProfileId String
+  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  name             String
+  gradeLevel       String?
+  teachingContexts TeachingContext[]
+
+  @@map("class")
+}
+
+model TeachingContext {
+  id               String         @id @default(cuid())
+  teacherProfileId String
+  teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  academicPeriodId String
+  academicPeriod   AcademicPeriod @relation(fields: [academicPeriodId], references: [id], onDelete: Cascade)
+  subjectId        String
+  subject          Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classId          String
+  class            Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherProfileId, academicPeriodId, subjectId, classId])
+  @@map("teaching_context")
 }

@@ -1,0 +1,213 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { submitOnboarding } from "@/modules/teachers/teachers.actions";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
+
+export default function OnboardingPage() {
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const { data: session } = authClient.useSession();
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    schoolName: "",
+    preferredName: "",
+    academicYear: "2026/2027",
+    semester: "Semester Ganjil",
+    subjectName: "",
+    subjectShortName: "",
+    className: "",
+    gradeLevel: ""
+  });
+
+  useEffect(() => {
+    if (session?.user?.name && !formData.fullName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormData(prev => ({ ...prev, fullName: session.user.name }));
+    }
+  }, [session, formData.fullName]);
+
+  const handleNext = () => {
+    setError("");
+    if (step === 1 && (!formData.fullName || !formData.schoolName)) {
+      setError("Nama Lengkap dan Nama Sekolah wajib diisi");
+      return;
+    }
+    if (step === 2 && (!formData.academicYear || !formData.semester)) {
+      setError("Tahun Akademik dan Semester wajib diisi");
+      return;
+    }
+    if (step === 3 && !formData.subjectName) {
+      setError("Nama Mata Pelajaran wajib diisi");
+      return;
+    }
+    setStep(step + 1);
+  };
+
+  const handleBack = () => {
+    setError("");
+    setStep(step - 1);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.className) {
+      setError("Nama Kelas wajib diisi");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    
+    try {
+      await submitOnboarding(formData);
+      toast.success("Setup berhasil diselesaikan!");
+      router.push("/");
+      router.refresh();
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message || "Terjadi kesalahan saat menyimpan data");
+      } else {
+        setError("Terjadi kesalahan saat menyimpan data");
+      }
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="shadow-lg border-2">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold">Setup Awal Guru</CardTitle>
+        <CardDescription>
+          Langkah {step} dari 4: Lengkapi profil dan konteks mengajar dasar Anda
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {step === 1 && (
+          <div className="space-y-4 animate-in fade-in zoom-in-95">
+            <h3 className="font-semibold text-lg">Profil Guru</h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Lengkap</label>
+              <Input 
+                value={formData.fullName} 
+                onChange={e => setFormData({...formData, fullName: e.target.value})} 
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Panggilan (Opsional)</label>
+              <Input 
+                value={formData.preferredName} 
+                onChange={e => setFormData({...formData, preferredName: e.target.value})} 
+                placeholder="Pak Budi" 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Sekolah</label>
+              <Input 
+                value={formData.schoolName} 
+                onChange={e => setFormData({...formData, schoolName: e.target.value})} 
+                required 
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <h3 className="font-semibold text-lg">Periode Akademik Aktif</h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tahun Akademik</label>
+              <Input 
+                value={formData.academicYear} 
+                onChange={e => setFormData({...formData, academicYear: e.target.value})} 
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Semester</label>
+              <Input 
+                value={formData.semester} 
+                onChange={e => setFormData({...formData, semester: e.target.value})} 
+                required 
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <h3 className="font-semibold text-lg">Mata Pelajaran</h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Mata Pelajaran</label>
+              <Input 
+                value={formData.subjectName} 
+                onChange={e => setFormData({...formData, subjectName: e.target.value})} 
+                placeholder="Ilmu Pengetahuan Alam" 
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Singkatan (Opsional)</label>
+              <Input 
+                value={formData.subjectShortName} 
+                onChange={e => setFormData({...formData, subjectShortName: e.target.value})} 
+                placeholder="IPA" 
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+            <h3 className="font-semibold text-lg">Kelas Pertama</h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nama Kelas</label>
+              <Input 
+                value={formData.className} 
+                onChange={e => setFormData({...formData, className: e.target.value})} 
+                placeholder="VIII A" 
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tingkat / Grade (Opsional)</label>
+              <Input 
+                value={formData.gradeLevel} 
+                onChange={e => setFormData({...formData, gradeLevel: e.target.value})} 
+                placeholder="8" 
+              />
+            </div>
+          </div>
+        )}
+      </CardContent>
+      
+      <CardFooter className="flex justify-between mt-4">
+        <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
+          Kembali
+        </Button>
+        {step < 4 ? (
+          <Button onClick={handleNext}>Lanjut</Button>
+        ) : (
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Menyimpan..." : "Selesai"}
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
