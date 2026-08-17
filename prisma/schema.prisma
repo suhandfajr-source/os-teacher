@@ -10,6 +10,25 @@ datasource db {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 02)
+// -------------------------------------------------
+
+enum MembershipStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum WorkspaceRole {
+  OWNER
+  MEMBER
+}
+
+enum EntityStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -76,6 +95,83 @@ model Verification {
 }
 
 // -------------------------------------------------
+// SCHOOL WORKSPACE SCHEMA (DEV STAGE 02)
+// -------------------------------------------------
+
+model School {
+  id             String   @id @default(cuid())
+  name           String
+  normalizedName String
+  city           String?
+  province       String?
+  npsn           String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships    TeacherSchoolMembership[]
+  students       Student[]
+  academicPeriods AcademicPeriod[]
+  subjects       Subject[]
+  classes        Class[]
+  teachingContexts TeachingContext[]
+
+  @@index([normalizedName])
+  @@index([npsn])
+  @@map("school")
+}
+
+model TeacherSchoolMembership {
+  id               String           @id @default(cuid())
+  teacherProfileId String
+  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  status           MembershipStatus @default(ACTIVE)
+  workspaceRole    WorkspaceRole    @default(MEMBER)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([teacherProfileId, schoolId])
+  @@index([status])
+  @@map("teacher_school_membership")
+}
+
+model Student {
+  id                        String       @id @default(cuid())
+  schoolId                  String
+  school                    School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  fullName                  String
+  nis                       String?
+  status                    EntityStatus @default(ACTIVE)
+  createdByTeacherProfileId String?
+  updatedByTeacherProfileId String?
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
+
+  classMemberships          ClassStudent[]
+
+  @@unique([schoolId, nis])
+  @@index([fullName])
+  @@map("student")
+}
+
+model ClassStudent {
+  id               String         @id @default(cuid())
+  studentId        String
+  student          Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId          String
+  class            Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicPeriodId String
+  academicPeriod   AcademicPeriod @relation(fields: [academicPeriodId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([studentId, academicPeriodId])
+  @@index([classId, academicPeriodId])
+  @@map("class_student")
+}
+
+// -------------------------------------------------
 // TEACHER SETUP SCHEMA (DEV STAGE 01)
 // -------------------------------------------------
 
@@ -83,13 +179,11 @@ model TeacherProfile {
   id                  String   @id @default(cuid())
   userId              String   @unique
   user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  schoolName          String
+  activeSchoolId      String?
   preferredName       String?
   onboardingCompleted Boolean  @default(false)
 
-  academicPeriods  AcademicPeriod[]
-  subjects         Subject[]
-  classes          Class[]
+  memberships      TeacherSchoolMembership[]
   teachingContexts TeachingContext[]
 
   @@map("teacher_profile")
@@ -97,35 +191,45 @@ model TeacherProfile {
 
 model AcademicPeriod {
   id               String           @id @default(cuid())
-  teacherProfileId String
-  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   year             String
   semester         String
   status           String           // e.g., "ACTIVE", "INACTIVE"
+  entityStatus     EntityStatus     @default(ACTIVE)
   teachingContexts TeachingContext[]
+  classStudents    ClassStudent[]
 
+  @@unique([schoolId, year, semester])
   @@map("academic_period")
 }
 
 model Subject {
   id               String           @id @default(cuid())
-  teacherProfileId String
-  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name             String
+  normalizedName   String?
   shortName        String?
+  status           EntityStatus     @default(ACTIVE)
   teachingContexts TeachingContext[]
 
+  @@unique([schoolId, normalizedName])
   @@map("subject")
 }
 
 model Class {
   id               String           @id @default(cuid())
-  teacherProfileId String
-  teacherProfile   TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name             String
+  normalizedName   String?
   gradeLevel       String?
+  status           EntityStatus     @default(ACTIVE)
   teachingContexts TeachingContext[]
+  classStudents    ClassStudent[]
 
+  @@unique([schoolId, normalizedName])
   @@map("class")
 }
 
@@ -133,6 +237,8 @@ model TeachingContext {
   id               String         @id @default(cuid())
   teacherProfileId String
   teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   academicPeriodId String
   academicPeriod   AcademicPeriod @relation(fields: [academicPeriodId], references: [id], onDelete: Cascade)
   subjectId        String
@@ -140,6 +246,6 @@ model TeachingContext {
   classId          String
   class            Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
 
-  @@unique([teacherProfileId, academicPeriodId, subjectId, classId])
+  @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
 }

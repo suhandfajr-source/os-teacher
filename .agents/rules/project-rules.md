@@ -58,19 +58,24 @@ These rules are NON-NEGOTIABLE unless the user explicitly changes the product sp
 33. Use the AI Service abstraction; do not call AI providers randomly from UI components.
 34. Deterministic calculations must use code/database logic, not an LLM.
 35. Do not introduce microservices, queues, vector databases, Redis, Docker, Kubernetes, or other infrastructure without an explicit requirement.
+36. School Workspace is the primary tenant. Students, Classes, Subjects, and AcademicPeriods belong to the School Workspace, NOT the individual teacher.
+37. Shared School data (AcademicPeriod, Subject, Class, Student) must not be hard-deleted if referenced. Server-side authorization is required to modify.
+38. Do not auto-merge Schools or Classes based solely on names. Class identity = School + Name.
+39. Parent access requires ParentTeachingAccess approval per TeachingContext by the specific Teacher.
+40. Shared Student Identity, Context-Owned Learning Data. Teachers share student rosters but own their learning data (scores, attendance).
 
 ## UX
 
-36. Daily teacher work has priority over advanced configuration.
-37. Minimum click and context-aware workflows are required.
-38. Missing optional data should warn, not block.
-39. UI must remain responsive.
-40. Fast score input is a critical workflow.
-41. Provide useful empty, loading, validation, and error states.
+42. Daily teacher work has priority over advanced configuration.
+43. Minimum click and context-aware workflows are required.
+44. Missing optional data should warn, not block.
+45. UI must remain responsive.
+46. Fast score input is a critical workflow.
+47. Provide useful empty, loading, validation, and error states.
 
 ## Quality Gate
 
-42. Before declaring a development stage complete:
+48. Before declaring a development stage complete:
     - run build;
     - run lint;
     - run relevant tests;
@@ -79,7 +84,7 @@ These rules are NON-NEGOTIABLE unless the user explicitly changes the product sp
     - verify no regression to previous PASSed stages;
     - verify responsive behavior for relevant screens.
 
-43. At the end of work, report:
+49. At the end of work, report:
     - implemented scope;
     - changed files;
     - migrations;
@@ -87,4 +92,4 @@ These rules are NON-NEGOTIABLE unless the user explicitly changes the product sp
     - known issues;
     - PASS criteria status.
 
-44. Never automatically proceed to the next development stage.
+50. Never automatically proceed to the next development stage.

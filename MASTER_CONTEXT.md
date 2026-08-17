@@ -74,6 +74,8 @@ Non-negotiable principles:
 The application must work with:
 
 ```text
+School Workspace
++
 Teacher
 +
 Subject
@@ -295,13 +297,18 @@ A mismatch is valid data and can later become an insight.
 
 Parents:
 
-- see only linked children;
-- see only permitted information;
+- see only linked children (via ParentStudentRelation);
+- must have Teacher-approved ParentTeachingAccess per TeachingContext;
+- see only permitted information (Parent-facing subset);
 - cannot edit teacher data;
 - cannot view teacher-private notes;
 - cannot access internal teacher analytics/configuration.
 
 Teacher notes default to PRIVATE.
+
+There are two access boundaries:
+1. **School Workspace Membership**: Frictionless onboarding. Teacher joins and gains ACTIVE access to shared school resources.
+2. **Parent Data Access**: Approved by the individual Teacher for their specific TeachingContext (governs parent access to learning data).
 
 ---
 

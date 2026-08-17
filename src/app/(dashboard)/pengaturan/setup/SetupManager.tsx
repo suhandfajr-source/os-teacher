@@ -2,17 +2,20 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { TeacherProfile, AcademicPeriod, Subject, Class as PrismaClass, TeachingContext } from "@prisma/client";
+import type { TeacherProfile, AcademicPeriod, Subject, Class as PrismaClass, TeachingContext, School } from "@prisma/client";
 
-type ProfileWithRelations = TeacherProfile & {
+type ProfileWithContext = TeacherProfile & {
   teachingContexts: (TeachingContext & { academicPeriod: AcademicPeriod, subject: Subject, class: PrismaClass })[];
+};
+
+type SchoolWithMaster = School & {
   academicPeriods: AcademicPeriod[];
   subjects: Subject[];
   classes: PrismaClass[];
 };
 
 // A minimal UI for Stage 01. In real app, we would have forms for each tab.
-export default function SetupManager({ initialProfile }: { initialProfile: ProfileWithRelations }) {
+export default function SetupManager({ initialProfile, activeSchool }: { initialProfile: ProfileWithContext, activeSchool: SchoolWithMaster }) {
   const [activeTab, setActiveTab] = useState("context");
 
   return (
@@ -36,9 +39,9 @@ export default function SetupManager({ initialProfile }: { initialProfile: Profi
         <CardHeader>
           <CardTitle>
             {activeTab === "context" && "Konteks Mengajar Aktif"}
-            {activeTab === "period" && "Daftar Periode Akademik"}
-            {activeTab === "subject" && "Daftar Mata Pelajaran"}
-            {activeTab === "class" && "Daftar Kelas"}
+            {activeTab === "period" && `Daftar Periode Akademik (${activeSchool.name})`}
+            {activeTab === "subject" && `Daftar Mata Pelajaran (${activeSchool.name})`}
+            {activeTab === "class" && `Daftar Kelas (${activeSchool.name})`}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -57,7 +60,7 @@ export default function SetupManager({ initialProfile }: { initialProfile: Profi
           )}
           {activeTab === "period" && (
             <div className="space-y-4">
-              {initialProfile.academicPeriods.map((p) => (
+              {activeSchool.academicPeriods.map((p) => (
                 <div key={p.id} className="p-4 border rounded-md flex justify-between items-center">
                   <div>
                     <div className="font-semibold">{p.year}</div>
@@ -70,7 +73,7 @@ export default function SetupManager({ initialProfile }: { initialProfile: Profi
           )}
           {activeTab === "subject" && (
             <div className="space-y-4">
-              {initialProfile.subjects.map((s) => (
+              {activeSchool.subjects.map((s) => (
                 <div key={s.id} className="p-4 border rounded-md">
                   <div className="font-semibold">{s.name}</div>
                   {s.shortName && <div className="text-sm text-muted-foreground">{s.shortName}</div>}
@@ -80,7 +83,7 @@ export default function SetupManager({ initialProfile }: { initialProfile: Profi
           )}
           {activeTab === "class" && (
             <div className="space-y-4">
-              {initialProfile.classes.map((c) => (
+              {activeSchool.classes.map((c) => (
                 <div key={c.id} className="p-4 border rounded-md">
                   <div className="font-semibold">{c.name}</div>
                   {c.gradeLevel && <div className="text-sm text-muted-foreground">Grade: {c.gradeLevel}</div>}

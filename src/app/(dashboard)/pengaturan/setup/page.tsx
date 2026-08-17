@@ -13,9 +13,6 @@ export default async function SetupPage() {
   const profile = await prisma.teacherProfile.findUnique({
     where: { userId: session.user.id },
     include: {
-      academicPeriods: true,
-      subjects: true,
-      classes: true,
       teachingContexts: {
         include: {
           academicPeriod: true,
@@ -25,6 +22,19 @@ export default async function SetupPage() {
       }
     }
   });
+
+  if (!profile || !profile.activeSchoolId) redirect("/onboarding");
+
+  const activeSchool = await prisma.school.findUnique({
+    where: { id: profile.activeSchoolId },
+    include: {
+      academicPeriods: true,
+      subjects: true,
+      classes: true
+    }
+  });
+
+  if (!activeSchool) redirect("/onboarding");
 
   if (!profile) redirect("/onboarding");
 
@@ -36,7 +46,7 @@ export default async function SetupPage() {
           Kelola periode akademik, mata pelajaran, kelas, dan relasi mengajarnya.
         </p>
       </div>
-      <SetupManager initialProfile={profile} />
+      <SetupManager initialProfile={profile as any} activeSchool={activeSchool as any} />
     </div>
   );
 }

@@ -137,13 +137,20 @@ Rules:
 PostgreSQL is the source of truth.
 
 ```text
-Teacher
-   ↓
-Class
-   ↓
-Student
-   ↓
-Teaching Session
+School Workspace
+   │
+   ├── AcademicPeriod
+   ├── Subject
+   ├── Class
+   └── Student
+          │
+          └── ClassStudent Membership
+                 │
+Teacher          │
+   ↓             │
+TeacherSchoolMembership
+   ↓             │
+Teaching Session (via TeachingContext)
    ↓
 Assessment
    ↓
@@ -166,7 +173,7 @@ All schema changes MUST use Prisma migrations.
 
 ---
 
-## 6. Authentication
+## 6. Authentication & Authorization
 
 V1 baseline:
 
@@ -176,11 +183,19 @@ V1 baseline:
   - teacher
   - parent
 
-Teacher is the primary user.
+Teacher is the primary user. Do not build complex school-wide RBAC in V1, but enforce these boundaries:
 
-Parent access is secondary and limited to their own linked child/children.
+### School Workspace Membership
+- `TeacherSchoolMembership` manages teacher access to a school.
+- Joining an existing school or creating a new one sets the status to ACTIVE immediately (frictionless onboarding in V1).
 
-Do not build complex school-wide RBAC in V1.
+### Parent Data Governance
+- Parent access is secondary and requires two steps:
+  1. `ParentStudentRelation`: Links Parent to Student.
+  2. `ParentTeachingAccess`: Context-specific approval by the Teacher owning the `TeachingContext`.
+- A Teacher can only approve parent access for their own `TeachingContext`.
+- Even when approved, Parents only see Parent-facing data (e.g., PRIVATE vs PARENT_VISIBLE teacher notes).
+- Workspace membership approval and Parent data access approval are separate systems.
 
 ---
 

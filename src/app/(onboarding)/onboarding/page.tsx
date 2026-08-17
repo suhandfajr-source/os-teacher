@@ -9,6 +9,9 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
+import { searchSchools } from "@/modules/schools/schools.actions";
+import { useDebounce } from "use-debounce";
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -19,6 +22,7 @@ export default function OnboardingPage() {
 
   const [formData, setFormData] = useState({
     fullName: "",
+    schoolId: "",
     schoolName: "",
     preferredName: "",
     academicYear: "2026/2027",
@@ -29,6 +33,24 @@ export default function OnboardingPage() {
     gradeLevel: ""
   });
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch] = useDebounce(searchQuery, 500);
+  const [searchResults, setSearchResults] = useState<Array<{id: string, name: string, city: string | null}>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isCreatingNewSchool, setIsCreatingNewSchool] = useState(false);
+
+  useEffect(() => {
+    if (debouncedSearch.length >= 3 && !isCreatingNewSchool && !formData.schoolId) {
+      setIsSearching(true);
+      searchSchools(debouncedSearch).then(res => {
+        setSearchResults(res);
+        setIsSearching(false);
+      });
+    } else {
+      setSearchResults([]);
+    }
+  }, [debouncedSearch, isCreatingNewSchool, formData.schoolId]);
+
   useEffect(() => {
     if (session?.user?.name && !formData.fullName) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -38,9 +60,15 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     setError("");
-    if (step === 1 && (!formData.fullName || !formData.schoolName)) {
-      setError("Nama Lengkap dan Nama Sekolah wajib diisi");
-      return;
+    if (step === 1) {
+      if (!formData.fullName) {
+        setError("Nama Lengkap wajib diisi");
+        return;
+      }
+      if (!formData.schoolId && !formData.schoolName) {
+        setError("Silakan pilih sekolah atau buat sekolah baru");
+        return;
+      }
     }
     if (step === 2 && (!formData.academicYear || !formData.semester)) {
       setError("Tahun Akademik dan Semester wajib diisi");
@@ -116,13 +144,75 @@ export default function OnboardingPage() {
                 placeholder="Pak Budi" 
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Sekolah</label>
-              <Input 
-                value={formData.schoolName} 
-                onChange={e => setFormData({...formData, schoolName: e.target.value})} 
-                required 
-              />
+            <div className="space-y-2 relative">
+              <label className="text-sm font-medium">Sekolah Tempat Mengajar</label>
+              
+              {!formData.schoolId && !isCreatingNewSchool ? (
+                <>
+                  <Input 
+                    value={searchQuery} 
+                    onChange={e => {
+                       setSearchQuery(e.target.value);
+                       setFormData({...formData, schoolId: "", schoolName: ""});
+                    }} 
+                    placeholder="Cari nama sekolah (min 3 huruf)..." 
+                  />
+                  {isSearching && <div className="text-xs text-muted-foreground mt-1">Mencari...</div>}
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-md max-h-60 overflow-y-auto">
+                      {searchResults.map(school => (
+                        <div 
+                          key={school.id} 
+                          className="p-2 hover:bg-gray-100 cursor-pointer text-sm border-b"
+                          onClick={() => {
+                            setFormData({...formData, schoolId: school.id, schoolName: school.name});
+                            setSearchQuery("");
+                            setSearchResults([]);
+                          }}
+                        >
+                          <div className="font-medium">{school.name}</div>
+                          {school.city && <div className="text-xs text-muted-foreground">{school.city}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+                    <div className="text-sm text-muted-foreground mt-2">
+                      Sekolah tidak ditemukan. <Button variant="link" className="p-0 h-auto" onClick={() => {
+                        setIsCreatingNewSchool(true);
+                        setFormData({...formData, schoolName: searchQuery});
+                      }}>Buat Sekolah Baru</Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-3 border rounded-md bg-slate-50 flex justify-between items-center">
+                  <div>
+                    <div className="font-medium">{formData.schoolName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formData.schoolId ? "Bergabung dengan sekolah yang ada" : "Membuat sekolah baru"}
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setFormData({...formData, schoolId: "", schoolName: ""});
+                    setIsCreatingNewSchool(false);
+                    setSearchQuery("");
+                  }}>
+                    Ubah
+                  </Button>
+                </div>
+              )}
+
+              {isCreatingNewSchool && (
+                <div className="mt-2 space-y-2">
+                   <Input 
+                     value={formData.schoolName}
+                     onChange={e => setFormData({...formData, schoolName: e.target.value})}
+                     placeholder="Masukkan nama sekolah lengkap"
+                     required
+                   />
+                </div>
+              )}
             </div>
           </div>
         )}
