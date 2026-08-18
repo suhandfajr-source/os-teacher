@@ -84,3 +84,17 @@ export async function verifyClassRosterAccess(classId: string) {
 
   return { profile, activeSchoolId, context };
 }
+
+export async function verifyTeachingSessionAccess(sessionId: string) {
+  const session = await prisma.teachingSession.findUnique({
+    where: { id: sessionId }
+  });
+
+  if (!session) {
+    throw new Error("Teaching session not found");
+  }
+
+  const contextAuth = await verifyTeachingContextAccess(session.teachingContextId);
+
+  return { ...contextAuth, session };
+}

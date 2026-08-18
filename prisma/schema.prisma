@@ -29,6 +29,28 @@ enum EntityStatus {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 03)
+// -------------------------------------------------
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  SICK
+  PERMISSION
+  ABSENT
+  LATE
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -108,11 +130,11 @@ model School {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  memberships    TeacherSchoolMembership[]
-  students       Student[]
-  academicPeriods AcademicPeriod[]
-  subjects       Subject[]
-  classes        Class[]
+  memberships      TeacherSchoolMembership[]
+  students         Student[]
+  academicPeriods  AcademicPeriod[]
+  subjects         Subject[]
+  classes          Class[]
   teachingContexts TeachingContext[]
 
   @@index([normalizedName])
@@ -148,7 +170,8 @@ model Student {
   createdAt                 DateTime     @default(now())
   updatedAt                 DateTime     @updatedAt
 
-  classMemberships          ClassStudent[]
+  classMemberships  ClassStudent[]
+  attendanceRecords AttendanceRecord[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -176,12 +199,12 @@ model ClassStudent {
 // -------------------------------------------------
 
 model TeacherProfile {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeSchoolId      String?
   preferredName       String?
-  onboardingCompleted Boolean  @default(false)
+  onboardingCompleted Boolean @default(false)
 
   memberships      TeacherSchoolMembership[]
   teachingContexts TeachingContext[]
@@ -190,13 +213,13 @@ model TeacherProfile {
 }
 
 model AcademicPeriod {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   schoolId         String
-  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   year             String
   semester         String
-  status           String           // e.g., "ACTIVE", "INACTIVE"
-  entityStatus     EntityStatus     @default(ACTIVE)
+  status           String // e.g., "ACTIVE", "INACTIVE"
+  entityStatus     EntityStatus      @default(ACTIVE)
   teachingContexts TeachingContext[]
   classStudents    ClassStudent[]
 
@@ -205,13 +228,13 @@ model AcademicPeriod {
 }
 
 model Subject {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   schoolId         String
-  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name             String
   normalizedName   String?
   shortName        String?
-  status           EntityStatus     @default(ACTIVE)
+  status           EntityStatus      @default(ACTIVE)
   teachingContexts TeachingContext[]
 
   @@unique([schoolId, normalizedName])
@@ -219,13 +242,13 @@ model Subject {
 }
 
 model Class {
-  id               String           @id @default(cuid())
+  id               String            @id @default(cuid())
   schoolId         String
-  school           School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   name             String
   normalizedName   String?
   gradeLevel       String?
-  status           EntityStatus     @default(ACTIVE)
+  status           EntityStatus      @default(ACTIVE)
   teachingContexts TeachingContext[]
   classStudents    ClassStudent[]
 
@@ -246,6 +269,74 @@ model TeachingContext {
   classId          String
   class            Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
 
+  teachingSessions TeachingSession[]
+  assignments      Assignment[]
+
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
+}
+
+// -------------------------------------------------
+// DAILY TEACHING SCHEMA (DEV STAGE 03)
+// -------------------------------------------------
+
+model TeachingSession {
+  id                   String          @id @default(cuid())
+  teachingContextId    String
+  teachingContext      TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  date                 DateTime        @db.Date
+  startedAt            DateTime?
+  endedAt              DateTime?
+  attendanceRecordedAt DateTime?
+  plannedTopic         String?
+  actualTopic          String?
+  activitySummary      String?
+  reflection           String?
+  status               SessionStatus   @default(IN_PROGRESS)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  attendanceRecords AttendanceRecord[]
+  assignments       Assignment[]
+
+  @@index([teachingContextId])
+  @@index([date])
+  @@index([status])
+  @@map("teaching_session")
+}
+
+model AttendanceRecord {
+  id                String           @id @default(cuid())
+  teachingSessionId String
+  teachingSession   TeachingSession  @relation(fields: [teachingSessionId], references: [id], onDelete: Cascade)
+  studentId         String
+  student           Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status            AttendanceStatus
+  note              String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([teachingSessionId, studentId])
+  @@index([teachingSessionId])
+  @@index([studentId])
+  @@map("attendance_record")
+}
+
+model Assignment {
+  id                String           @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  teachingSessionId String?
+  teachingSession   TeachingSession? @relation(fields: [teachingSessionId], references: [id], onDelete: SetNull)
+  title             String
+  description       String?
+  dueDate           DateTime?
+  status            AssignmentStatus @default(ACTIVE)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([teachingContextId])
+  @@index([teachingSessionId])
+  @@index([dueDate])
+  @@map("assignment")
 }

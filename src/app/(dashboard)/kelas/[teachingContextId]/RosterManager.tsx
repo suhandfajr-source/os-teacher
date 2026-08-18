@@ -12,6 +12,16 @@ import { enrollStudentInClass, removeStudentFromClass } from "@/modules/classes/
 import { findOrCreateStudent, updateStudent } from "@/modules/students/students.actions";
 import { useRouter } from "next/navigation";
 
+export type RosterItem = {
+  id: string;
+  studentId: string;
+  student: {
+    id: string;
+    fullName: string;
+    nis?: string | null;
+  };
+};
+
 export default function RosterManager({ 
   teachingContextId, 
   classId, 
@@ -21,13 +31,13 @@ export default function RosterManager({
   teachingContextId: string, 
   classId: string, 
   academicPeriodId: string,
-  initialRoster: any[] 
+  initialRoster: RosterItem[] 
 }) {
   const router = useRouter();
-  const [roster, setRoster] = useState(initialRoster);
+  const roster = initialRoster;
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = useState<RosterItem | null>(null);
   
   const [formData, setFormData] = useState({ fullName: "", nis: "" });
   const [loading, setLoading] = useState(false);
@@ -48,8 +58,8 @@ export default function RosterManager({
       setIsAddOpen(false);
       setFormData({ fullName: "", nis: "" });
       router.refresh(); 
-    } catch (error: any) {
-      toast.error(error.message || "Gagal menambahkan siswa");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Gagal menambahkan siswa");
     } finally {
       setLoading(false);
     }
@@ -59,12 +69,14 @@ export default function RosterManager({
     e.preventDefault();
     setLoading(true);
     try {
-      await updateStudent(selectedStudent.studentId, { fullName: formData.fullName, nis: formData.nis });
+      if (selectedStudent) {
+        await updateStudent(selectedStudent.studentId, { fullName: formData.fullName, nis: formData.nis });
+      }
       toast.success("Siswa berhasil diubah");
       setIsEditOpen(false);
       router.refresh();
-    } catch (error: any) {
-      toast.error(error.message || "Gagal mengubah siswa");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengubah siswa");
     } finally {
       setLoading(false);
     }
@@ -77,12 +89,12 @@ export default function RosterManager({
       await removeStudentFromClass(studentId, academicPeriodId);
       toast.success("Siswa dihapus dari kelas");
       router.refresh();
-    } catch (error: any) {
-      toast.error(error.message || "Gagal menghapus siswa");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus siswa");
     }
   };
 
-  const openEdit = (student: any) => {
+  const openEdit = (student: RosterItem) => {
     setSelectedStudent(student);
     setFormData({ fullName: student.student.fullName, nis: student.student.nis || "" });
     setIsEditOpen(true);

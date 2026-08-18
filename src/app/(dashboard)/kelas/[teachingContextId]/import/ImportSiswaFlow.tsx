@@ -4,13 +4,12 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { validateImportFile, confirmImport, ValidationResult } from "@/modules/students/import.actions";
 import { useRouter } from "next/navigation";
-import { Upload, CheckCircle, AlertCircle, FileText } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 export default function ImportSiswaFlow({ teachingContextId }: { teachingContextId: string }) {
   const router = useRouter();
@@ -22,7 +21,6 @@ export default function ImportSiswaFlow({ teachingContextId }: { teachingContext
   const [nisCol, setNisCol] = useState("");
   
   // Validation Results
-  const [headers, setHeaders] = useState<string[]>([]);
   const [results, setResults] = useState<ValidationResult[]>([]);
   
   const [loading, setLoading] = useState(false);
@@ -34,7 +32,6 @@ export default function ImportSiswaFlow({ teachingContextId }: { teachingContext
       setError("");
       // Reset state if they upload a new file
       setStep(1);
-      setHeaders([]);
       setResults([]);
     }
   };
@@ -54,11 +51,10 @@ export default function ImportSiswaFlow({ teachingContextId }: { teachingContext
       formData.append("file", file);
 
       const res = await validateImportFile(teachingContextId, formData, { namaCol, nisCol });
-      setHeaders(res.headers);
       setResults(res.results);
       setStep(2);
-    } catch (e: any) {
-      setError(e.message || "Terjadi kesalahan saat validasi file.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan saat validasi file.");
     } finally {
       setLoading(false);
     }
@@ -72,8 +68,8 @@ export default function ImportSiswaFlow({ teachingContextId }: { teachingContext
       toast.success(`${res.importedCount} siswa berhasil diimport dan didaftarkan ke kelas.`);
       router.push(`/kelas/${teachingContextId}`);
       router.refresh();
-    } catch (e: any) {
-      setError(e.message || "Terjadi kesalahan saat import.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan saat import.");
       setLoading(false);
     }
   };

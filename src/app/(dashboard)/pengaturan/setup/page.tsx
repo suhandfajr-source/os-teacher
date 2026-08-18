@@ -46,7 +46,7 @@ export default async function SetupPage() {
           Kelola periode akademik, mata pelajaran, kelas, dan relasi mengajarnya.
         </p>
       </div>
-      <SetupManager initialProfile={profile as any} activeSchool={activeSchool as any} />
+      <SetupManager initialProfile={profile as never} activeSchool={activeSchool as never} />
     </div>
   );
 }

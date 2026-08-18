@@ -39,7 +39,7 @@ export async function validateImportFile(
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
   
-  const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+  const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
   
   if (rawData.length < 2) throw new Error("Excel file has no data rows");
 

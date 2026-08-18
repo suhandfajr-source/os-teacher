@@ -40,15 +40,16 @@ export default function OnboardingPage() {
   const [isCreatingNewSchool, setIsCreatingNewSchool] = useState(false);
 
   useEffect(() => {
+    let active = true;
     if (debouncedSearch.length >= 3 && !isCreatingNewSchool && !formData.schoolId) {
-      setIsSearching(true);
       searchSchools(debouncedSearch).then(res => {
-        setSearchResults(res);
-        setIsSearching(false);
+        if (active) {
+          setSearchResults(res);
+          setIsSearching(false);
+        }
       });
-    } else {
-      setSearchResults([]);
     }
+    return () => { active = false; };
   }, [debouncedSearch, isCreatingNewSchool, formData.schoolId]);
 
   useEffect(() => {
@@ -151,8 +152,15 @@ export default function OnboardingPage() {
                 <>
                   <Input 
                     value={searchQuery} 
-                    onChange={e => {
-                       setSearchQuery(e.target.value);
+                     onChange={e => {
+                       const val = e.target.value;
+                       setSearchQuery(val);
+                       if (val.length < 3) {
+                         setSearchResults([]);
+                         setIsSearching(false);
+                       } else {
+                         setIsSearching(true);
+                       }
                        setFormData({...formData, schoolId: "", schoolName: ""});
                     }} 
                     placeholder="Cari nama sekolah (min 3 huruf)..." 
