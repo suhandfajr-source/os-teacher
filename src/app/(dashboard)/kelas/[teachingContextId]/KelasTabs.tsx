@@ -17,6 +17,7 @@ export default function KelasTabs({ teachingContextId }: { teachingContextId: st
     { name: "Tugas", href: `${baseUrl}/tugas` },
     { name: "Penilaian", href: `${baseUrl}/penilaian` },
     { name: "Pengaturan Nilai", href: `${baseUrl}/pengaturan-nilai` },
+    { name: "Monitoring", href: `${baseUrl}/monitoring` },
   ];
 
   return (

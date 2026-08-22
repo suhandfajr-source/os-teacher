@@ -11,7 +11,8 @@ import {
   BarChart, 
   GraduationCap, 
   FileText, 
-  Settings 
+  Settings,
+  UserCheck
 } from 'lucide-react';
 
 const mainNavItems = [
@@ -20,6 +21,7 @@ const mainNavItems = [
   { href: '/classes', label: 'Kelas Saya', icon: Users },
   { href: '/teaching', label: 'Pembelajaran', icon: BookOpen },
   { href: '/assessment', label: 'Assessment', icon: CheckSquare },
+  { href: '/monitoring', label: 'Monitoring Siswa', icon: UserCheck },
   { href: '/students', label: 'Siswa', icon: UserCircle },
   { href: '/ai-studio', label: 'AI Studio', icon: Sparkles },
   { href: '/reports', label: 'Laporan', icon: BarChart },

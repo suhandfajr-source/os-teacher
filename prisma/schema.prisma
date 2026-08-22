@@ -208,6 +208,7 @@ model Student {
   classMemberships  ClassStudent[]
   attendanceRecords AttendanceRecord[]
   assessmentResults AssessmentResult[]
+  monitoringNotes   StudentMonitoringNote[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -310,6 +311,7 @@ model TeachingContext {
   assessmentTypes  AssessmentType[]
   gradePolicy      GradePolicy?
   assessments      Assessment[]
+  monitoringNotes  StudentMonitoringNote[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -498,3 +500,28 @@ model RemedialAttempt {
   @@index([attemptDate])
   @@map("remedial_attempt")
 }
+
+// -------------------------------------------------
+// STUDENT MONITORING SCHEMA (DEV STAGE 05)
+// -------------------------------------------------
+
+model StudentMonitoringNote {
+  id                String          @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  studentId         String
+  student           Student         @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  content           String          @db.Text
+  requiresFollowUp  Boolean         @default(false)
+  resolvedAt        DateTime?
+  isArchived        Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([teachingContextId, isArchived])
+  @@index([teachingContextId, studentId])
+  @@index([studentId])
+  @@index([requiresFollowUp, resolvedAt])
+  @@map("student_monitoring_note")
+}
+

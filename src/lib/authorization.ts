@@ -207,3 +207,125 @@ export async function verifyStudentScoreHistoryAccess(studentId: string) {
   return { profile, activeSchoolId, student };
 }
 
+// -------------------------------------------------
+// STAGE 05 MONITORING AUTHORIZATION HELPERS
+// -------------------------------------------------
+
+/**
+ * Validates that the student is CURRENTLY enrolled in the roster of the given TeachingContext.
+ * Required for creating new StudentMonitoringNotes.
+ */
+export async function verifyCurrentStudentInTeachingContext(teachingContextId: string, studentId: string) {
+  const { profile, activeSchoolId, context } = await verifyTeachingContextAccess(teachingContextId);
+
+  const student = await prisma.student.findFirst({
+    where: {
+      id: studentId,
+      schoolId: activeSchoolId,
+    },
+  });
+
+  if (!student) {
+    throw new Error("Forbidden: Student not found in active school");
+  }
+
+  const currentMembership = await prisma.classStudent.findFirst({
+    where: {
+      studentId: studentId,
+      classId: context.classId,
+      academicPeriodId: context.academicPeriodId,
+    },
+  });
+
+  if (!currentMembership) {
+    throw new Error("Forbidden: Siswa tidak terdaftar dalam anggota kelas aktif saat ini");
+  }
+
+  return { profile, activeSchoolId, context, student, currentMembership };
+}
+
+/**
+ * Validates that the teacher owns the TeachingContext and the student either is currently enrolled
+ * OR has historical activity / notes in this exact TeachingContext.
+ */
+export async function verifyStudentHistoricalAccessInContext(teachingContextId: string, studentId: string) {
+  const { profile, activeSchoolId, context } = await verifyTeachingContextAccess(teachingContextId);
+
+  const student = await prisma.student.findFirst({
+    where: {
+      id: studentId,
+      schoolId: activeSchoolId,
+    },
+  });
+
+  if (!student) {
+    throw new Error("Forbidden: Student not found in active school");
+  }
+
+  // Check current roster presence
+  const currentMembership = await prisma.classStudent.findFirst({
+    where: {
+      studentId: studentId,
+      classId: context.classId,
+      academicPeriodId: context.academicPeriodId,
+    },
+  });
+
+  const isCurrentRosterStudent = !!currentMembership;
+
+  if (!isCurrentRosterStudent) {
+    // Check if there is any historical activity or note in this exact context
+    const hasAttendance = await prisma.attendanceRecord.findFirst({
+      where: {
+        studentId: studentId,
+        teachingSession: {
+          teachingContextId: context.id,
+        },
+      },
+    });
+
+    const hasAssessment = await prisma.assessmentResult.findFirst({
+      where: {
+        studentId: studentId,
+        assessment: {
+          teachingContextId: context.id,
+        },
+      },
+    });
+
+    const hasNote = await prisma.studentMonitoringNote.findFirst({
+      where: {
+        studentId: studentId,
+        teachingContextId: context.id,
+      },
+    });
+
+    if (!hasAttendance && !hasAssessment && !hasNote) {
+      throw new Error("Forbidden: Siswa tidak memiliki hubungan atau riwayat pembelajaran pada kelas ini");
+    }
+  }
+
+  return { profile, activeSchoolId, context, student, isCurrentRosterStudent };
+}
+
+/**
+ * Validates that the note exists and belongs to a TeachingContext owned by the active teacher.
+ */
+export async function verifyMonitoringNoteAccess(noteId: string) {
+  const note = await prisma.studentMonitoringNote.findUnique({
+    where: { id: noteId },
+    include: {
+      teachingContext: true,
+      student: true,
+    },
+  });
+
+  if (!note) {
+    throw new Error("Catatan monitoring tidak ditemukan");
+  }
+
+  const contextAuth = await verifyTeachingContextAccess(note.teachingContextId);
+
+  return { ...contextAuth, note };
+}
+

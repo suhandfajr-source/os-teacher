@@ -1,12 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
-import { Home, Calendar, Users, Sparkles, Menu } from 'lucide-react';
+import { Home, Calendar, Users, UserCheck, Menu } from 'lucide-react';
 
 const mobileNavItems = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/today', label: 'Hari Ini', icon: Calendar },
   { href: '/classes', label: 'Kelas', icon: Users },
-  { href: '/ai-studio', label: 'AI Studio', icon: Sparkles },
+  { href: '/monitoring', label: 'Monitoring', icon: UserCheck },
   { href: '/more', label: 'Lainnya', icon: Menu },
 ];
 

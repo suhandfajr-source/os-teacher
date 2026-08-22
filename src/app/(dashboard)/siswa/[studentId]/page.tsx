@@ -67,6 +67,28 @@ export default async function SiswaDetailPage({
     assessmentHistory = [];
   }
 
+  // Fetch teacher's monitoring notes for this student across their teaching contexts in active school
+  const teacherNotes = await prisma.studentMonitoringNote.findMany({
+    where: {
+      studentId: student.id,
+      teachingContext: {
+        teacherProfileId: profile.id,
+        schoolId: profile.activeSchoolId,
+      },
+    },
+    include: {
+      teachingContext: {
+        include: {
+          class: true,
+          subject: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-16">
       <div>
@@ -120,6 +142,54 @@ export default async function SiswaDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Context-Bounded Teacher Monitoring Notes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Catatan Monitoring Guru (Konteks Anda)
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {teacherNotes.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-sm">
+              Belum ada catatan monitoring yang Anda buat untuk siswa ini.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {teacherNotes.map((note) => (
+                <div key={note.id} className="p-3.5 rounded-lg border bg-slate-50/60 space-y-1.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <div className="font-semibold text-slate-800">
+                      {note.teachingContext.class.name} &bull; {note.teachingContext.subject.name}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">
+                        {format(new Date(note.createdAt), "dd MMM yyyy", { locale: localeId })}
+                      </span>
+                      {note.requiresFollowUp ? (
+                        note.resolvedAt ? (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
+                            Tindak Lanjut Selesai
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 text-[10px] font-bold">
+                            Perlu Tindak Lanjut
+                          </Badge>
+                        )
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Scoped Assessment History */}
       <Card>
