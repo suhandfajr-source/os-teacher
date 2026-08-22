@@ -51,6 +51,41 @@ enum AssignmentStatus {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 04)
+// -------------------------------------------------
+
+enum AssessmentCategory {
+  ASSIGNMENT
+  FORMATIVE
+  SUMMATIVE
+  MIDTERM
+  FINAL_TERM
+  SCHOOL_EXAM
+  PRACTICE
+  PROJECT
+  OTHER
+}
+
+enum GradePolicyStatus {
+  DRAFT
+  ACTIVE
+}
+
+enum AssessmentStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum AssessmentResultStatus {
+  PENDING
+  GRADED
+  ABSENT
+  EXCUSED
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -172,6 +207,7 @@ model Student {
 
   classMemberships  ClassStudent[]
   attendanceRecords AttendanceRecord[]
+  assessmentResults AssessmentResult[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -271,6 +307,9 @@ model TeachingContext {
 
   teachingSessions TeachingSession[]
   assignments      Assignment[]
+  assessmentTypes  AssessmentType[]
+  gradePolicy      GradePolicy?
+  assessments      Assessment[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -298,6 +337,7 @@ model TeachingSession {
 
   attendanceRecords AttendanceRecord[]
   assignments       Assignment[]
+  assessments       Assessment[]
 
   @@index([teachingContextId])
   @@index([date])
@@ -339,4 +379,122 @@ model Assignment {
   @@index([teachingSessionId])
   @@index([dueDate])
   @@map("assignment")
+}
+
+// -------------------------------------------------
+// ASSESSMENT & GRADING SCHEMA (DEV STAGE 04)
+// -------------------------------------------------
+
+model AssessmentType {
+  id                String             @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext    @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  name              String
+  normalizedName    String
+  category          AssessmentCategory @default(OTHER)
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  assessments      Assessment[]
+  gradePolicyItems GradePolicyItem[]
+
+  @@unique([teachingContextId, normalizedName])
+  @@index([teachingContextId, isActive])
+  @@map("assessment_type")
+}
+
+model GradePolicy {
+  id                String            @id @default(cuid())
+  teachingContextId String            @unique
+  teachingContext   TeachingContext   @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  status            GradePolicyStatus @default(DRAFT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  items GradePolicyItem[]
+
+  @@index([teachingContextId, status])
+  @@map("grade_policy")
+}
+
+model GradePolicyItem {
+  id               String         @id @default(cuid())
+  gradePolicyId    String
+  gradePolicy      GradePolicy    @relation(fields: [gradePolicyId], references: [id], onDelete: Cascade)
+  assessmentTypeId String
+  assessmentType   AssessmentType @relation(fields: [assessmentTypeId], references: [id], onDelete: Restrict)
+  weight           Decimal        @db.Decimal(5, 2)
+  sortOrder        Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([gradePolicyId, assessmentTypeId])
+  @@index([gradePolicyId])
+  @@index([assessmentTypeId])
+  @@map("grade_policy_item")
+}
+
+model Assessment {
+  id                         String           @id @default(cuid())
+  teachingContextId          String
+  teachingContext            TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  assessmentTypeId           String
+  assessmentType             AssessmentType   @relation(fields: [assessmentTypeId], references: [id], onDelete: Restrict)
+  teachingSessionId          String?
+  teachingSession            TeachingSession? @relation(fields: [teachingSessionId], references: [id], onDelete: SetNull)
+  title                      String
+  description                String?
+  assessmentDate             DateTime         @db.Date
+  maxScore                   Decimal          @db.Decimal(10, 2)
+  minimumPassingScore        Decimal?         @db.Decimal(5, 2)
+  status                     AssessmentStatus @default(DRAFT)
+  participantsInitializedAt DateTime?
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+
+  results AssessmentResult[]
+
+  @@index([teachingContextId, status])
+  @@index([teachingContextId, assessmentDate])
+  @@index([assessmentTypeId])
+  @@index([teachingSessionId])
+  @@map("assessment")
+}
+
+model AssessmentResult {
+  id              String                 @id @default(cuid())
+  assessmentId    String
+  assessment      Assessment             @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  studentId       String
+  student         Student                @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  status          AssessmentResultStatus @default(PENDING)
+  rawScore        Decimal?               @db.Decimal(10, 2)
+  normalizedScore Decimal?               @db.Decimal(5, 2)
+  finalScore      Decimal?               @db.Decimal(5, 2)
+  note            String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  remedialAttempts RemedialAttempt[]
+
+  @@unique([assessmentId, studentId])
+  @@index([assessmentId, status])
+  @@index([studentId])
+  @@map("assessment_result")
+}
+
+model RemedialAttempt {
+  id                 String           @id @default(cuid())
+  assessmentResultId String
+  assessmentResult   AssessmentResult @relation(fields: [assessmentResultId], references: [id], onDelete: Restrict)
+  score              Decimal          @db.Decimal(5, 2)
+  note               String?
+  attemptDate        DateTime         @default(now())
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([assessmentResultId])
+  @@index([attemptDate])
+  @@map("remedial_attempt")
 }

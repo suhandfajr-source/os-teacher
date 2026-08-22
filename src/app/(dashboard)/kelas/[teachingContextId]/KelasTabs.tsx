@@ -10,10 +10,13 @@ export default function KelasTabs({ teachingContextId }: { teachingContextId: st
 
   const tabs = [
     { name: "Overview", href: baseUrl },
+    { name: "Siswa", href: `${baseUrl}#roster` },
     { name: "Pertemuan", href: `${baseUrl}/pertemuan` },
     { name: "Absensi", href: `${baseUrl}/absensi` },
     { name: "Jurnal Mengajar", href: `${baseUrl}/jurnal` },
     { name: "Tugas", href: `${baseUrl}/tugas` },
+    { name: "Penilaian", href: `${baseUrl}/penilaian` },
+    { name: "Pengaturan Nilai", href: `${baseUrl}/pengaturan-nilai` },
   ];
 
   return (
