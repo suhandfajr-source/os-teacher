@@ -368,4 +368,61 @@ export async function verifyAiDraftAccess(draftId: string) {
   return { profile, activeSchoolId, draft };
 }
 
+// -------------------------------------------------
+// STAGE 07 ACADEMIC CONTEXT AUTHORIZATION HELPERS
+// -------------------------------------------------
+
+/**
+ * Validates that the LearningObjective exists and belongs to a TeachingContext
+ * owned by the active teacher in the active school workspace.
+ */
+export async function verifyLearningObjectiveAccess(objectiveId: string) {
+  const objective = await prisma.learningObjective.findUnique({
+    where: { id: objectiveId },
+    include: {
+      teachingContext: {
+        include: {
+          class: true,
+          subject: true,
+          academicPeriod: true,
+        },
+      },
+    },
+  });
+
+  if (!objective) {
+    throw new Error("Tujuan Pembelajaran tidak ditemukan");
+  }
+
+  const contextAuth = await verifyTeachingContextAccess(objective.teachingContextId);
+
+  return { ...contextAuth, objective };
+}
+
+/**
+ * Validates that the AcademicPlanItem exists and belongs to a TeachingContext
+ * owned by the active teacher in the active school workspace.
+ */
+export async function verifyAcademicPlanItemAccess(planItemId: string) {
+  const planItem = await prisma.academicPlanItem.findUnique({
+    where: { id: planItemId },
+    include: {
+      teachingContext: {
+        include: {
+          class: true,
+          subject: true,
+          academicPeriod: true,
+        },
+      },
+    },
+  });
+
+  if (!planItem) {
+    throw new Error("Program Akademik (Prota/Prosem) tidak ditemukan");
+  }
+
+  const contextAuth = await verifyTeachingContextAccess(planItem.teachingContextId);
+
+  return { ...contextAuth, planItem };
+}
 

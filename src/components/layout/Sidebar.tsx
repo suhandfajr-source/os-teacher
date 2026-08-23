@@ -24,11 +24,11 @@ const mainNavItems = [
   { href: '/monitoring', label: 'Monitoring Siswa', icon: UserCheck },
   { href: '/students', label: 'Siswa', icon: UserCircle },
   { href: '/ai-studio', label: 'AI Studio', icon: Sparkles },
-  { href: '/reports', label: 'Laporan', icon: BarChart },
+  { href: '/laporan', label: 'Laporan', icon: BarChart },
 ];
 
 const secondaryNavItems = [
-  { href: '/academic', label: 'Akademik', icon: GraduationCap },
+  { href: '/akademik', label: 'Akademik', icon: GraduationCap },
   { href: '/documents', label: 'Dokumen Saya', icon: FileText },
   { href: '/settings', label: 'Pengaturan', icon: Settings },
 ];

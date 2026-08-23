@@ -102,6 +102,15 @@ enum AiDraftStatus {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 07)
+// -------------------------------------------------
+
+enum AcademicPlanType {
+  PROTA
+  PROSEM
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -324,13 +333,16 @@ model TeachingContext {
   classId          String
   class            Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
 
-  teachingSessions TeachingSession[]
-  assignments      Assignment[]
-  assessmentTypes  AssessmentType[]
-  gradePolicy      GradePolicy?
-  assessments      Assessment[]
-  monitoringNotes  StudentMonitoringNote[]
-  aiContentDrafts  AiContentDraft[]
+  teachingSessions       TeachingSession[]
+  assignments            Assignment[]
+  assessmentTypes        AssessmentType[]
+  gradePolicy            GradePolicy?
+  assessments            Assessment[]
+  monitoringNotes        StudentMonitoringNote[]
+  aiContentDrafts        AiContentDraft[]
+  academicContextProfile AcademicContextProfile?
+  learningObjectives     LearningObjective[]
+  academicPlanItems      AcademicPlanItem[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -356,9 +368,10 @@ model TeachingSession {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
-  attendanceRecords AttendanceRecord[]
-  assignments       Assignment[]
-  assessments       Assessment[]
+  attendanceRecords      AttendanceRecord[]
+  assignments            Assignment[]
+  assessments            Assessment[]
+  learningObjectiveLinks TeachingSessionLearningObjective[]
 
   @@index([teachingContextId])
   @@index([date])
@@ -474,7 +487,8 @@ model Assessment {
   createdAt                  DateTime         @default(now())
   updatedAt                  DateTime         @updatedAt
 
-  results AssessmentResult[]
+  results                AssessmentResult[]
+  learningObjectiveLinks AssessmentLearningObjective[]
 
   @@index([teachingContextId, status])
   @@index([teachingContextId, assessmentDate])
@@ -572,4 +586,90 @@ model AiContentDraft {
   @@map("ai_content_draft")
 }
 
+// -------------------------------------------------
+// ACADEMIC CONTEXT SCHEMA (DEV STAGE 07)
+// -------------------------------------------------
 
+model AcademicContextProfile {
+  id                String          @id @default(cuid())
+  teachingContextId String          @unique
+  teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  curriculumName    String?
+  phase             String?
+  academicNote      String?         @db.Text
+  cpText            String?         @db.Text
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@map("academic_context_profile")
+}
+
+model LearningObjective {
+  id                String          @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  code              String?
+  description       String          @db.Text
+  orderIndex        Int             @default(0)
+  status            EntityStatus    @default(ACTIVE)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  sessionLinks      TeachingSessionLearningObjective[]
+  assessmentLinks   AssessmentLearningObjective[]
+
+  @@index([teachingContextId, status])
+  @@index([teachingContextId, orderIndex])
+  @@map("learning_objective")
+}
+
+model AcademicPlanItem {
+  id                String           @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  planType          AcademicPlanType
+  title             String
+  targetMonth       Int?
+  allocatedHours    Int?
+  notes             String?          @db.Text
+  orderIndex        Int              @default(0)
+  status            EntityStatus     @default(ACTIVE)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([teachingContextId, planType, status])
+  @@index([teachingContextId, orderIndex])
+  @@map("academic_plan_item")
+}
+
+model TeachingSessionLearningObjective {
+  id                  String            @id @default(cuid())
+  teachingSessionId   String
+  teachingSession     TeachingSession   @relation(fields: [teachingSessionId], references: [id], onDelete: Restrict)
+  learningObjectiveId String
+  learningObjective   LearningObjective @relation(fields: [learningObjectiveId], references: [id], onDelete: Restrict)
+  snapshotCode        String?
+  snapshotDescription String            @db.Text
+  createdAt           DateTime          @default(now())
+
+  @@unique([teachingSessionId, learningObjectiveId])
+  @@index([teachingSessionId])
+  @@index([learningObjectiveId])
+  @@map("teaching_session_learning_objective")
+}
+
+model AssessmentLearningObjective {
+  id                  String            @id @default(cuid())
+  assessmentId        String
+  assessment          Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  learningObjectiveId String
+  learningObjective   LearningObjective @relation(fields: [learningObjectiveId], references: [id], onDelete: Restrict)
+  snapshotCode        String?
+  snapshotDescription String            @db.Text
+  createdAt           DateTime          @default(now())
+
+  @@unique([assessmentId, learningObjectiveId])
+  @@index([assessmentId])
+  @@index([learningObjectiveId])
+  @@map("assessment_learning_objective")
+}
