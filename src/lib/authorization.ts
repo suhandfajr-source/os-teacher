@@ -329,3 +329,43 @@ export async function verifyMonitoringNoteAccess(noteId: string) {
   return { ...contextAuth, note };
 }
 
+// -------------------------------------------------
+// STAGE 06 AI CONTENT STUDIO AUTHORIZATION HELPERS
+// -------------------------------------------------
+
+/**
+ * Validates that the AI content draft exists, belongs to the active school,
+ * and is owned by the current authenticated teacher profile.
+ */
+export async function verifyAiDraftAccess(draftId: string) {
+  const { profile, activeSchoolId } = await verifyActiveSchoolMembership();
+
+  const draft = await prisma.aiContentDraft.findUnique({
+    where: { id: draftId },
+    include: {
+      teachingContext: {
+        include: {
+          class: true,
+          subject: true,
+          academicPeriod: true,
+        },
+      },
+    },
+  });
+
+  if (!draft) {
+    throw new Error("Draft AI tidak ditemukan");
+  }
+
+  if (draft.teacherProfileId !== profile.id) {
+    throw new Error("Forbidden: You do not own this AI draft");
+  }
+
+  if (draft.schoolId !== activeSchoolId) {
+    throw new Error("Forbidden: This draft belongs to a different school workspace");
+  }
+
+  return { profile, activeSchoolId, draft };
+}
+
+

@@ -11,10 +11,24 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+export function resolveTrustedOrigins(
+    nodeEnv: string | undefined = process.env.NODE_ENV,
+    appUrl: string | undefined = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL
+): string[] {
+    if (nodeEnv !== "production") {
+        return ["http://localhost:3000", "http://localhost:3005"];
+    }
+    if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
+        return [appUrl];
+    }
+    return [];
+}
+
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
+    trustedOrigins: resolveTrustedOrigins(),
     emailAndPassword: {
         enabled: true,
         autoSignIn: true

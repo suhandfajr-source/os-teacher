@@ -86,6 +86,22 @@ enum AssessmentResultStatus {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 06)
+// -------------------------------------------------
+
+enum AiContentType {
+  LESSON_PLAN
+  LEARNING_MATERIAL
+  TASK_INSTRUCTION
+  RUBRIC
+}
+
+enum AiDraftStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -171,6 +187,7 @@ model School {
   subjects         Subject[]
   classes          Class[]
   teachingContexts TeachingContext[]
+  aiContentDrafts  AiContentDraft[]
 
   @@index([normalizedName])
   @@index([npsn])
@@ -245,6 +262,7 @@ model TeacherProfile {
 
   memberships      TeacherSchoolMembership[]
   teachingContexts TeachingContext[]
+  aiContentDrafts  AiContentDraft[]
 
   @@map("teacher_profile")
 }
@@ -312,6 +330,7 @@ model TeachingContext {
   gradePolicy      GradePolicy?
   assessments      Assessment[]
   monitoringNotes  StudentMonitoringNote[]
+  aiContentDrafts  AiContentDraft[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -524,4 +543,33 @@ model StudentMonitoringNote {
   @@index([requiresFollowUp, resolvedAt])
   @@map("student_monitoring_note")
 }
+
+// -------------------------------------------------
+// AI CONTENT STUDIO SCHEMA (DEV STAGE 06)
+// -------------------------------------------------
+
+model AiContentDraft {
+  id                String           @id @default(cuid())
+  schoolId          String
+  school            School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  teacherProfileId  String
+  teacherProfile    TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  teachingContextId String?
+  teachingContext   TeachingContext? @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  contentType       AiContentType
+  title             String
+  topic             String
+  instruction       String?          @db.Text
+  content           String           @db.Text
+  status            AiDraftStatus    @default(ACTIVE)
+  modelUsed         String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([teacherProfileId, schoolId, status])
+  @@index([teachingContextId])
+  @@index([contentType])
+  @@map("ai_content_draft")
+}
+
 
