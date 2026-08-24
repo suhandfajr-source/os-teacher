@@ -426,3 +426,93 @@ export async function verifyAcademicPlanItemAccess(planItemId: string) {
   return { ...contextAuth, planItem };
 }
 
+// -------------------------------------------------
+// STAGE 08 PARENT PORTAL AUTHORIZATION HELPERS
+// -------------------------------------------------
+
+/**
+ * Validates that the user has an active authenticated session and returns ParentProfile if exists.
+ */
+export async function verifyParentSession() {
+  const session = await requireAuthSession();
+
+  const parentProfile = await prisma.parentProfile.findUnique({
+    where: { userId: session.user.id }
+  });
+
+  return { session, parentProfile };
+}
+
+/**
+ * Validates that the authenticated parent has an active relation with the given student.
+ */
+export async function verifyParentStudentRelation(studentId: string) {
+  const { session, parentProfile } = await verifyParentSession();
+
+  if (!parentProfile) {
+    throw new Error("Forbidden: Profil orang tua tidak ditemukan");
+  }
+
+  const relation = await prisma.parentStudentRelation.findUnique({
+    where: {
+      parentProfileId_studentId: {
+        parentProfileId: parentProfile.id,
+        studentId: studentId
+      }
+    },
+    include: {
+      student: true
+    }
+  });
+
+  if (!relation) {
+    throw new Error("Forbidden: Anda tidak memiliki akses terhadap data siswa ini");
+  }
+
+  return { session, parentProfile, relation, student: relation.student };
+}
+
+/**
+ * Validates that the authenticated parent has ACTIVE ParentTeachingAccess
+ * for the exact Student and exact TeachingContext.
+ */
+export async function verifyParentTeachingAccess(studentId: string, teachingContextId: string) {
+  const { session, parentProfile, relation, student } = await verifyParentStudentRelation(studentId);
+
+  const access = await prisma.parentTeachingAccess.findUnique({
+    where: {
+      parentStudentRelationId_teachingContextId: {
+        parentStudentRelationId: relation.id,
+        teachingContextId: teachingContextId
+      }
+    },
+    include: {
+      teachingContext: {
+        include: {
+          subject: true,
+          class: true,
+          academicPeriod: true,
+          teacherProfile: {
+            include: {
+              user: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!access || access.status !== "ACTIVE") {
+    throw new Error("Forbidden: Akses pembelajaran kelas ini tidak aktif atau telah dicabut");
+  }
+
+  return {
+    session,
+    parentProfile,
+    relation,
+    student,
+    access,
+    teachingContext: access.teachingContext
+  };
+}
+

@@ -111,6 +111,21 @@ enum AcademicPlanType {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 08)
+// -------------------------------------------------
+
+enum ParentAccessStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum ParentInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -126,6 +141,7 @@ model User {
   accounts      Account[]
 
   teacherProfile TeacherProfile?
+  parentProfile  ParentProfile?
 
   @@unique([email])
   @@map("user")
@@ -235,6 +251,8 @@ model Student {
   attendanceRecords AttendanceRecord[]
   assessmentResults AssessmentResult[]
   monitoringNotes   StudentMonitoringNote[]
+  parentRelations   ParentStudentRelation[]
+  parentInvitations ParentInvitation[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -269,9 +287,11 @@ model TeacherProfile {
   preferredName       String?
   onboardingCompleted Boolean @default(false)
 
-  memberships      TeacherSchoolMembership[]
-  teachingContexts TeachingContext[]
-  aiContentDrafts  AiContentDraft[]
+  memberships                    TeacherSchoolMembership[]
+  teachingContexts               TeachingContext[]
+  aiContentDrafts                AiContentDraft[]
+  createdParentInvitations       ParentInvitation[]     @relation("CreatedParentInvitations")
+  grantedParentTeachingAccesses  ParentTeachingAccess[] @relation("GrantedParentTeachingAccesses")
 
   @@map("teacher_profile")
 }
@@ -343,6 +363,8 @@ model TeachingContext {
   academicContextProfile AcademicContextProfile?
   learningObjectives     LearningObjective[]
   academicPlanItems      AcademicPlanItem[]
+  parentInvitations      ParentInvitation[]
+  parentTeachingAccesses ParentTeachingAccess[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -673,3 +695,83 @@ model AssessmentLearningObjective {
   @@index([learningObjectiveId])
   @@map("assessment_learning_objective")
 }
+
+// -------------------------------------------------
+// PARENT PORTAL SCHEMA (DEV STAGE 08)
+// -------------------------------------------------
+
+model ParentProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studentRelations ParentStudentRelation[]
+  acceptedInvites  ParentInvitation[]      @relation("AcceptedByParent")
+
+  @@map("parent_profile")
+}
+
+model ParentStudentRelation {
+  id                String        @id @default(cuid())
+  parentProfileId   String
+  parentProfile     ParentProfile @relation(fields: [parentProfileId], references: [id], onDelete: Restrict)
+  studentId         String
+  student           Student       @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  relationshipLabel String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  teachingAccesses ParentTeachingAccess[]
+
+  @@unique([parentProfileId, studentId])
+  @@index([studentId])
+  @@map("parent_student_relation")
+}
+
+model ParentInvitation {
+  id                          String                 @id @default(cuid())
+  tokenHash                   String                 @unique
+  recipientEmail              String
+  relationshipLabel           String?
+  studentId                   String
+  student                     Student                @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  teachingContextId           String
+  teachingContext             TeachingContext        @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  teacherProfileId            String
+  teacherProfile              TeacherProfile         @relation("CreatedParentInvitations", fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  status                      ParentInvitationStatus @default(PENDING)
+  expiresAt                   DateTime
+  acceptedAt                  DateTime?
+  acceptedByParentProfileId   String?
+  acceptedByParentProfile     ParentProfile?         @relation("AcceptedByParent", fields: [acceptedByParentProfileId], references: [id], onDelete: Restrict)
+  revokedAt                   DateTime?
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+
+  @@index([tokenHash])
+  @@index([recipientEmail])
+  @@index([teachingContextId, status])
+  @@index([studentId])
+  @@map("parent_invitation")
+}
+
+model ParentTeachingAccess {
+  id                          String                 @id @default(cuid())
+  parentStudentRelationId     String
+  parentStudentRelation       ParentStudentRelation  @relation(fields: [parentStudentRelationId], references: [id], onDelete: Restrict)
+  teachingContextId           String
+  teachingContext             TeachingContext        @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  grantedByTeacherProfileId   String
+  grantedByTeacherProfile     TeacherProfile         @relation("GrantedParentTeachingAccesses", fields: [grantedByTeacherProfileId], references: [id], onDelete: Restrict)
+  status                      ParentAccessStatus     @default(ACTIVE)
+  revokedAt                   DateTime?
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+
+  @@unique([parentStudentRelationId, teachingContextId])
+  @@index([teachingContextId, status])
+  @@map("parent_teaching_access")
+}
+
