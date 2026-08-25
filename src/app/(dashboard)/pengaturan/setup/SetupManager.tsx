@@ -20,19 +20,27 @@ export default function SetupManager({ initialProfile, activeSchool }: { initial
 
   return (
     <div className="space-y-4">
-      <div className="flex space-x-2 border-b pb-2">
-        <Button variant={activeTab === "context" ? "default" : "ghost"} onClick={() => setActiveTab("context")}>
-          Konteks Mengajar
-        </Button>
-        <Button variant={activeTab === "period" ? "default" : "ghost"} onClick={() => setActiveTab("period")}>
-          Periode Akademik
-        </Button>
-        <Button variant={activeTab === "subject" ? "default" : "ghost"} onClick={() => setActiveTab("subject")}>
-          Mata Pelajaran
-        </Button>
-        <Button variant={activeTab === "class" ? "default" : "ghost"} onClick={() => setActiveTab("class")}>
-          Kelas
-        </Button>
+      <div className="flex justify-between items-center border-b pb-2">
+        <div className="flex space-x-2">
+          <Button variant={activeTab === "context" ? "default" : "ghost"} onClick={() => setActiveTab("context")}>
+            Konteks Mengajar
+          </Button>
+          <Button variant={activeTab === "period" ? "default" : "ghost"} onClick={() => setActiveTab("period")}>
+            Periode Akademik
+          </Button>
+          <Button variant={activeTab === "subject" ? "default" : "ghost"} onClick={() => setActiveTab("subject")}>
+            Mata Pelajaran
+          </Button>
+          <Button variant={activeTab === "class" ? "default" : "ghost"} onClick={() => setActiveTab("class")}>
+            Kelas
+          </Button>
+        </div>
+        <a
+          href="/onboarding/mid-semester"
+          className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+        >
+          Mulai di Tengah Semester
+        </a>
       </div>
 
       <Card>

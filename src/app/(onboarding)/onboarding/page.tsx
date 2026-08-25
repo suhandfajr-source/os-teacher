@@ -113,10 +113,20 @@ export default function OnboardingPage() {
   return (
     <Card className="shadow-lg border-2">
       <CardHeader>
-        <CardTitle className="text-2xl font-bold">Setup Awal Guru</CardTitle>
-        <CardDescription>
-          Langkah {step} dari 4: Lengkapi profil dan konteks mengajar dasar Anda
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-2xl font-bold">Setup Awal Guru</CardTitle>
+            <CardDescription>
+              Langkah {step} dari 4: Lengkapi profil dan konteks mengajar dasar Anda
+            </CardDescription>
+          </div>
+          <a
+            href="/onboarding/mid-semester"
+            className="text-xs font-semibold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+          >
+            Setup Tengah Semester
+          </a>
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-4">

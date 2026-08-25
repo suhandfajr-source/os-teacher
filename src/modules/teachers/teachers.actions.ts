@@ -29,7 +29,7 @@ export async function submitOnboarding(data: {
   subjectShortName?: string;
   className: string;
   gradeLevel?: string;
-}) {
+}): Promise<{ success: boolean; context?: { id: string } | null }> {
   const session = await validateSession();
 
   // 1. Update User Name
@@ -203,8 +203,9 @@ export async function submitOnboarding(data: {
       }
     });
 
-    if (!existingContext) {
-      await tx.teachingContext.create({
+    let context = existingContext;
+    if (!context) {
+      context = await tx.teachingContext.create({
         data: {
           teacherProfileId: profile.id,
           schoolId: targetSchoolId,
@@ -215,7 +216,7 @@ export async function submitOnboarding(data: {
       });
     }
 
-    return { success: true };
+    return { success: true, context };
   });
 }
 

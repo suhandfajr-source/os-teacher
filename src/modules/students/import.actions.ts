@@ -20,10 +20,14 @@ export type ValidationResult = {
   existingStudentId?: string;
 };
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_ROW_COUNT = 500;
+const MAX_COLUMN_COUNT = 50;
+
 export async function validateImportFile(
-  teachingContextId: string, 
-  formData: FormData, 
-  mapping: { namaCol: string, nisCol: string }
+  teachingContextId: string,
+  formData: FormData,
+  mapping: { namaCol: string; nisCol: string }
 ) {
   const { activeSchoolId } = await verifyActiveSchoolMembership();
   const { context } = await verifyTeachingContextAccess(teachingContextId);
@@ -32,21 +36,31 @@ export async function validateImportFile(
   if (!file) throw new Error("No file uploaded");
 
   const buffer = await file.arrayBuffer();
-  const workbook = read(buffer, { type: "buffer" });
-  
+  if (buffer.byteLength > MAX_FILE_SIZE_BYTES) {
+    throw new Error(`File size exceeds maximum limit (${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB).`);
+  }
+
+  const workbook = read(buffer, { type: "buffer", cellDates: true, cellFormula: false });
+
   if (!workbook.SheetNames.length) throw new Error("Excel file is empty");
-  
+
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
-  
-  const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
-  
-  if (rawData.length < 2) throw new Error("Excel file has no data rows");
 
-  const headers = rawData[0].map(h => String(h).trim().toLowerCase());
-  
-  const namaIdx = headers.findIndex(h => h === mapping.namaCol.toLowerCase());
-  const nisIdx = mapping.nisCol ? headers.findIndex(h => h === mapping.nisCol.toLowerCase()) : -1;
+  const rawData = utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
+
+  if (rawData.length < 2) throw new Error("Excel file has no data rows");
+  if (rawData.length > MAX_ROW_COUNT + 1) {
+    throw new Error(`Row count exceeds maximum limit (${MAX_ROW_COUNT} rows).`);
+  }
+
+  const headers = rawData[0].map((h) => String(h).trim().toLowerCase());
+  if (headers.length > MAX_COLUMN_COUNT) {
+    throw new Error(`Column count exceeds maximum limit (${MAX_COLUMN_COUNT} columns).`);
+  }
+
+  const namaIdx = headers.findIndex((h) => h === mapping.namaCol.toLowerCase());
+  const nisIdx = mapping.nisCol ? headers.findIndex((h) => h === mapping.nisCol.toLowerCase()) : -1;
 
   if (namaIdx === -1) {
     throw new Error(`Column mapped to 'Nama Lengkap' (${mapping.namaCol}) not found in the file.`);
@@ -57,8 +71,7 @@ export async function validateImportFile(
 
   for (let i = 1; i < rawData.length; i++) {
     const row = rawData[i];
-    // Skip completely empty rows
-    if (row.length === 0 || row.every(cell => !cell)) continue;
+    if (row.length === 0 || row.every((cell) => !cell)) continue;
 
     const rowNum = i + 1;
     const rawNama = row[namaIdx]?.toString().trim();
@@ -71,7 +84,7 @@ export async function validateImportFile(
         nis: rawNis,
         status: "ERROR",
         message: "Nama Lengkap is required.",
-        action: "SKIP"
+        action: "SKIP",
       });
       continue;
     }
@@ -84,14 +97,14 @@ export async function validateImportFile(
           nis: rawNis,
           status: "ERROR",
           message: `Duplicate NIS (${rawNis}) found inside the uploaded file.`,
-          action: "SKIP"
+          action: "SKIP",
         });
         continue;
       }
       seenNisInFile.add(rawNis);
     }
 
-    // Database validations
+    // Database validations strictly scoped to activeSchoolId
     let dbStatus: "VALID" | "ERROR" | "WARNING" = "VALID";
     let dbMessage = "Ready to import.";
     let dbAction: ValidationResult["action"] = "CREATE";
@@ -99,7 +112,7 @@ export async function validateImportFile(
 
     if (rawNis) {
       const existingDb = await prisma.student.findUnique({
-        where: { schoolId_nis: { schoolId: activeSchoolId, nis: rawNis } }
+        where: { schoolId_nis: { schoolId: activeSchoolId, nis: rawNis } },
       });
 
       if (existingDb) {
@@ -115,12 +128,12 @@ export async function validateImportFile(
         }
       }
     } else {
-      // Name-only match
+      // Name-only match in active school
       const existingByName = await prisma.student.findFirst({
         where: {
           schoolId: activeSchoolId,
-          fullName: { equals: rawNama, mode: "insensitive" }
-        }
+          fullName: { equals: rawNama, mode: "insensitive" },
+        },
       });
 
       if (existingByName) {
@@ -137,9 +150,9 @@ export async function validateImportFile(
         where: {
           studentId_academicPeriodId: {
             studentId: existingStudentId,
-            academicPeriodId: context.academicPeriodId
-          }
-        }
+            academicPeriodId: context.academicPeriodId,
+          },
+        },
       });
 
       if (alreadyInClass) {
@@ -148,9 +161,9 @@ export async function validateImportFile(
           dbMessage = "Student is already enrolled in this class.";
           dbAction = "SKIP";
         } else {
-          dbStatus = "WARNING";
-          dbMessage = "Student is enrolled in another class for this Academic Period. Will move them to this class.";
-          dbAction = "ENROLL_ONLY";
+          dbStatus = "ERROR";
+          dbMessage = "Student is enrolled in another class for this Academic Period. Importer cannot automatically move students across classes.";
+          dbAction = "SKIP";
         }
       }
     }
@@ -162,7 +175,7 @@ export async function validateImportFile(
       status: dbStatus,
       message: dbMessage,
       action: dbAction,
-      existingStudentId
+      existingStudentId,
     });
   }
 
@@ -173,56 +186,65 @@ export async function confirmImport(teachingContextId: string, results: Validati
   const { activeSchoolId, profile } = await verifyActiveSchoolMembership();
   const { context } = await verifyTeachingContextAccess(teachingContextId);
 
-  // We only process rows that are NOT skipped
-  const validRows = results.filter(r => r.action !== "SKIP");
+  // Filter valid actionable rows
+  const validRows = results.filter((r) => r.action !== "SKIP" && r.status !== "ERROR");
   let importedCount = 0;
 
-  // Execute in transaction
+  // Execute in transaction with strict active school and class validation
   await prisma.$transaction(async (tx) => {
     for (const row of validRows) {
       let studentId = row.existingStudentId;
 
+      if (studentId) {
+        // SECURITY HARDENING: Re-verify student belongs to activeSchoolId
+        const verifiedStudent = await tx.student.findFirst({
+          where: { id: studentId, schoolId: activeSchoolId },
+        });
+        if (!verifiedStudent) {
+          throw new Error(`Siswa dengan ID ${studentId} tidak ditemukan di sekolah aktif.`);
+        }
+      }
+
       if (!studentId) {
-        // Create new student
+        // Create new student in active school
         const newStudent = await tx.student.create({
           data: {
             schoolId: activeSchoolId,
             fullName: row.namaLengkap,
             nis: row.nis || null,
             createdByTeacherProfileId: profile.id,
-            updatedByTeacherProfileId: profile.id
-          }
+            updatedByTeacherProfileId: profile.id,
+          },
         });
         studentId = newStudent.id;
       }
 
-      // Upsert into ClassStudent for this academic period
+      // Check ClassStudent for this academic period
       const existingClassStudent = await tx.classStudent.findUnique({
         where: {
           studentId_academicPeriodId: {
             studentId: studentId,
-            academicPeriodId: context.academicPeriodId
-          }
-        }
+            academicPeriodId: context.academicPeriodId,
+          },
+        },
       });
 
       if (existingClassStudent) {
         if (existingClassStudent.classId !== context.classId) {
-          await tx.classStudent.update({
-            where: { id: existingClassStudent.id },
-            data: { classId: context.classId }
-          });
+          throw new Error(
+            `Siswa '${row.namaLengkap}' sudah terdaftar di kelas lain pada periode akademik ini. Importer tidak diizinkan memindahkan kelas.`
+          );
         }
       } else {
         await tx.classStudent.create({
           data: {
             studentId,
             classId: context.classId,
-            academicPeriodId: context.academicPeriodId
-          }
+            academicPeriodId: context.academicPeriodId,
+          },
         });
       }
-      
+
       importedCount++;
     }
   });

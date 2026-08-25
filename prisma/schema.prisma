@@ -126,6 +126,17 @@ enum ParentInvitationStatus {
 }
 
 // -------------------------------------------------
+// ENUMS (STAGE 09 - IMPORT & ONBOARDING)
+// -------------------------------------------------
+
+enum ImportCategory {
+  ROSTER
+  HISTORICAL_SESSION
+  HISTORICAL_ATTENDANCE
+  HISTORICAL_ASSESSMENT
+}
+
+// -------------------------------------------------
 // BETTER AUTH SCHEMA
 // -------------------------------------------------
 
@@ -213,6 +224,7 @@ model School {
   classes          Class[]
   teachingContexts TeachingContext[]
   aiContentDrafts  AiContentDraft[]
+  importSessions   ImportSession[]
 
   @@index([normalizedName])
   @@index([npsn])
@@ -292,6 +304,7 @@ model TeacherProfile {
   aiContentDrafts                AiContentDraft[]
   createdParentInvitations       ParentInvitation[]     @relation("CreatedParentInvitations")
   grantedParentTeachingAccesses  ParentTeachingAccess[] @relation("GrantedParentTeachingAccesses")
+  importSessions                 ImportSession[]
 
   @@map("teacher_profile")
 }
@@ -365,6 +378,7 @@ model TeachingContext {
   academicPlanItems      AcademicPlanItem[]
   parentInvitations      ParentInvitation[]
   parentTeachingAccesses ParentTeachingAccess[]
+  importSessions         ImportSession[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -774,4 +788,31 @@ model ParentTeachingAccess {
   @@index([teachingContextId, status])
   @@map("parent_teaching_access")
 }
+
+// -------------------------------------------------
+// IMPORT SESSION SCHEMA (DEV STAGE 09)
+// -------------------------------------------------
+
+model ImportSession {
+  id                String           @id @default(cuid())
+  tokenHash         String           @unique
+  teacherProfileId  String
+  teacherProfile    TeacherProfile   @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  schoolId          String
+  school            School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  teachingContextId String?
+  teachingContext   TeachingContext? @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  category          ImportCategory
+  payloadHash       String
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([tokenHash])
+  @@index([teacherProfileId, schoolId])
+  @@index([teachingContextId, category])
+  @@map("import_session")
+}
+
 
