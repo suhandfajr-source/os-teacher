@@ -4,33 +4,29 @@ import {
   Home, 
   Calendar, 
   Users, 
-  BookOpen, 
   CheckSquare, 
   UserCircle, 
   Sparkles, 
   BarChart, 
   GraduationCap, 
-  FileText, 
   Settings,
   UserCheck
 } from 'lucide-react';
 
 const mainNavItems = [
   { href: '/', label: 'Beranda', icon: Home },
-  { href: '/today', label: 'Hari Ini', icon: Calendar },
-  { href: '/classes', label: 'Kelas Saya', icon: Users },
-  { href: '/teaching', label: 'Pembelajaran', icon: BookOpen },
-  { href: '/assessment', label: 'Assessment', icon: CheckSquare },
+  { href: '/hari-ini', label: 'Hari Ini', icon: Calendar },
+  { href: '/kelas', label: 'Kelas Saya', icon: Users },
+  { href: '/assessment', label: 'Penilaian', icon: CheckSquare },
   { href: '/monitoring', label: 'Monitoring Siswa', icon: UserCheck },
-  { href: '/students', label: 'Siswa', icon: UserCircle },
+  { href: '/siswa', label: 'Daftar Siswa', icon: UserCircle },
   { href: '/ai-studio', label: 'AI Studio', icon: Sparkles },
   { href: '/laporan', label: 'Laporan', icon: BarChart },
 ];
 
 const secondaryNavItems = [
   { href: '/akademik', label: 'Akademik', icon: GraduationCap },
-  { href: '/documents', label: 'Dokumen Saya', icon: FileText },
-  { href: '/settings', label: 'Pengaturan', icon: Settings },
+  { href: '/pengaturan/setup', label: 'Pengaturan', icon: Settings },
 ];
 
 export function Sidebar() {

@@ -1,13 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
-import { Home, Calendar, Users, UserCheck, Menu } from 'lucide-react';
+import { Home, Calendar, Users, UserCheck, Settings } from 'lucide-react';
 
 const mobileNavItems = [
   { href: '/', label: 'Beranda', icon: Home },
-  { href: '/today', label: 'Hari Ini', icon: Calendar },
-  { href: '/classes', label: 'Kelas', icon: Users },
+  { href: '/hari-ini', label: 'Hari Ini', icon: Calendar },
+  { href: '/kelas', label: 'Kelas', icon: Users },
   { href: '/monitoring', label: 'Monitoring', icon: UserCheck },
-  { href: '/more', label: 'Lainnya', icon: Menu },
+  { href: '/pengaturan/setup', label: 'Pengaturan', icon: Settings },
 ];
 
 export function BottomNav() {
