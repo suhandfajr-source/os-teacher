@@ -16,10 +16,17 @@ export function resolveTrustedOrigins(
     appUrl: string | undefined = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL
 ): string[] {
     if (nodeEnv !== "production") {
-        return ["http://localhost:3000", "http://localhost:3005"];
+        return [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:3003",
+            "http://localhost:3004",
+            "http://localhost:3005"
+        ];
     }
     if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
-        return [appUrl];
+        return [appUrl.replace(/\/$/, "")];
     }
     return [];
 }
