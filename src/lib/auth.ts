@@ -11,6 +11,22 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
+export function getBaseURL(): string {
+    if (process.env.BETTER_AUTH_URL) {
+        return process.env.BETTER_AUTH_URL.replace(/\/$/, "");
+    }
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+        return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+    }
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+        return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, "")}`;
+    }
+    if (process.env.VERCEL_URL) {
+        return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
+    }
+    return "http://localhost:3000";
+}
+
 export function resolveTrustedOrigins(): string[] {
     const origins = [
         "http://localhost:3000",
@@ -20,7 +36,8 @@ export function resolveTrustedOrigins(): string[] {
         "http://localhost:3004",
         "http://localhost:3005",
         "https://*.vercel.app",
-        "https://*.pages.dev"
+        "https://*.pages.dev",
+        getBaseURL()
     ];
 
     if (process.env.BETTER_AUTH_URL) {
@@ -40,6 +57,7 @@ export function resolveTrustedOrigins(): string[] {
 }
 
 export const auth = betterAuth({
+    baseURL: getBaseURL(),
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
