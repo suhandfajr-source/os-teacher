@@ -37,8 +37,8 @@ import {
   AcademicContextProfileData,
   LearningObjectiveData,
   AcademicPlanItemData,
+  AcademicPlanType,
 } from "@/modules/academic/academic.types";
-import { AcademicPlanType } from "@prisma/client";
 
 interface ContextOption {
   id: string;

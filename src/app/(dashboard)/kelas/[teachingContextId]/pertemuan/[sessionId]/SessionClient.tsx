@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { AttendanceStatus } from "@prisma/client";
+import type { AttendanceStatus } from "@prisma/client";
 
 type AttendanceData = { status: AttendanceStatus; note: string };
 type SessionData = { id: string; status: string; date: Date | string; actualTopic?: string | null; plannedTopic?: string | null; activitySummary?: string | null; attendanceRecordedAt?: Date | string | null; };

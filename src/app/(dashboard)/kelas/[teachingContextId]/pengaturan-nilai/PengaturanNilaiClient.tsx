@@ -23,7 +23,7 @@ import {
   copyGradePolicy,
 } from "@/modules/assessment/assessment.actions";
 import { Plus, Edit2, Archive, Copy, Sparkles, AlertCircle, CheckCircle2, ShieldAlert } from "lucide-react";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 interface AssessmentTypeItem {
   id: string;

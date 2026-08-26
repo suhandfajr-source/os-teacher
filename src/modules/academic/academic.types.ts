@@ -1,4 +1,10 @@
-import { EntityStatus, AcademicPlanType } from "@prisma/client";
+import type { EntityStatus } from "@prisma/client";
+
+export const AcademicPlanType = {
+  PROTA: "PROTA",
+  PROSEM: "PROSEM",
+} as const;
+export type AcademicPlanType = (typeof AcademicPlanType)[keyof typeof AcademicPlanType];
 
 export interface AcademicContextProfileData {
   id: string;

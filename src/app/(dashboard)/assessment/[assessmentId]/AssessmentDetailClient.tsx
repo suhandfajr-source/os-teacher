@@ -27,7 +27,7 @@ import {
   Edit,
   History,
 } from "lucide-react";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 interface RemedialAttemptItem {
   id: string;

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { toast } from "sonner";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import {
   createMonitoringNote,
   updateMonitoringNote,

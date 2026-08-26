@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Plus, BarChart3, ListOrdered, CheckCircle2, AlertCircle, FileText, ArrowRight } from "lucide-react";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 interface AssessmentItem {
   id: string;

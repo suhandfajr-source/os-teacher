@@ -13,7 +13,7 @@ import {
   BookOpen,
   AlertCircle,
 } from "lucide-react";
-import { AttendanceStatus, AssessmentResultStatus } from "@prisma/client";
+import type { AttendanceStatus, AssessmentResultStatus } from "@prisma/client";
 
 interface PageProps {
   params: Promise<{
@@ -60,17 +60,17 @@ export default async function ParentChildContextPage({ params }: PageProps) {
 
   const { attendance, activities, assessments } = detail;
 
-  const getAttendanceBadge = (status: AttendanceStatus) => {
+  const getAttendanceBadge = (status: AttendanceStatus | string) => {
     switch (status) {
-      case AttendanceStatus.PRESENT:
+      case "PRESENT":
         return <Badge className="bg-green-600 hover:bg-green-700 text-white">Hadir</Badge>;
-      case AttendanceStatus.LATE:
+      case "LATE":
         return <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Terlambat</Badge>;
-      case AttendanceStatus.SICK:
+      case "SICK":
         return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Sakit</Badge>;
-      case AttendanceStatus.PERMISSION:
+      case "PERMISSION":
         return <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white">Izin</Badge>;
-      case AttendanceStatus.ABSENT:
+      case "ABSENT":
         return <Badge variant="destructive">Alpa</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
@@ -281,7 +281,7 @@ export default async function ParentChildContextPage({ params }: PageProps) {
                         {ass.minimumPassingScore !== null ? ass.minimumPassingScore : "-"}
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
-                        {ass.resultStatus === AssessmentResultStatus.GRADED && ass.finalScore !== null ? (
+                        {ass.resultStatus === "GRADED" && ass.finalScore !== null ? (
                           <span
                             className={`font-mono text-base font-extrabold ${
                               ass.minimumPassingScore !== null && ass.finalScore >= ass.minimumPassingScore
@@ -293,9 +293,9 @@ export default async function ParentChildContextPage({ params }: PageProps) {
                           >
                             {ass.finalScore}
                           </span>
-                        ) : ass.resultStatus === AssessmentResultStatus.ABSENT ? (
+                        ) : ass.resultStatus === "ABSENT" ? (
                           <Badge variant="destructive">Tidak Hadir</Badge>
-                        ) : ass.resultStatus === AssessmentResultStatus.EXCUSED ? (
+                        ) : ass.resultStatus === "EXCUSED" ? (
                           <Badge variant="secondary">Izin/Dispensasi</Badge>
                         ) : (
                           <Badge variant="outline" className="text-slate-500">
