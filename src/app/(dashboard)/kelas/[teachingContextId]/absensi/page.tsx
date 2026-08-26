@@ -3,9 +3,9 @@ import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
-export default async function AbsensiPage({ params }: { params: { teachingContextId: string } }) {
+export default async function AbsensiPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
   const { teachingContextId } = await params;
-  const { context } = await verifyTeachingContextAccess(teachingContextId);
+  await verifyTeachingContextAccess(teachingContextId);
 
   const sessions = await prisma.teachingSession.findMany({
     where: { teachingContextId, attendanceRecordedAt: { not: null } },

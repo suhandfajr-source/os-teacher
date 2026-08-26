@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/auth";
-import { verifyActiveSchoolMembership, verifyTeachingContextAccess } from "@/lib/authorization";
+import { verifyActiveSchoolMembership } from "@/lib/authorization";
 
 export async function getClassRoster(classId: string, academicPeriodId: string) {
   const { activeSchoolId } = await verifyActiveSchoolMembership();

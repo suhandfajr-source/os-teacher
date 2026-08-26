@@ -17,7 +17,7 @@ export default async function KelasLayout(props: { params: Promise<{ teachingCon
   let authResult;
   try {
     authResult = await verifyTeachingContextAccess(params.teachingContextId);
-  } catch (error) {
+  } catch {
     redirect("/kelas"); 
   }
 

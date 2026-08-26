@@ -5,7 +5,7 @@ import { verifyTeachingContextAccess, verifyTeachingSessionAccess } from "@/lib/
 import { revalidatePath } from "next/cache";
 
 export async function startTeachingSession(teachingContextId: string, plannedTopic?: string) {
-  const { profile } = await verifyTeachingContextAccess(teachingContextId);
+  await verifyTeachingContextAccess(teachingContextId);
 
   const session = await prisma.teachingSession.create({
     data: {

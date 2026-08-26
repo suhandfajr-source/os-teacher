@@ -6,7 +6,7 @@ import { verifyTeachingContextAccess } from "@/lib/authorization";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-export default async function KelasDetailPage({ params }: { params: { teachingContextId: string } }) {
+export default async function KelasDetailPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
   const session = await auth.api.getSession({
     headers: await headers()
   });
@@ -19,7 +19,7 @@ export default async function KelasDetailPage({ params }: { params: { teachingCo
   let authResult;
   try {
     authResult = await verifyTeachingContextAccess(teachingContextId);
-  } catch (error) {
+  } catch {
     redirect("/kelas"); // Redirect if not authorized
   }
 

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
 import TugasClient from "./TugasClient";
 
-export default async function TugasPage({ params }: { params: { teachingContextId: string } }) {
+export default async function TugasPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
   const { teachingContextId } = await params;
   await verifyTeachingContextAccess(teachingContextId);
 

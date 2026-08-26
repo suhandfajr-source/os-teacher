@@ -3,7 +3,7 @@ import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
-export default async function JurnalPage({ params }: { params: { teachingContextId: string } }) {
+export default async function JurnalPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
   const { teachingContextId } = await params;
   await verifyTeachingContextAccess(teachingContextId);
 

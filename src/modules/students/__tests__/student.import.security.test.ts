@@ -36,7 +36,6 @@ vi.mock("@/lib/authorization", () => ({
 
 describe("Stage 02 Importer Security Hardening (Stage 09 Trust Boundary)", () => {
   const activeSchoolId = "school-legit-a";
-  const foreignSchoolId = "school-foreign-b";
   const teacherProfileId = "teacher-1";
   const teachingContextId = "ctx-1";
   const classId = "class-a";

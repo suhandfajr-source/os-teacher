@@ -5,7 +5,7 @@ import { id } from "date-fns/locale";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 
-export default async function PertemuanPage({ params }: { params: { teachingContextId: string } }) {
+export default async function PertemuanPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
   const { teachingContextId } = await params;
   await verifyTeachingContextAccess(teachingContextId);
 
