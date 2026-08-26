@@ -11,24 +11,32 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export function resolveTrustedOrigins(
-    nodeEnv: string | undefined = process.env.NODE_ENV,
-    appUrl: string | undefined = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL
-): string[] {
-    if (nodeEnv !== "production") {
-        return [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:3003",
-            "http://localhost:3004",
-            "http://localhost:3005"
-        ];
+export function resolveTrustedOrigins(): string[] {
+    const origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3004",
+        "http://localhost:3005",
+        "https://*.vercel.app",
+        "https://*.pages.dev"
+    ];
+
+    if (process.env.BETTER_AUTH_URL) {
+        origins.push(process.env.BETTER_AUTH_URL.replace(/\/$/, ""));
     }
-    if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
-        return [appUrl.replace(/\/$/, "")];
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+        origins.push(process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""));
     }
-    return [];
+    if (process.env.VERCEL_URL) {
+        origins.push(`https://${process.env.VERCEL_URL.replace(/\/$/, "")}`);
+    }
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+        origins.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, "")}`);
+    }
+
+    return Array.from(new Set(origins));
 }
 
 export const auth = betterAuth({
@@ -36,6 +44,7 @@ export const auth = betterAuth({
         provider: "postgresql",
     }),
     trustedOrigins: resolveTrustedOrigins(),
+    secret: process.env.BETTER_AUTH_SECRET || "os-teacher-secret-auth-key-2026",
     emailAndPassword: {
         enabled: true,
         autoSignIn: true
