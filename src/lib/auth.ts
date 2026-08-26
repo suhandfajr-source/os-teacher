@@ -27,33 +27,29 @@ export function getBaseURL(): string {
     return "http://localhost:3000";
 }
 
-export function resolveTrustedOrigins(): string[] {
-    const origins = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:3002",
-        "http://localhost:3003",
-        "http://localhost:3004",
-        "http://localhost:3005",
-        "https://*.vercel.app",
-        "https://*.pages.dev",
-        getBaseURL()
-    ];
-
-    if (process.env.BETTER_AUTH_URL) {
-        origins.push(process.env.BETTER_AUTH_URL.replace(/\/$/, ""));
+export function resolveTrustedOrigins(
+    nodeEnv: string | undefined = process.env.NODE_ENV,
+    appUrl: string | undefined = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+): string[] {
+    if (nodeEnv !== "production") {
+        return [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:3003",
+            "http://localhost:3004",
+            "http://localhost:3005"
+        ];
     }
-    if (process.env.NEXT_PUBLIC_APP_URL) {
-        origins.push(process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""));
+    if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
+        const cleaned = appUrl.replace(/\/$/, "");
+        const origins = [cleaned];
+        if (cleaned.includes("vercel.app") || process.env.VERCEL_URL) {
+            origins.push("https://*.vercel.app");
+        }
+        return Array.from(new Set(origins));
     }
-    if (process.env.VERCEL_URL) {
-        origins.push(`https://${process.env.VERCEL_URL.replace(/\/$/, "")}`);
-    }
-    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-        origins.push(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, "")}`);
-    }
-
-    return Array.from(new Set(origins));
+    return [];
 }
 
 export const auth = betterAuth({
