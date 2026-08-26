@@ -5,9 +5,14 @@ import { ParentLogoutButton } from "./ParentLogoutButton";
 import { HeartHandshake } from "lucide-react";
 
 export default async function ParentLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let session = null;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch (err) {
+    console.warn("ParentLayout session lookup error:", err);
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
