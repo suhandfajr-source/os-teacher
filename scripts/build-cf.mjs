@@ -23,9 +23,18 @@ try {
     minify: true,
     treeShaking: true,
     format: "esm",
-    platform: "neutral",
+    platform: "node",
     target: "es2022",
-    external: ["cloudflare:*", "node:*"],
+    loader: {
+      ".wasm": "binary"
+    },
+    external: [
+      "cloudflare:*",
+      "node:*",
+      "pg-cloudflare",
+      "@prisma/client",
+      ".prisma/client"
+    ],
   });
 
   const stat = fs.statSync(workerDest);
