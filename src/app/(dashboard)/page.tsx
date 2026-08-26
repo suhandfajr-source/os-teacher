@@ -8,9 +8,15 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Calendar, Sparkles, ArrowRight, Settings } from 'lucide-react';
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
+  let session = null;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers()
+    });
+  } catch (err) {
+    console.warn("Session fetch error:", err);
+    redirect("/login");
+  }
 
   if (!session) {
     redirect("/login");

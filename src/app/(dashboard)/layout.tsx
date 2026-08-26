@@ -7,21 +7,31 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/auth"; // using the prisma client
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
+  let session = null;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers()
+    });
+  } catch (err) {
+    console.warn("Session check error, redirecting to /login:", err);
+    redirect("/login");
+  }
 
   if (!session) {
     redirect("/login");
   }
 
-  // Check onboarding status
-  const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: session.user.id }
-  });
+  try {
+    // Check onboarding status
+    const profile = await prisma.teacherProfile.findUnique({
+      where: { userId: session.user.id }
+    });
 
-  if (!profile?.onboardingCompleted) {
-    redirect("/onboarding");
+    if (!profile?.onboardingCompleted) {
+      redirect("/onboarding");
+    }
+  } catch (err) {
+    console.warn("Profile lookup warning:", err);
   }
 
   return (
