@@ -13,7 +13,7 @@ import {
   BookOpen,
   AlertCircle,
 } from "lucide-react";
-import type { AttendanceStatus, AssessmentResultStatus } from "@prisma/client";
+import type { AttendanceStatus } from "@prisma/client";
 
 interface PageProps {
   params: Promise<{

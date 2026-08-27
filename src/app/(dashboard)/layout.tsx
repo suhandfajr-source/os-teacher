@@ -13,25 +13,26 @@ export default async function DashboardLayout({ children }: { children: React.Re
       headers: await headers()
     });
   } catch (err) {
-    console.warn("Session check error, redirecting to /login:", err);
-    redirect("/login");
+    console.warn("Session check error, treating as unauthenticated:", err);
+    session = null;
   }
 
   if (!session) {
     redirect("/login");
   }
 
+  let profile = null;
   try {
     // Check onboarding status
-    const profile = await prisma.teacherProfile.findUnique({
+    profile = await prisma.teacherProfile.findUnique({
       where: { userId: session.user.id }
     });
-
-    if (!profile?.onboardingCompleted) {
-      redirect("/onboarding");
-    }
   } catch (err) {
     console.warn("Profile lookup warning:", err);
+  }
+
+  if (!profile?.onboardingCompleted) {
+    redirect("/onboarding");
   }
 
   return (

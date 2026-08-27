@@ -27,9 +27,20 @@ export function getBaseURL(): string {
     return "http://localhost:3000";
 }
 
+export function getAuthSecret(nodeEnv: string | undefined = process.env.NODE_ENV): string {
+    const secret = process.env.BETTER_AUTH_SECRET;
+    if (nodeEnv === "production") {
+        if (!secret || secret.trim() === "") {
+            throw new Error("Missing required BETTER_AUTH_SECRET configuration in production environment.");
+        }
+        return secret;
+    }
+    return secret || "dev-only-local-secret-do-not-use-in-production";
+}
+
 export function resolveTrustedOrigins(
     nodeEnv: string | undefined = process.env.NODE_ENV,
-    appUrl: string | undefined = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined) || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+    appUrl: string | undefined = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined)
 ): string[] {
     if (nodeEnv !== "production") {
         return [
@@ -43,11 +54,7 @@ export function resolveTrustedOrigins(
     }
     if (appUrl && !appUrl.includes("localhost") && !appUrl.includes("127.0.0.1")) {
         const cleaned = appUrl.replace(/\/$/, "");
-        const origins = [cleaned];
-        if (cleaned.includes("vercel.app") || process.env.VERCEL_URL) {
-            origins.push("https://*.vercel.app");
-        }
-        return Array.from(new Set(origins));
+        return [cleaned];
     }
     return [];
 }
@@ -58,7 +65,7 @@ export const auth = betterAuth({
         provider: "postgresql",
     }),
     trustedOrigins: resolveTrustedOrigins(),
-    secret: process.env.BETTER_AUTH_SECRET || "os-teacher-secret-auth-key-2026",
+    secret: getAuthSecret(),
     emailAndPassword: {
         enabled: true,
         autoSignIn: true

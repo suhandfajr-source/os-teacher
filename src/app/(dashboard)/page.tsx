@@ -14,8 +14,8 @@ export default async function DashboardPage() {
       headers: await headers()
     });
   } catch (err) {
-    console.warn("Session fetch error:", err);
-    redirect("/login");
+    console.warn("Session fetch error, treating as unauthenticated:", err);
+    session = null;
   }
 
   if (!session) {
