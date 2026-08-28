@@ -1,21 +1,19 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { getGlobalMonitoringOverview } from "@/modules/monitoring/monitoring.actions";
 import { MonitoringOverviewClient } from "./MonitoringOverviewClient";
 
 export default async function GlobalMonitoringPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let authContext = null;
+  try {
+    authContext = await getRscAuthContext();
+  } catch {
+    redirect("/login");
+  }
 
-  if (!session) redirect("/login");
+  const { activeSchoolId } = authContext;
 
-  const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: session.user.id },
-  });
-
-  if (!profile || !profile.activeSchoolId) redirect("/onboarding");
+  if (!activeSchoolId) redirect("/onboarding");
 
   const overviews = await getGlobalMonitoringOverview();
 

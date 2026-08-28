@@ -1,25 +1,24 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
+import { prisma } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import HariIniClient from "./HariIniClient";
 
 export default async function HariIniPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let authContext = null;
+  try {
+    authContext = await getRscAuthContext();
+  } catch {
+    redirect("/login");
+  }
 
-  if (!session) redirect("/login");
+  const { profile, activeSchoolId } = authContext;
 
-  const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: session.user.id },
-  });
-
-  if (!profile || !profile.activeSchoolId) redirect("/onboarding");
+  if (!activeSchoolId) redirect("/onboarding");
 
   const teachingContexts = await prisma.teachingContext.findMany({
     where: {
       teacherProfileId: profile.id,
-      schoolId: profile.activeSchoolId,
+      schoolId: activeSchoolId,
     },
     include: {
       academicPeriod: true,

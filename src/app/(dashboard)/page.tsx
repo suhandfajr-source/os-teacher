@@ -1,44 +1,31 @@
 import React from 'react';
 import Link from 'next/link';
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
+import { prisma } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Calendar, Sparkles, ArrowRight, Settings } from 'lucide-react';
+import { getRscAuthContext } from "@/lib/rsc-auth-context";
 
 export default async function DashboardPage() {
-  let session = null;
+  let authContext = null;
   try {
-    session = await auth.api.getSession({
-      headers: await headers()
-    });
-  } catch (err) {
-    console.warn("Session fetch error, treating as unauthenticated:", err);
-    session = null;
-  }
-
-  if (!session) {
+    authContext = await getRscAuthContext();
+  } catch {
     redirect("/login");
   }
 
-  const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: session.user.id }
-  });
+  const { session, profile, activeSchoolId, activeSchool } = authContext;
 
-  if (!profile || !profile.activeSchoolId) {
+  if (!profile.activeSchoolId) {
     redirect("/onboarding");
   }
-
-  const activeSchool = await prisma.school.findUnique({
-    where: { id: profile.activeSchoolId }
-  });
 
   // Query teacher-owned teaching contexts in the active school
   const teachingContexts = await prisma.teachingContext.findMany({
     where: {
       teacherProfileId: profile.id,
-      schoolId: profile.activeSchoolId
+      schoolId: activeSchoolId
     },
     include: {
       class: true,
@@ -49,38 +36,38 @@ export default async function DashboardPage() {
 
   const teachingContextIds = teachingContexts.map(tc => tc.id);
 
-  // Query today's sessions for these contexts
+  // Query today's sessions and reachable students in parallel
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todaySessions = await prisma.teachingSession.findMany({
-    where: {
-      teachingContextId: { in: teachingContextIds },
-      date: { gte: today }
-    }
-  });
-
-  const inProgressSessionsCount = todaySessions.filter(s => s.status === "IN_PROGRESS").length;
-  const completedSessionsCount = todaySessions.filter(s => s.status === "COMPLETED").length;
-
-  // Query distinct active students reachable through teacher's teaching contexts
-  const reachableStudentsCount = await prisma.student.count({
-    where: {
-      schoolId: profile.activeSchoolId,
-      status: "ACTIVE",
-      classMemberships: {
-        some: {
-          class: {
-            teachingContexts: {
-              some: {
-                teacherProfileId: profile.id
+  const [todaySessions, reachableStudentsCount] = await Promise.all([
+    prisma.teachingSession.findMany({
+      where: {
+        teachingContextId: { in: teachingContextIds },
+        date: { gte: today }
+      }
+    }),
+    prisma.student.count({
+      where: {
+        schoolId: activeSchoolId,
+        status: "ACTIVE",
+        classMemberships: {
+          some: {
+            class: {
+              teachingContexts: {
+                some: {
+                  teacherProfileId: profile.id
+                }
               }
             }
           }
         }
       }
-    }
-  });
+    })
+  ]);
+
+  const inProgressSessionsCount = todaySessions.filter(s => s.status === "IN_PROGRESS").length;
+  const completedSessionsCount = todaySessions.filter(s => s.status === "COMPLETED").length;
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-16">

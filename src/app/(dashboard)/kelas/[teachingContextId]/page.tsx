@@ -25,23 +25,11 @@ export default async function KelasDetailPage({ params }: { params: Promise<{ te
 
   const { context } = authResult;
 
-  // Fetch full context details
-  const fullContext = await prisma.teachingContext.findUnique({
-    where: { id: context.id },
-    include: {
-      subject: true,
-      class: true,
-      academicPeriod: true
-    }
-  });
-
-  if (!fullContext) redirect("/kelas");
-
   // Fetch roster
   const roster = await prisma.classStudent.findMany({
     where: {
-      classId: fullContext.classId,
-      academicPeriodId: fullContext.academicPeriodId,
+      classId: context.classId,
+      academicPeriodId: context.academicPeriodId,
       student: {
         status: "ACTIVE"
       }
@@ -61,16 +49,16 @@ export default async function KelasDetailPage({ params }: { params: Promise<{ te
           <ArrowLeft className="mr-2 h-4 w-4" />
           Kembali ke Daftar Kelas
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">{fullContext.class.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{context.class.name}</h1>
         <p className="text-muted-foreground mt-2">
-          {fullContext.subject.name} &bull; {fullContext.academicPeriod.year} {fullContext.academicPeriod.semester}
+          {context.subject.name} &bull; {context.academicPeriod.year} {context.academicPeriod.semester}
         </p>
       </div>
 
       <RosterManager 
         teachingContextId={teachingContextId} 
-        classId={fullContext.classId}
-        academicPeriodId={fullContext.academicPeriodId}
+        classId={context.classId}
+        academicPeriodId={context.academicPeriodId}
         initialRoster={roster} 
       />
     </div>

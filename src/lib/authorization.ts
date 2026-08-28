@@ -15,40 +15,45 @@ export async function verifyActiveSchoolMembership() {
   const session = await requireAuthSession();
 
   const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: session.user.id }
+    where: { userId: session.user.id },
+    include: {
+      memberships: {
+        where: {
+          status: "ACTIVE",
+        },
+        include: {
+          school: true,
+        },
+      },
+    },
   });
 
   if (!profile || !profile.activeSchoolId) {
     throw new Error("Teacher profile or active school not found");
   }
 
-  const activeSchool = await prisma.school.findUnique({
-    where: { id: profile.activeSchoolId }
-  });
-  
-  if (!activeSchool) throw new Error("Active school not found");
+  // Strict check: find active membership whose schoolId === profile.activeSchoolId AND status === 'ACTIVE'
+  const activeMembership = profile.memberships?.find(
+    (m) => m.schoolId === profile.activeSchoolId && m.status === "ACTIVE"
+  );
 
-  const membership = await prisma.teacherSchoolMembership.findUnique({
-    where: {
-      teacherProfileId_schoolId: {
-        teacherProfileId: profile.id,
-        schoolId: profile.activeSchoolId
-      }
-    }
-  });
-
-  if (!membership || membership.status !== "ACTIVE") {
+  if (!activeMembership || !activeMembership.school) {
     throw new Error("Not an active member of the school workspace");
   }
 
-  return { session, profile, activeSchoolId: profile.activeSchoolId, activeSchool };
+  return { session, profile, activeSchoolId: profile.activeSchoolId, activeSchool: activeMembership.school };
 }
 
 export async function verifyTeachingContextAccess(teachingContextId: string) {
-  const { profile, activeSchoolId } = await verifyActiveSchoolMembership();
+  const { profile, activeSchoolId, activeSchool, session } = await verifyActiveSchoolMembership();
 
   const context = await prisma.teachingContext.findUnique({
-    where: { id: teachingContextId }
+    where: { id: teachingContextId },
+    include: {
+      class: true,
+      subject: true,
+      academicPeriod: true,
+    },
   });
 
   if (!context) {
@@ -63,7 +68,7 @@ export async function verifyTeachingContextAccess(teachingContextId: string) {
     throw new Error("Forbidden: This context belongs to a different school workspace");
   }
 
-  return { profile, activeSchoolId, context };
+  return { profile, activeSchoolId, activeSchool, session, context };
 }
 
 export async function verifyClassRosterAccess(classId: string) {

@@ -2,36 +2,17 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { prisma } from "@/lib/auth"; // using the prisma client
+import { getRscAuthContext } from "@/lib/rsc-auth-context";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  let session = null;
+  let authContext = null;
   try {
-    session = await auth.api.getSession({
-      headers: await headers()
-    });
-  } catch (err) {
-    console.warn("Session check error, treating as unauthenticated:", err);
-    session = null;
-  }
-
-  if (!session) {
+    authContext = await getRscAuthContext();
+  } catch {
     redirect("/login");
   }
 
-  let profile = null;
-  try {
-    // Check onboarding status
-    profile = await prisma.teacherProfile.findUnique({
-      where: { userId: session.user.id }
-    });
-  } catch (err) {
-    console.warn("Profile lookup warning:", err);
-  }
-
-  if (!profile?.onboardingCompleted) {
+  if (!authContext?.profile?.onboardingCompleted) {
     redirect("/onboarding");
   }
 

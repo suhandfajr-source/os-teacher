@@ -53,8 +53,10 @@ describe("Stage 02 Importer Security Hardening (Stage 09 Trust Boundary)", () =>
     });
 
     vi.mocked(authLib.verifyTeachingContextAccess).mockResolvedValue({
+      session: { user: { id: "user-1" } } as never,
       profile: { id: teacherProfileId, activeSchoolId } as never,
       activeSchoolId,
+      activeSchool: { id: activeSchoolId, name: "SMA Negeri 1" } as never,
       context: {
         id: teachingContextId,
         schoolId: activeSchoolId,

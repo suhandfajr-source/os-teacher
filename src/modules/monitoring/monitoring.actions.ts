@@ -199,18 +199,8 @@ export async function getClassMonitoringData(teachingContextId: string) {
 
   const metrics = calculateClassMonitoringMetrics(rows);
 
-  // Fetch full context metadata
-  const fullContext = await prisma.teachingContext.findUniqueOrThrow({
-    where: { id: context.id },
-    include: {
-      class: true,
-      subject: true,
-      academicPeriod: true,
-    },
-  });
-
   return {
-    context: fullContext,
+    context,
     rows,
     metrics,
     hasActiveGradePolicy: !!activeGradePolicy,
@@ -227,15 +217,7 @@ export async function getStudentMonitoringDetail(teachingContextId: string, stud
     studentId
   );
 
-  const [fullContext, attendanceRecords, rawResults, activeGradePolicy, notes] = await Promise.all([
-    prisma.teachingContext.findUniqueOrThrow({
-      where: { id: context.id },
-      include: {
-        class: true,
-        subject: true,
-        academicPeriod: true,
-      },
-    }),
+  const [attendanceRecords, rawResults, activeGradePolicy, notes] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where: {
         studentId: student.id,
@@ -351,7 +333,7 @@ export async function getStudentMonitoringDetail(teachingContextId: string, stud
   );
 
   return {
-    context: fullContext,
+    context,
     student: {
       id: student.id,
       fullName: student.fullName,
@@ -393,62 +375,56 @@ export async function getGlobalMonitoringOverview(): Promise<GlobalContextMonito
     ],
   });
 
-  const overviews: GlobalContextMonitoringOverview[] = [];
+  if (contexts.length === 0) {
+    return [];
+  }
 
+  // 1. Collect context IDs and unique classId + academicPeriodId pairs
+  const contextIds = contexts.map((c) => c.id);
+  const classPeriodMap = new Map<string, { classId: string; academicPeriodId: string }>();
   for (const ctx of contexts) {
-    // Current roster
-    const classStudents = await prisma.classStudent.findMany({
+    const key = `${ctx.classId}:${ctx.academicPeriodId}`;
+    if (!classPeriodMap.has(key)) {
+      classPeriodMap.set(key, { classId: ctx.classId, academicPeriodId: ctx.academicPeriodId });
+    }
+  }
+
+  // 2. Batch 3 data queries in parallel (O(1) database operations regardless of context count)
+  const [allClassStudents, allOpenNotes, allCompletedResults] = await Promise.all([
+    // Query A: Shared Rosters by real (classId, academicPeriodId)
+    prisma.classStudent.findMany({
       where: {
-        classId: ctx.classId,
-        academicPeriodId: ctx.academicPeriodId,
+        OR: Array.from(classPeriodMap.values()).map((cp) => ({
+          classId: cp.classId,
+          academicPeriodId: cp.academicPeriodId,
+        })),
       },
       select: {
+        classId: true,
+        academicPeriodId: true,
         studentId: true,
       },
-    });
-
-    const currentStudentIds = classStudents.map((cs) => cs.studentId);
-    const currentStudentCount = currentStudentIds.length;
-
-    if (currentStudentCount === 0) {
-      overviews.push({
-        teachingContextId: ctx.id,
-        className: ctx.class.name,
-        subjectName: ctx.subject.name,
-        academicYear: ctx.academicPeriod.year,
-        semester: ctx.academicPeriod.semester,
-        currentStudentCount: 0,
-        studentsWithOpenFollowUp: 0,
-        studentsWithBelowKktp: 0,
-        hasActiveGradePolicy: ctx.gradePolicy?.status === "ACTIVE",
-      });
-      continue;
-    }
-
-    // Open follow-ups for current students
-    const openNotes = await prisma.studentMonitoringNote.findMany({
+    }),
+    // Query B: Open Notes for all authorized TeachingContexts
+    prisma.studentMonitoringNote.findMany({
       where: {
-        teachingContextId: ctx.id,
-        studentId: { in: currentStudentIds },
+        teachingContextId: { in: contextIds },
         requiresFollowUp: true,
         resolvedAt: null,
         isArchived: false,
       },
       select: {
+        teachingContextId: true,
         studentId: true,
       },
-    });
-
-    const studentsWithOpenFollowUp = new Set(openNotes.map((n) => n.studentId)).size;
-
-    // Completed & graded results below KKTP for current students
-    const results = await prisma.assessmentResult.findMany({
+    }),
+    // Query C: Completed & Graded Results with KKTP for all authorized TeachingContexts
+    prisma.assessmentResult.findMany({
       where: {
-        studentId: { in: currentStudentIds },
         status: "GRADED",
         finalScore: { not: null },
         assessment: {
-          teachingContextId: ctx.id,
+          teachingContextId: { in: contextIds },
           status: "COMPLETED",
           minimumPassingScore: { not: null },
         },
@@ -458,22 +434,84 @@ export async function getGlobalMonitoringOverview(): Promise<GlobalContextMonito
         finalScore: true,
         assessment: {
           select: {
+            teachingContextId: true,
             minimumPassingScore: true,
           },
         },
       },
-    });
+    }),
+  ]);
 
-    const belowKktpStudentIds = new Set<string>();
-    for (const r of results) {
-      if (r.assessment.minimumPassingScore !== null && r.finalScore !== null) {
-        if (Number(r.finalScore) < Number(r.assessment.minimumPassingScore)) {
-          belowKktpStudentIds.add(r.studentId);
+  // 3. Map shared rosters by `${classId}:${academicPeriodId}`
+  const rosterMap = new Map<string, Set<string>>();
+  for (const cs of allClassStudents) {
+    const key = `${cs.classId}:${cs.academicPeriodId}`;
+    if (!rosterMap.has(key)) {
+      rosterMap.set(key, new Set());
+    }
+    rosterMap.get(key)!.add(cs.studentId);
+  }
+
+  // 4. Map open notes by `teachingContextId`
+  const openNotesByContext = new Map<string, Set<string>>();
+  for (const note of allOpenNotes) {
+    if (!openNotesByContext.has(note.teachingContextId)) {
+      openNotesByContext.set(note.teachingContextId, new Set());
+    }
+    openNotesByContext.get(note.teachingContextId)!.add(note.studentId);
+  }
+
+  // 5. Map below-KKTP students by `teachingContextId`
+  const belowKktpByContext = new Map<string, Set<string>>();
+  for (const r of allCompletedResults) {
+    if (r.assessment.minimumPassingScore !== null && r.finalScore !== null) {
+      if (Number(r.finalScore) < Number(r.assessment.minimumPassingScore)) {
+        const ctxId = r.assessment.teachingContextId;
+        if (!belowKktpByContext.has(ctxId)) {
+          belowKktpByContext.set(ctxId, new Set());
         }
+        belowKktpByContext.get(ctxId)!.add(r.studentId);
+      }
+    }
+  }
+
+  // 6. Assemble overviews in memory per context preserving data isolation
+  const overviews: GlobalContextMonitoringOverview[] = contexts.map((ctx) => {
+    const rosterKey = `${ctx.classId}:${ctx.academicPeriodId}`;
+    const currentStudentSet = rosterMap.get(rosterKey) || new Set<string>();
+    const currentStudentCount = currentStudentSet.size;
+
+    if (currentStudentCount === 0) {
+      return {
+        teachingContextId: ctx.id,
+        className: ctx.class.name,
+        subjectName: ctx.subject.name,
+        academicYear: ctx.academicPeriod.year,
+        semester: ctx.academicPeriod.semester,
+        currentStudentCount: 0,
+        studentsWithOpenFollowUp: 0,
+        studentsWithBelowKktp: 0,
+        hasActiveGradePolicy: ctx.gradePolicy?.status === "ACTIVE",
+      };
+    }
+
+    const contextOpenNotes = openNotesByContext.get(ctx.id) || new Set<string>();
+    let studentsWithOpenFollowUp = 0;
+    for (const studentId of contextOpenNotes) {
+      if (currentStudentSet.has(studentId)) {
+        studentsWithOpenFollowUp++;
       }
     }
 
-    overviews.push({
+    const contextBelowKktp = belowKktpByContext.get(ctx.id) || new Set<string>();
+    let studentsWithBelowKktp = 0;
+    for (const studentId of contextBelowKktp) {
+      if (currentStudentSet.has(studentId)) {
+        studentsWithBelowKktp++;
+      }
+    }
+
+    return {
       teachingContextId: ctx.id,
       className: ctx.class.name,
       subjectName: ctx.subject.name,
@@ -481,10 +519,10 @@ export async function getGlobalMonitoringOverview(): Promise<GlobalContextMonito
       semester: ctx.academicPeriod.semester,
       currentStudentCount,
       studentsWithOpenFollowUp,
-      studentsWithBelowKktp: belowKktpStudentIds.size,
+      studentsWithBelowKktp,
       hasActiveGradePolicy: ctx.gradePolicy?.status === "ACTIVE",
-    });
-  }
+    };
+  });
 
   return overviews;
 }

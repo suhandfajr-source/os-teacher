@@ -59,11 +59,18 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
       VALUES ($1, 'SMP Test BottomNav', 'smp test bottomnav', NOW(), NOW())
     `, [schoolId]);
 
+    const teacherProfileId = `tp_${userId}`;
     await client.query(`
       INSERT INTO teacher_profile (id, "userId", "preferredName", "onboardingCompleted", "activeSchoolId") 
       VALUES ($1, $2, 'Guru Penguji', true, $3)
       ON CONFLICT ("userId") DO UPDATE SET "onboardingCompleted" = true, "activeSchoolId" = $3
-    `, [`tp_${userId}`, userId, schoolId]);
+    `, [teacherProfileId, userId, schoolId]);
+
+    await client.query(`
+      INSERT INTO teacher_school_membership (id, "teacherProfileId", "schoolId", status, "workspaceRole", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, 'ACTIVE', 'OWNER', NOW(), NOW())
+      ON CONFLICT ("teacherProfileId", "schoolId") DO UPDATE SET status = 'ACTIVE'
+    `, [`tsm_${userId}`, teacherProfileId, schoolId]);
     await client.end();
 
     // 2. Set mobile viewport (~390px)
@@ -71,7 +78,7 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
 
     // 3. Navigate to authenticated dashboard route where BottomNav is rendered
     await page.goto('/');
-    await expect(page).toHaveURL('http://localhost:3005/');
+    await expect(page).toHaveURL('http://localhost:3002/');
 
     // 4. Locate actual BottomNav in the rendered DOM
     const bottomNav = page.locator('nav.md\\:hidden').first();
