@@ -195,8 +195,21 @@ export async function validateHistoricalAssessmentsAction(
 }
 
 // ============================================================================
-// 4. EXECUTE IMPORT ACTIONS
+// 4. EXECUTE IMPORT ACTIONS (WITH SAFE POST-COMMIT REVALIDATION)
 // ============================================================================
+
+function safeRevalidatePaths(paths: string[]) {
+  for (const p of paths) {
+    try {
+      revalidatePath(p);
+    } catch (err) {
+      console.warn(
+        `[SafeRevalidation] Non-blocking post-commit cache invalidation failed for path '${p}':`,
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+  }
+}
 
 export async function executeRosterImportAction(
   teachingContextId: string,
@@ -214,9 +227,12 @@ export async function executeRosterImportAction(
     token
   );
 
-  revalidatePath(`/kelas`);
-  revalidatePath(`/kelas/${teachingContextId}`);
-  revalidatePath(`/siswa`);
+  safeRevalidatePaths([
+    `/kelas`,
+    `/kelas/${teachingContextId}`,
+    `/siswa`,
+  ]);
+
   return result;
 }
 
@@ -236,9 +252,12 @@ export async function executeHistoricalSessionsImportAction(
     token
   );
 
-  revalidatePath(`/kelas/${teachingContextId}`);
-  revalidatePath(`/kelas/${teachingContextId}/pertemuan`);
-  revalidatePath(`/hari-ini`);
+  safeRevalidatePaths([
+    `/kelas/${teachingContextId}`,
+    `/kelas/${teachingContextId}/pertemuan`,
+    `/hari-ini`,
+  ]);
+
   return result;
 }
 
@@ -258,10 +277,13 @@ export async function executeHistoricalAttendanceImportAction(
     token
   );
 
-  revalidatePath(`/kelas/${teachingContextId}`);
-  revalidatePath(`/kelas/${teachingContextId}/pertemuan`);
-  revalidatePath(`/kelas/${teachingContextId}/absensi`);
-  revalidatePath(`/laporan`);
+  safeRevalidatePaths([
+    `/kelas/${teachingContextId}`,
+    `/kelas/${teachingContextId}/pertemuan`,
+    `/kelas/${teachingContextId}/absensi`,
+    `/laporan`,
+  ]);
+
   return result;
 }
 
@@ -281,9 +303,13 @@ export async function executeHistoricalAssessmentsImportAction(
     token
   );
 
-  revalidatePath(`/kelas/${teachingContextId}`);
-  revalidatePath(`/kelas/${teachingContextId}/penilaian`);
-  revalidatePath(`/assessment`);
-  revalidatePath(`/laporan`);
+  safeRevalidatePaths([
+    `/kelas/${teachingContextId}`,
+    `/kelas/${teachingContextId}/penilaian`,
+    `/assessment`,
+    `/laporan`,
+  ]);
+
   return result;
 }
+
