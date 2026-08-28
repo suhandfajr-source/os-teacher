@@ -79,7 +79,12 @@ export default function ImportSiswaFlow({ teachingContextId }: { teachingContext
       setToken(res.token);
       setStep(2);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Terjadi kesalahan saat validasi file.");
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("#441") || msg.includes("Minified React error") || !msg) {
+        setError("Terjadi kendala saat memvalidasi file. Silakan periksa kembali format spreadsheet Anda.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -105,7 +110,12 @@ export default function ImportSiswaFlow({ teachingContextId }: { teachingContext
       router.push(`/kelas/${teachingContextId}`);
       router.refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Terjadi kesalahan saat import.");
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("#441") || msg.includes("Minified React error") || !msg) {
+        setError("Sesi validasi telah kedaluwarsa atau terjadi kendala saat menyimpan. Silakan unggah ulang file Anda.");
+      } else {
+        setError(msg);
+      }
       setLoading(false);
     }
   };

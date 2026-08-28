@@ -8,9 +8,20 @@ export const MAX_CELL_STRING_LENGTH = 1000;
 
 /**
  * Computes deterministic SHA-256 hash of normalized preview/confirmation rows.
+ * Automatically ignores transient client-side state (e.g. userChoice) so that preview integrity is preserved.
  */
 export function computePayloadHash(rows: unknown[]): string {
-  const jsonStr = JSON.stringify(rows);
+  const normalized = Array.isArray(rows)
+    ? rows.map((r: unknown) => {
+        if (r && typeof r === "object") {
+          const rowObj = { ...(r as Record<string, unknown>) };
+          delete rowObj.userChoice;
+          return rowObj;
+        }
+        return r;
+      })
+    : rows;
+  const jsonStr = JSON.stringify(normalized);
   return crypto.createHash("sha256").update(jsonStr).digest("hex");
 }
 
