@@ -446,6 +446,9 @@ export async function executeRosterImport(
         });
       }
     }
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
   });
 
   return {
@@ -621,6 +624,9 @@ export async function executeHistoricalSessionsImport(
       "HISTORICAL_SESSION",
       rows
     );
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
   });
 
   return {
@@ -1055,6 +1061,9 @@ export async function executeHistoricalAttendanceImport(
         importedCount++;
       }
     }
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
   });
 
   return {
@@ -1565,6 +1574,9 @@ export async function executeHistoricalAssessmentsImport(
         }
       }
     }
+  }, {
+    maxWait: 15000,
+    timeout: 30000,
   });
 
   return {
