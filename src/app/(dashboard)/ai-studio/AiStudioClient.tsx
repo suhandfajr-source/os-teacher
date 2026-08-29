@@ -39,8 +39,12 @@ import {
   Sliders,
   History,
   Lock,
+  Download,
+  FileSpreadsheet,
+  Presentation,
 } from "lucide-react";
 import { toast } from "sonner";
+import { exportAiDocument, ExportFormat } from "@/lib/export";
 
 interface TeachingContextOption {
   id: string;
@@ -238,6 +242,36 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
       // Refresh saved drafts list in background
       refreshDrafts();
     });
+  };
+
+  const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
+
+  const handleDownloadDocument = async (format: ExportFormat, customTitle?: string, customContent?: string, customSubject?: string) => {
+    const contentToExport = customContent || draftContent;
+    const titleToExport = customTitle || draftTitle || "Dokumen Pembelajaran";
+    const subjectToExport = customSubject || activePreviewInfo?.contextSummary.subjectName;
+
+    if (!contentToExport.trim()) {
+      toast.error("Tidak ada konten untuk diunduh");
+      return;
+    }
+
+    setIsExporting(format);
+    try {
+      await exportAiDocument({
+        format,
+        title: titleToExport,
+        content: contentToExport,
+        subjectName: subjectToExport,
+        schoolName: "AI Teacher Assistant",
+      });
+      toast.success(`Berhasil mengunduh dokumen .${format.toUpperCase()}!`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal mengunduh dokumen";
+      toast.error(msg);
+    } finally {
+      setIsExporting(null);
+    }
   };
 
   const handleArchiveDraft = (draftIdToArchive?: string) => {
@@ -441,47 +475,99 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResetEditor}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-1.5" />
-                    Buat Draf Baru
-                  </Button>
-
-                  {draftStatus === "ACTIVE" && (
-                    <>
-                      {currentDraftId && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={isArchiving}
-                          onClick={() => handleArchiveDraft()}
-                          className="text-destructive hover:bg-destructive/10"
-                        >
-                          <Archive className="h-4 w-4 mr-1.5" />
-                          Arsipkan
-                        </Button>
-                      )}
-
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Multi-Format Export Group */}
+                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border">
                       <Button
                         type="button"
-                        variant="default"
+                        variant="ghost"
                         size="sm"
-                        disabled={isSaving}
-                        onClick={handleSaveDraft}
-                        className="bg-primary hover:bg-primary/90"
+                        disabled={!!isExporting || !draftContent}
+                        onClick={() => handleDownloadDocument("docx")}
+                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                        title="Unduh sebagai Dokumen Word (.docx)"
                       >
-                        <Save className="h-4 w-4 mr-1.5" />
-                        {isSaving ? "Menyimpan..." : currentDraftId ? "Simpan Perubahan" : "Simpan Draf"}
+                        {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
+                        Word
                       </Button>
-                    </>
-                  )}
-                </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={!!isExporting || !draftContent}
+                        onClick={() => handleDownloadDocument("pdf")}
+                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                        title="Unduh sebagai Dokumen PDF (.pdf)"
+                      >
+                        {isExporting === "pdf" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-red-600" />}
+                        PDF
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={!!isExporting || !draftContent}
+                        onClick={() => handleDownloadDocument("pptx")}
+                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                        title="Unduh sebagai Slide PowerPoint (.pptx)"
+                      >
+                        {isExporting === "pptx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Presentation className="h-3.5 w-3.5 text-orange-600" />}
+                        PPT
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={!!isExporting || !draftContent}
+                        onClick={() => handleDownloadDocument("xlsx")}
+                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                        title="Unduh sebagai Spreadsheet Excel (.xlsx)"
+                      >
+                        {isExporting === "xlsx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />}
+                        Excel
+                      </Button>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetEditor}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1.5" />
+                      Buat Draf Baru
+                    </Button>
+
+                    {draftStatus === "ACTIVE" && (
+                      <>
+                        {currentDraftId && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isArchiving}
+                            onClick={() => handleArchiveDraft()}
+                            className="text-destructive hover:bg-destructive/10"
+                          >
+                            <Archive className="h-4 w-4 mr-1.5" />
+                            Arsipkan
+                          </Button>
+                        )}
+
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          disabled={isSaving}
+                          onClick={handleSaveDraft}
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          <Save className="h-4 w-4 mr-1.5" />
+                          {isSaving ? "Menyimpan..." : currentDraftId ? "Simpan Perubahan" : "Simpan Draf"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
               </div>
 
               {/* Title & Content Editor */}
@@ -1041,9 +1127,56 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t">
-                      <span>Diperbarui: {new Date(draft.updatedAt).toLocaleDateString("id-ID")}</span>
-                      <div className="flex items-center gap-1.5">
+                    {/* Quick export bar for draft card */}
+                    <div className="flex items-center justify-between gap-1 pt-2 border-t">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadDocument("docx", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          className="h-6 px-1.5 text-[10px] text-blue-600 hover:bg-blue-50"
+                          title="Download Word"
+                        >
+                          <FileText className="h-3 w-3 mr-0.5" />
+                          Word
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadDocument("pdf", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          className="h-6 px-1.5 text-[10px] text-red-600 hover:bg-red-50"
+                          title="Download PDF"
+                        >
+                          <FileText className="h-3 w-3 mr-0.5" />
+                          PDF
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadDocument("pptx", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          className="h-6 px-1.5 text-[10px] text-orange-600 hover:bg-orange-50"
+                          title="Download PPT"
+                        >
+                          <Presentation className="h-3 w-3 mr-0.5" />
+                          PPT
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadDocument("xlsx", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          className="h-6 px-1.5 text-[10px] text-emerald-600 hover:bg-emerald-50"
+                          title="Download Excel"
+                        >
+                          <FileSpreadsheet className="h-3 w-3 mr-0.5" />
+                          Excel
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-1">
                         {draft.status === "ACTIVE" && (
                           <Button
                             type="button"
@@ -1053,7 +1186,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                             className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
                           >
                             <Archive className="h-3.5 w-3.5 mr-1" />
-                            Arsipkan
+                            Arsip
                           </Button>
                         )}
                         <Button
@@ -1064,7 +1197,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           className="h-7 px-2.5 text-xs font-semibold"
                         >
                           <Eye className="h-3.5 w-3.5 mr-1" />
-                          {draft.status === "ACTIVE" ? "Buka & Edit" : "Buka & Lihat"}
+                          {draft.status === "ACTIVE" ? "Buka & Edit" : "Lihat"}
                         </Button>
                       </div>
                     </div>
