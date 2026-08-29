@@ -5,9 +5,10 @@ import { prisma } from "@/lib/auth";
 import { getParentAuthorizedContexts } from "@/modules/parent/parent.service";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, GraduationCap, ArrowRight, HeartHandshake } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default async function ParentHomePage() {
   const session = await auth.api.getSession({
@@ -105,12 +106,13 @@ export default async function ParentHomePage() {
                 <CardFooter className="pt-0 border-t border-slate-100 mt-auto pt-3">
                   <Link
                     href={`/parent/anak/${ctx.studentId}/konteks/${ctx.teachingContextId}`}
-                    className="w-full"
+                    className={cn(
+                      buttonVariants({ variant: "default" }),
+                      "w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center justify-center gap-1.5"
+                    )}
                   >
-                    <Button variant="default" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center justify-center gap-1.5">
-                      Lihat Pembelajaran
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
+                    Lihat Pembelajaran
+                    <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </CardFooter>
               </Card>

@@ -15,33 +15,37 @@ export default async function HariIniPage() {
 
   if (!activeSchoolId) redirect("/onboarding");
 
-  const teachingContexts = await prisma.teachingContext.findMany({
-    where: {
-      teacherProfileId: profile.id,
-      schoolId: activeSchoolId,
-    },
-    include: {
-      academicPeriod: true,
-      subject: true,
-      class: true,
-    },
-  });
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todaySessions = await prisma.teachingSession.findMany({
-    where: {
-      teachingContextId: { in: teachingContexts.map((tc) => tc.id) },
-      date: { gte: today },
-    },
-    include: {
-      teachingContext: {
-        include: { subject: true, class: true },
+  const [teachingContexts, todaySessions] = await Promise.all([
+    prisma.teachingContext.findMany({
+      where: {
+        teacherProfileId: profile.id,
+        schoolId: activeSchoolId,
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      include: {
+        academicPeriod: true,
+        subject: true,
+        class: true,
+      },
+    }),
+    prisma.teachingSession.findMany({
+      where: {
+        teachingContext: {
+          teacherProfileId: profile.id,
+          schoolId: activeSchoolId,
+        },
+        date: { gte: today },
+      },
+      include: {
+        teachingContext: {
+          include: { subject: true, class: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

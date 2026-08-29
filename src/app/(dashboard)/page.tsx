@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { prisma } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { BookOpen, Users, Calendar, Sparkles, ArrowRight, Settings } from 'lucide-react';
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
+import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
   let authContext = null;
@@ -138,11 +139,12 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
-            <Link href="/hari-ini">
-              <Button className="w-full sm:w-auto">
-                Buka Menu Hari Ini
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+            <Link
+              href="/hari-ini"
+              className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
+            >
+              Buka Menu Hari Ini
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </CardContent>
         </Card>
@@ -158,11 +160,15 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
-            <Link href="/ai-studio">
-              <Button variant="outline" className="w-full sm:w-auto text-purple-700 border-purple-200 hover:bg-purple-50">
-                Buka AI Studio
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+            <Link
+              href="/ai-studio"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "w-full sm:w-auto text-purple-700 border-purple-200 hover:bg-purple-50"
+              )}
+            >
+              Buka AI Studio
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </CardContent>
         </Card>
@@ -178,11 +184,12 @@ export default async function DashboardPage() {
           {teachingContexts.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground space-y-3">
               <p>Belum ada kelas atau mata pelajaran yang diatur.</p>
-              <Link href="/pengaturan/setup">
-                <Button variant="outline">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Atur Kelas di Pengaturan
-                </Button>
+              <Link
+                href="/pengaturan/setup"
+                className={cn(buttonVariants({ variant: "outline" }))}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Atur Kelas di Pengaturan
               </Link>
             </div>
           ) : (

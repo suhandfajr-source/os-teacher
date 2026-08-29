@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { acceptParentInvitationAction } from "@/modules/parent/parent.actions";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { HeartHandshake, CheckCircle2, AlertTriangle, ShieldCheck, UserCheck, ArrowRight } from "lucide-react";
 import { AuthenticatedInvitationDetail, PublicInvitationInfo } from "@/modules/parent/parent.types";
+import { cn } from "@/lib/utils";
 
 interface Props {
   token: string;
@@ -46,8 +47,8 @@ export function InvitationAcceptClient({
             <CardDescription>{errorMessage || publicInfo?.message || "Tautan undangan tidak valid atau telah kedaluwarsa."}</CardDescription>
           </CardHeader>
           <CardFooter className="flex justify-center pt-2">
-            <Link href="/parent">
-              <Button variant="outline">Kembali ke Portal Orang Tua</Button>
+            <Link href="/parent" className={cn(buttonVariants({ variant: "outline" }))}>
+              Kembali ke Portal Orang Tua
             </Link>
           </CardFooter>
         </Card>
@@ -83,16 +84,21 @@ export function InvitationAcceptClient({
             </p>
           </CardContent>
           <CardFooter className="flex flex-col gap-2.5 pt-2">
-            <Link href={`/parent/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="w-full">
-              <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2">
-                Masuk ke Akun Orang Tua
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+            <Link
+              href={`/parent/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className={cn(
+                buttonVariants({ variant: "default" }),
+                "w-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2"
+              )}
+            >
+              Masuk ke Akun Orang Tua
+              <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href={`/parent/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="w-full">
-              <Button variant="outline" className="w-full border-slate-300">
-                Daftar Akun Baru
-              </Button>
+            <Link
+              href={`/parent/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className={cn(buttonVariants({ variant: "outline" }), "w-full border-slate-300")}
+            >
+              Daftar Akun Baru
             </Link>
           </CardFooter>
         </Card>
@@ -125,8 +131,8 @@ export function InvitationAcceptClient({
             </Alert>
           </CardContent>
           <CardFooter className="flex justify-center pt-2">
-            <Link href="/parent">
-              <Button variant="outline">Kembali ke Beranda</Button>
+            <Link href="/parent" className={cn(buttonVariants({ variant: "outline" }))}>
+              Kembali ke Beranda
             </Link>
           </CardFooter>
         </Card>
@@ -207,10 +213,11 @@ export function InvitationAcceptClient({
             <UserCheck className="h-4 w-4" />
             {isAccepting ? "Menghubungkan Akun..." : "Terima Undangan & Buka Portal"}
           </Button>
-          <Link href="/parent" className="w-full sm:w-auto">
-            <Button variant="ghost" className="w-full">
-              Batal
-            </Button>
+          <Link
+            href="/parent"
+            className={cn(buttonVariants({ variant: "ghost" }), "w-full sm:w-auto text-center")}
+          >
+            Batal
           </Link>
         </CardFooter>
       </Card>

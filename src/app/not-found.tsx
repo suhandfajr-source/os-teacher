@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { FileQuestion } from 'lucide-react';
 
 export default function NotFound() {
@@ -12,9 +12,9 @@ export default function NotFound() {
       <p className="text-muted-foreground max-w-[500px]">
         Maaf, halaman yang Anda cari tidak tersedia atau mungkin masih dalam tahap pengembangan.
       </p>
-      <Button className="mt-4">
-        <Link href="/">Kembali ke Beranda</Link>
-      </Button>
+      <Link href="/" className={buttonVariants({ className: "mt-4" })}>
+        Kembali ke Beranda
+      </Link>
     </div>
   );
 }

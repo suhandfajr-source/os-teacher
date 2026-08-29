@@ -5,7 +5,7 @@ import { getParentContextDetail } from "@/modules/parent/parent.service";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   ArrowLeft,
   Calendar,
@@ -49,8 +49,8 @@ export default async function ParentChildContextPage({ params }: PageProps) {
             <CardDescription>{message}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Link href="/parent">
-              <Button variant="outline">Kembali ke Beranda</Button>
+            <Link href="/parent" className={buttonVariants({ variant: "outline" })}>
+              Kembali ke Beranda
             </Link>
           </CardContent>
         </Card>

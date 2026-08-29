@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Plus, BarChart3, ListOrdered, CheckCircle2, AlertCircle, FileText, ArrowRight } from "lucide-react";
@@ -87,16 +88,18 @@ export default function PenilaianClient({
         </div>
 
         <div className="flex gap-2">
-          <Link href={`/kelas/${teachingContextId}/pengaturan-nilai`}>
-            <Button variant="outline" size="sm">
-              Pengaturan Bobot
-            </Button>
+          <Link
+            href={`/kelas/${teachingContextId}/pengaturan-nilai`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            Pengaturan Bobot
           </Link>
-          <Link href={`/assessment/new?teachingContextId=${teachingContextId}`}>
-            <Button size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              + Buat Penilaian Baru
-            </Button>
+          <Link
+            href={`/assessment/new?teachingContextId=${teachingContextId}`}
+            className={cn(buttonVariants({ size: "sm" }))}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            + Buat Penilaian Baru
           </Link>
         </div>
       </div>
@@ -143,11 +146,12 @@ export default function PenilaianClient({
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
                   Buat penilaian baru untuk mulai mencatat skor siswa pada tugas, ulangan harian, UTS, atau UAS.
                 </p>
-                <Link href={`/assessment/new?teachingContextId=${teachingContextId}`}>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Buat Penilaian Pertama
-                  </Button>
+                <Link
+                  href={`/assessment/new?teachingContextId=${teachingContextId}`}
+                  className={cn(buttonVariants({ variant: "default" }))}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Buat Penilaian Pertama
                 </Link>
               </CardContent>
             </Card>
@@ -158,6 +162,7 @@ export default function PenilaianClient({
                   <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-1.5 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-base text-foreground">{a.title}</span>
                         <Badge variant="outline">{a.typeName}</Badge>
                         {a.status === "COMPLETED" && (
                           <Badge className="bg-green-600 hover:bg-green-700">Selesai (COMPLETED)</Badge>
@@ -173,50 +178,36 @@ export default function PenilaianClient({
                           </Badge>
                         )}
                       </div>
-                      <h3 className="text-lg font-bold">
-                        <Link href={`/assessment/${a.id}`} className="hover:underline text-primary">
-                          {a.title}
-                        </Link>
-                      </h3>
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
-                        <span>Tanggal: {format(new Date(a.date), "dd MMMM yyyy", { locale: localeId })}</span>
-                        <span>Skor Maks: {Number(a.maxScore)}</span>
-                        {a.minimumPassingScore !== null && (
-                          <span>KKTP: {Number(a.minimumPassingScore)}</span>
-                        )}
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Tanggal: {format(new Date(a.date), "dd MMMM yyyy", { locale: localeId })} • Maks: {Number(a.maxScore)}
+                        {a.minimumPassingScore && ` • KKM: ${Number(a.minimumPassingScore)}`}
+                      </p>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="flex flex-wrap md:flex-nowrap items-center gap-4 text-xs border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-5">
-                      <div className="text-center min-w-[70px]">
-                        <div className="text-muted-foreground">Dinilai</div>
-                        <div className="font-semibold text-sm">
-                          {a.stats.gradedCount} / {a.stats.totalParticipants}
-                        </div>
-                      </div>
-
-                      <div className="text-center min-w-[70px]">
-                        <div className="text-muted-foreground">Rata-rata</div>
-                        <div className="font-semibold text-sm">
-                          {a.stats.averageScore ? Number(a.stats.averageScore).toFixed(1) : "—"}
-                        </div>
-                      </div>
-
-                      {a.minimumPassingScore !== null && (
-                        <div className="text-center min-w-[80px]">
-                          <div className="text-muted-foreground">Ketuntasan</div>
-                          <div className="font-semibold text-sm text-green-600">
+                    <div className="flex items-center gap-6">
+                      {a.stats && (
+                        <div className="flex gap-4 text-xs text-muted-foreground border-l pl-4 hidden sm:flex">
+                          <div>
+                            <span className="font-semibold text-foreground">{a.stats.gradedCount}</span>/{a.stats.totalParticipants} Dinilai
+                          </div>
+                          <div>
+                            Rata-rata: <span className="font-semibold text-foreground">
+                              {a.stats.averageScore ? Number(a.stats.averageScore).toFixed(1) : "—"}
+                            </span>
+                          </div>
+                          <div>
+                            Ketuntasan:{" "}
                             {a.stats.masteryPercentage ? `${Number(a.stats.masteryPercentage).toFixed(0)}%` : "—"}
                           </div>
                         </div>
                       )}
 
-                      <Link href={`/assessment/${a.id}`}>
-                        <Button variant="outline" size="sm">
-                          Buka Penilaian
-                          <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                        </Button>
+                      <Link
+                        href={`/assessment/${a.id}`}
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                      >
+                        Buka Penilaian
+                        <ArrowRight className="w-3.5 h-3.5 ml-1" />
                       </Link>
                     </div>
                   </CardContent>
@@ -238,10 +229,11 @@ export default function PenilaianClient({
                 <p className="text-sm text-muted-foreground max-w-lg mx-auto">
                   Untuk melihat perhitungan rekapitulasi performa berjalan siswa secara otomatis, atur dan aktifkan konfigurasi bobot nilai (total tepat 100.00%).
                 </p>
-                <Link href={`/kelas/${teachingContextId}/pengaturan-nilai`}>
-                  <Button className="mt-2 font-semibold">
-                    Buka Pengaturan Bobot Nilai
-                  </Button>
+                <Link
+                  href={`/kelas/${teachingContextId}/pengaturan-nilai`}
+                  className={cn(buttonVariants({ variant: "default" }), "mt-2 font-semibold")}
+                >
+                  Buka Pengaturan Bobot Nilai
                 </Link>
               </CardContent>
             </Card>

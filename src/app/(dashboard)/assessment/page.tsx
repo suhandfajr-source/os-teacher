@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getAssessmentDashboardData } from "@/modules/assessment/assessment.actions";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Plus, FileText, ArrowRight, CheckCircle2, Clock } from "lucide-react";
@@ -36,11 +37,12 @@ export default async function AssessmentDashboardPage() {
           </p>
         </div>
 
-        <Link href="/assessment/new">
-          <Button size="lg" className="font-semibold shadow-sm">
-            <Plus className="w-4 h-4 mr-2" />
-            + Buat Penilaian Baru
-          </Button>
+        <Link
+          href="/assessment/new"
+          className={cn(buttonVariants({ size: "lg" }), "font-semibold shadow-sm")}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          + Buat Penilaian Baru
         </Link>
       </div>
 
@@ -53,11 +55,12 @@ export default async function AssessmentDashboardPage() {
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
               Buat penilaian baru untuk mulai mencatat skor siswa, menganalisis ketuntasan KKTP, dan mendokumentasikan remedial.
             </p>
-            <Link href="/assessment/new">
-              <Button size="lg">
-                <Plus className="w-4 h-4 mr-2" />
-                Buat Penilaian Sekarang
-              </Button>
+            <Link
+              href="/assessment/new"
+              className={cn(buttonVariants({ size: "lg" }))}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Buat Penilaian Sekarang
             </Link>
           </CardContent>
         </Card>
@@ -130,11 +133,12 @@ export default async function AssessmentDashboardPage() {
                     </div>
                   )}
 
-                  <Link href={`/assessment/${a.id}`}>
-                    <Button variant="default" size="sm" className="font-medium">
-                      Buka Lembar Nilai
-                      <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                    </Button>
+                  <Link
+                    href={`/assessment/${a.id}`}
+                    className={cn(buttonVariants({ variant: "default", size: "sm" }), "font-medium")}
+                  >
+                    Buka Lembar Nilai
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                   </Link>
                 </div>
               </CardContent>
