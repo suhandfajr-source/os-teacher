@@ -4,21 +4,17 @@ import {
   Home, 
   Calendar, 
   Users, 
-  CheckSquare, 
   UserCircle, 
   Sparkles, 
   BarChart, 
   GraduationCap, 
-  Settings,
-  UserCheck
+  Settings
 } from 'lucide-react';
 
 const mainNavItems = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/hari-ini', label: 'Hari Ini', icon: Calendar },
   { href: '/kelas', label: 'Kelas Saya', icon: Users },
-  { href: '/assessment', label: 'Penilaian', icon: CheckSquare },
-  { href: '/monitoring', label: 'Monitoring Siswa', icon: UserCheck },
   { href: '/siswa', label: 'Daftar Siswa', icon: UserCircle },
   { href: '/ai-studio', label: 'AI Studio', icon: Sparkles },
   { href: '/laporan', label: 'Laporan', icon: BarChart },
