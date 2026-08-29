@@ -167,4 +167,31 @@ test.describe('Stage 06: AI Content Studio E2E & Business Invariant Tests', () =
     // Teacher input topic is preserved and not lost
     expect(teacherInputTopic).toBe('Hukum Termodinamika');
   });
+
+  test('7. AI Studio PPTX Automatic Generator Invariant & Layout Pipeline', async () => {
+    const { parseMarkdownForPpt } = await import('../src/lib/export/ppt/ppt-parser');
+    const { resolvePresentationLayout } = await import('../src/lib/export/ppt/ppt-layout-resolver');
+
+    const sampleMarkdown = `# Modul Ajar Biologi\n\n## Tujuan Pembelajaran\n- Memahami struktur sel prokariotik dan eukariotik\n\n## Materi Inti\n- Dinding sel memberikan perlindungan mekanis\n- Membran plasma mengatur transport zat\n- Sitoplasma tempat metabolisme berlangsung\n\n## Kuis\n- Sebutkan fungsi utama kloroplas pada sel tumbuhan!`;
+
+    const parsed = parseMarkdownForPpt(sampleMarkdown, 'Modul Ajar Biologi');
+    expect(parsed.documentTitle).toBe('Modul Ajar Biologi');
+    expect(parsed.sections).toHaveLength(3);
+
+    const model = resolvePresentationLayout(parsed, {
+      title: 'Modul Ajar Biologi',
+      schoolName: 'SMA Negeri 1',
+      subjectName: 'Biologi',
+      teacherName: 'Guru Biologi',
+      className: 'XI IPA 1',
+      dateFormatted: '29 Agustus 2026',
+    });
+
+    expect(model.slides.length).toBe(4); // Cover, Objectives, Content, Quiz
+    expect(model.slides[0].type).toBe('COVER');
+    expect(model.slides[1].type).toBe('OBJECTIVES');
+    expect(model.slides[2].type).toBe('CONTENT');
+    expect(model.slides[3].type).toBe('REFLECTION_OR_QUIZ');
+  });
 });
+

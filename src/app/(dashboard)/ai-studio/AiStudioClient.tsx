@@ -245,10 +245,29 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
 
   const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
 
-  const handleDownloadDocument = async (format: ExportFormat, customTitle?: string, customContent?: string, customSubject?: string) => {
+  const handleDownloadDocument = async (
+    format: ExportFormat,
+    customTitle?: string,
+    customContent?: string,
+    customSubject?: string,
+    customSchool?: string,
+    customClass?: string
+  ) => {
+    if (isExporting) return; // Prevent double invocation
+
     const contentToExport = customContent || draftContent;
     const titleToExport = customTitle || draftTitle || "Dokumen Pembelajaran";
-    const subjectToExport = customSubject || activePreviewInfo?.contextSummary.subjectName;
+    const subjectToExport =
+      customSubject ||
+      activePreviewInfo?.contextSummary.subjectName ||
+      selectedContext?.subjectName;
+    const schoolToExport =
+      customSchool ||
+      "AI Teacher Assistant";
+    const classToExport =
+      customClass ||
+      activePreviewInfo?.contextSummary.className ||
+      selectedContext?.className;
 
     if (!contentToExport.trim()) {
       toast.error("Tidak ada konten untuk diunduh");
@@ -262,11 +281,12 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
         title: titleToExport,
         content: contentToExport,
         subjectName: subjectToExport,
-        schoolName: "AI Teacher Assistant",
+        schoolName: schoolToExport,
+        className: classToExport,
       });
       toast.success(`Berhasil mengunduh dokumen .${format.toUpperCase()}!`);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal mengunduh dokumen";
+      const msg = err instanceof Error ? err.message : "Gagal menyusun dan mengunduh dokumen";
       toast.error(msg);
     } finally {
       setIsExporting(null);
@@ -1133,7 +1153,17 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDownloadDocument("docx", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          disabled={!!isExporting}
+                          onClick={() =>
+                            handleDownloadDocument(
+                              "docx",
+                              draft.title,
+                              draft.content,
+                              draft.teachingContext?.subject.name,
+                              undefined,
+                              draft.teachingContext?.class.name
+                            )
+                          }
                           className="h-6 px-1.5 text-[10px] text-blue-600 hover:bg-blue-50"
                           title="Download Word"
                         >
@@ -1144,7 +1174,17 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDownloadDocument("pdf", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          disabled={!!isExporting}
+                          onClick={() =>
+                            handleDownloadDocument(
+                              "pdf",
+                              draft.title,
+                              draft.content,
+                              draft.teachingContext?.subject.name,
+                              undefined,
+                              draft.teachingContext?.class.name
+                            )
+                          }
                           className="h-6 px-1.5 text-[10px] text-red-600 hover:bg-red-50"
                           title="Download PDF"
                         >
@@ -1155,7 +1195,17 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDownloadDocument("pptx", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          disabled={!!isExporting}
+                          onClick={() =>
+                            handleDownloadDocument(
+                              "pptx",
+                              draft.title,
+                              draft.content,
+                              draft.teachingContext?.subject.name,
+                              undefined,
+                              draft.teachingContext?.class.name
+                            )
+                          }
                           className="h-6 px-1.5 text-[10px] text-orange-600 hover:bg-orange-50"
                           title="Download PPT"
                         >
@@ -1166,7 +1216,17 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDownloadDocument("xlsx", draft.title, draft.content, draft.teachingContext?.subject.name)}
+                          disabled={!!isExporting}
+                          onClick={() =>
+                            handleDownloadDocument(
+                              "xlsx",
+                              draft.title,
+                              draft.content,
+                              draft.teachingContext?.subject.name,
+                              undefined,
+                              draft.teachingContext?.class.name
+                            )
+                          }
                           className="h-6 px-1.5 text-[10px] text-emerald-600 hover:bg-emerald-50"
                           title="Download Excel"
                         >

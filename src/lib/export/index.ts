@@ -12,6 +12,7 @@ export interface UnifiedExportOptions {
   schoolName?: string;
   subjectName?: string;
   teacherName?: string;
+  className?: string;
   dateStr?: string;
 }
 
@@ -19,7 +20,7 @@ export interface UnifiedExportOptions {
  * Single unified helper to trigger instant download in Word, PDF, PPT, or Excel
  */
 export async function exportAiDocument(options: UnifiedExportOptions): Promise<void> {
-  const { format, title, content, schoolName, subjectName, teacherName, dateStr } = options;
+  const { format, title, content, schoolName, subjectName, teacherName, className, dateStr } = options;
 
   switch (format) {
     case "docx": {
@@ -41,6 +42,8 @@ export async function exportAiDocument(options: UnifiedExportOptions): Promise<v
         schoolName,
         subjectName,
         teacherName,
+        className,
+        dateStr,
       });
       break;
     }
