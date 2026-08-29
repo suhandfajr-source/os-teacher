@@ -39,7 +39,6 @@ import {
   Sliders,
   History,
   Lock,
-  Download,
   FileSpreadsheet,
   Presentation,
 } from "lucide-react";

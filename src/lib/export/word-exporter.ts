@@ -5,7 +5,6 @@ import {
   TextRun,
   HeadingLevel,
   AlignmentType,
-  BorderStyle,
   Table,
   TableRow,
   TableCell,

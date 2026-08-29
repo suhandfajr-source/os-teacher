@@ -1,7 +1,7 @@
-import { exportToWord, ExportDocumentOptions } from "./word-exporter";
-import { exportToPowerPoint, ExportPptOptions } from "./ppt-exporter";
-import { exportToPdf, ExportPdfOptions } from "./pdf-exporter";
-import { exportToExcel, ExportExcelOptions } from "./excel-exporter";
+import { exportToWord } from "./word-exporter";
+import { exportToPowerPoint } from "./ppt-exporter";
+import { exportToPdf } from "./pdf-exporter";
+import { exportToExcel } from "./excel-exporter";
 
 export type ExportFormat = "docx" | "pdf" | "pptx" | "xlsx";
 
@@ -82,3 +82,7 @@ function triggerBlobDownload(blob: Blob, filename: string) {
 }
 
 export { exportToWord, exportToPowerPoint, exportToPdf, exportToExcel };
+export type { ExportDocumentOptions } from "./word-exporter";
+export type { ExportPptOptions } from "./ppt-exporter";
+export type { ExportPdfOptions } from "./pdf-exporter";
+export type { ExportExcelOptions } from "./excel-exporter";

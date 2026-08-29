@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export function NavigationProgressBar() {
@@ -9,17 +9,22 @@ export function NavigationProgressBar() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // When pathname or searchParams change, navigation finished
+  // When pathname or searchParams change, complete and reset progress safely
   useEffect(() => {
     if (loading) {
-      setProgress(100);
+      const frame = requestAnimationFrame(() => {
+        setProgress(100);
+      });
       const timer = setTimeout(() => {
         setLoading(false);
         setProgress(0);
       }, 300);
-      return () => clearTimeout(timer);
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
     }
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, loading]);
 
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {

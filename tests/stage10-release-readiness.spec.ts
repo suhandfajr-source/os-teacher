@@ -92,7 +92,7 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
       { label: 'Beranda', href: '/' },
       { label: 'Hari Ini', href: '/hari-ini' },
       { label: 'Kelas', href: '/kelas' },
-      { label: 'Monitoring', href: '/monitoring' },
+      { label: 'Siswa', href: '/siswa' },
       { label: 'Pengaturan', href: '/pengaturan/setup' },
     ];
 
@@ -107,10 +107,10 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
     await expect(bottomNav.locator('a[href="/more"]')).toHaveCount(0);
     await expect(bottomNav.locator('text=/.*more.*/i')).toHaveCount(0);
 
-    // 8. Verify AI Studio does NOT replace Monitoring in primary BottomNav
+    // 8. Verify AI Studio does NOT replace primary items in BottomNav
     await expect(bottomNav.locator('a[href="/ai-studio"]')).toHaveCount(0);
     const renderedTexts = await navLinks.allInnerTexts();
-    expect(renderedTexts.some(t => t.includes('Monitoring'))).toBe(true);
+    expect(renderedTexts.some(t => t.includes('Siswa'))).toBe(true);
     expect(renderedTexts.some(t => t.includes('AI Studio'))).toBe(false);
 
     // 9. Interactive navigation verification: click link and verify route resolution
@@ -292,5 +292,39 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
     await page.goto('/parent/login');
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
+  });
+
+  test('13. NavigationProgressBar User-Visible Lifecycle & Repeated Navigation Guard', async ({ page }) => {
+    await page.goto('/login');
+
+    // 1. Initial state: progress bar is reset/hidden
+    const progressBar = page.locator('div[aria-hidden="true"] > div.bg-gradient-to-r');
+    expect(await progressBar.count()).toBeLessThanOrEqual(1);
+
+    // 2. Navigation trigger: click internal anchor to register
+    const registerLink = page.locator('a[href="/register"]').first();
+    if (await registerLink.isVisible()) {
+      await registerLink.click();
+      await expect(page).toHaveURL(/.*register.*/);
+      
+      // Progress completes and resets within completion delay window
+      await page.waitForTimeout(400);
+      const activeBar = page.locator('div[aria-hidden="true"] > div.bg-gradient-to-r');
+      if (await activeBar.count() > 0) {
+        await expect(activeBar.first()).toHaveCSS('opacity', '0');
+      }
+
+      // 3. Repeated navigation: navigate back to login
+      const loginLink = page.locator('a[href="/login"]').first();
+      if (await loginLink.isVisible()) {
+        await loginLink.click();
+        await expect(page).toHaveURL(/.*login.*/);
+        await page.waitForTimeout(400);
+        
+        // Ensure no duplicate progress containers left in DOM
+        const containers = page.locator('div[aria-hidden="true"]');
+        expect(await containers.count()).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });
