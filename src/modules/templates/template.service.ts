@@ -27,6 +27,7 @@ export async function listDocumentTemplates(params: {
   teacherProfileId: string;
   schoolId: string;
   contentType?: AiContentType;
+  format?: DocumentTemplateFormat;
 }): Promise<DocumentTemplateItem[]> {
   const templates = await prisma.documentTemplate.findMany({
     where: {
@@ -34,6 +35,7 @@ export async function listDocumentTemplates(params: {
       schoolId: params.schoolId,
       status: EntityStatus.ACTIVE,
       ...(params.contentType ? { contentType: params.contentType } : {}),
+      ...(params.format ? { format: params.format } : {}),
     },
     select: {
       id: true,

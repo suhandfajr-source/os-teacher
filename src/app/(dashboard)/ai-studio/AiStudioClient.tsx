@@ -323,7 +323,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
   }, [contentType]);
 
   const handleExportWithTemplate = async (
-    templateId: string,
+    template: DocumentTemplateItem,
     draftOverride?: {
       id?: string;
       title: string;
@@ -345,10 +345,15 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
       return;
     }
 
-    setIsExporting("docx");
+    const isXlsx = template.format === "XLSX";
+    const formatKey = isXlsx ? "xlsx" : "docx";
+    const endpoint = isXlsx ? "/api/templates/xlsx/export" : "/api/templates/docx/export";
+    const ext = isXlsx ? "xlsx" : "docx";
+
+    setIsExporting(formatKey);
     try {
       const payload = {
-        templateId,
+        templateId: template.id,
         sourceMode: targetDraftId ? ("SAVED_DRAFT" as const) : ("TRANSIENT" as const),
         draftId: targetDraftId || undefined,
         title: targetTitle,
@@ -357,7 +362,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
         teachingContextId: targetContextId || undefined,
       };
 
-      const res = await fetch("/api/templates/docx/export", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -372,13 +377,13 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${targetTitle.replace(/[^\w\s.-]/g, "_")}.docx`;
+      a.download = `${targetTitle.replace(/[^\w\s.-]/g, "_")}.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success("Berhasil mengunduh dokumen dengan template kustom!");
+      toast.success(`Berhasil mengunduh dokumen dengan template kustom ${ext.toUpperCase()}!`);
     } catch (err: unknown) {
       toast.error((err as Error).message);
     } finally {
@@ -603,36 +608,51 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         Word Standar
                       </Button>
 
-                      {/* Custom Template Dropdown / Trigger */}
-                      {availableTemplates.length > 0 ? (
+                      {/* Word Export Button & Custom Templates */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={!!isExporting || !draftContent}
+                        onClick={() => handleDownloadDocument("docx")}
+                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                        title="Unduh sebagai Dokumen Word Standar (.docx)"
+                      >
+                        {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
+                        Word Standar
+                      </Button>
+
+                      {availableTemplates.filter((t) => (t.format || "DOCX") === "DOCX").length > 0 ? (
                         <div className="relative group">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             disabled={!!isExporting || !draftContent}
-                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-indigo-700 bg-indigo-50/50"
-                            title="Pilih Template Word Kustom Sendiri"
+                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/50"
+                            title="Pilih Template Word Kustom"
                           >
-                            <LayoutTemplate className="h-3.5 w-3.5 text-indigo-600" />
-                            Template Saya ({availableTemplates.length})
+                            <LayoutTemplate className="h-3.5 w-3.5 text-blue-600" />
+                            Template Word ({availableTemplates.filter((t) => (t.format || "DOCX") === "DOCX").length})
                           </Button>
                           <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
-                            {availableTemplates.map((t) => (
-                              <button
-                                key={t.id}
-                                type="button"
-                                onClick={() => handleExportWithTemplate(t.id)}
-                                className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg font-medium transition-all"
-                              >
-                                {t.name}
-                              </button>
-                            ))}
+                            {availableTemplates
+                              .filter((t) => (t.format || "DOCX") === "DOCX")
+                              .map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => handleExportWithTemplate(t)}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg font-medium transition-all"
+                                >
+                                  {t.name}
+                                </button>
+                              ))}
                             <div className="border-t border-slate-100 my-1"></div>
                             <button
                               type="button"
                               onClick={() => setIsTemplateDialogOpen(true)}
-                              className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 font-semibold rounded-lg"
+                              className="w-full text-left px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 font-semibold rounded-lg"
                             >
                               + Kelola Template...
                             </button>
@@ -676,6 +696,8 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         {isExporting === "pptx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Presentation className="h-3.5 w-3.5 text-orange-600" />}
                         PPT
                       </Button>
+
+                      {/* Excel Export Button & Custom Templates */}
                       <Button
                         type="button"
                         variant="ghost"
@@ -683,11 +705,61 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         disabled={!!isExporting || !draftContent}
                         onClick={() => handleDownloadDocument("xlsx")}
                         className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
-                        title="Unduh sebagai Spreadsheet Excel (.xlsx)"
+                        title="Unduh sebagai Spreadsheet Excel Standar (.xlsx)"
                       >
                         {isExporting === "xlsx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />}
-                        Excel
+                        Excel Standar
                       </Button>
+
+                      {availableTemplates.filter((t) => t.format === "XLSX").length > 0 ? (
+                        <div className="relative group">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={!!isExporting || !draftContent}
+                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-emerald-700 bg-emerald-50/50"
+                            title="Pilih Template Excel Kustom"
+                          >
+                            <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600" />
+                            Template Excel ({availableTemplates.filter((t) => t.format === "XLSX").length})
+                          </Button>
+                          <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
+                            {availableTemplates
+                              .filter((t) => t.format === "XLSX")
+                              .map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => handleExportWithTemplate(t)}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg font-medium transition-all"
+                                >
+                                  {t.name}
+                                </button>
+                              ))}
+                            <div className="border-t border-slate-100 my-1"></div>
+                            <button
+                              type="button"
+                              onClick={() => setIsTemplateDialogOpen(true)}
+                              className="w-full text-left px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 font-semibold rounded-lg"
+                            >
+                              + Kelola Template...
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsTemplateDialogOpen(true)}
+                          className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
+                          title="Gunakan Template Excel Kustom Sendiri"
+                        >
+                          <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
+                          + Template Excel
+                        </Button>
+                      )}
                     </div>
 
                     <Button

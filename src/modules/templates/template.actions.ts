@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { auth, prisma } from "@/lib/auth";
-import { AiContentType, MembershipStatus } from "@prisma/client";
+import { AiContentType, DocumentTemplateFormat, MembershipStatus } from "@prisma/client";
 import {
   archiveDocumentTemplate,
   getDocumentTemplateMetadata,
@@ -56,6 +56,7 @@ async function resolveTeacherAuth() {
  */
 export async function listDocumentTemplatesAction(params?: {
   contentType?: AiContentType;
+  format?: DocumentTemplateFormat;
 }): Promise<{ success: boolean; data?: DocumentTemplateItem[]; error?: string }> {
   try {
     const authCtx = await resolveTeacherAuth();
@@ -63,6 +64,7 @@ export async function listDocumentTemplatesAction(params?: {
       teacherProfileId: authCtx.teacherProfileId,
       schoolId: authCtx.schoolId,
       contentType: params?.contentType,
+      format: params?.format,
     });
 
     return { success: true, data: list };

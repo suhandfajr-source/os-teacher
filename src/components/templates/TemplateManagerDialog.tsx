@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useTransition } from "react";
-import { AiContentType } from "@prisma/client";
+import { AiContentType, DocumentTemplateFormat } from "@prisma/client";
 import { DocumentTemplateItem } from "@/modules/templates/template.types";
 import {
   listDocumentTemplatesAction,
@@ -31,17 +31,19 @@ export function TemplateManagerDialog({
   const [templates, setTemplates] = useState<DocumentTemplateItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedContentType, setSelectedContentType] = useState<AiContentType>(defaultContentType);
+  const [formatFilter, setFormatFilter] = useState<"ALL" | DocumentTemplateFormat>("ALL");
 
   // Upload Form State
   const [isUploading, setIsUploading] = useState(false);
   const [uploadName, setUploadName] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [detectedFormat, setDetectedFormat] = useState<DocumentTemplateFormat | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [unsupportedTags, setUnsupportedTags] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Replace State
-  const [replacingTemplateId, setReplacingTemplateId] = useState<string | null>(null);
+  const [replacingTemplate, setReplacingTemplate] = useState<DocumentTemplateItem | null>(null);
 
   const [, startTransition] = useTransition();
 
@@ -49,17 +51,23 @@ export function TemplateManagerDialog({
     setIsLoading(true);
     setUploadError(null);
     setSuccessMessage(null);
-    const res = await listDocumentTemplatesAction({ contentType: selectedContentType });
+    const res = await listDocumentTemplatesAction({
+      contentType: selectedContentType,
+      format: formatFilter === "ALL" ? undefined : formatFilter,
+    });
     if (res.success && res.data) {
       setTemplates(res.data);
     }
     setIsLoading(false);
-  }, [selectedContentType]);
+  }, [selectedContentType, formatFilter]);
 
   useEffect(() => {
     if (isOpen) {
       let isMounted = true;
-      void listDocumentTemplatesAction({ contentType: selectedContentType }).then((res) => {
+      void listDocumentTemplatesAction({
+        contentType: selectedContentType,
+        format: formatFilter === "ALL" ? undefined : formatFilter,
+      }).then((res) => {
         if (isMounted) {
           if (res.success && res.data) {
             setTemplates(res.data);
@@ -71,7 +79,7 @@ export function TemplateManagerDialog({
         isMounted = false;
       };
     }
-  }, [isOpen, selectedContentType]);
+  }, [isOpen, selectedContentType, formatFilter]);
 
   if (!isOpen) return null;
 
@@ -82,9 +90,18 @@ export function TemplateManagerDialog({
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setUploadFile(file);
+
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith(".xlsx")) {
+        setDetectedFormat("XLSX");
+      } else if (lower.endsWith(".docx")) {
+        setDetectedFormat("DOCX");
+      } else {
+        setDetectedFormat(null);
+      }
+
       if (!uploadName) {
-        // Default template name based on filename without extension
-        const base = file.name.replace(/\.docx$/i, "");
+        const base = file.name.replace(/\.(docx|xlsx)$/i, "");
         setUploadName(base);
       }
     }
@@ -93,11 +110,20 @@ export function TemplateManagerDialog({
   const handleUploadOrReplace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile) {
-      setUploadError("Pilih file dokumen Word (.docx) terlebih dahulu.");
+      setUploadError("Pilih file dokumen Word (.docx) atau Excel (.xlsx) terlebih dahulu.");
       return;
     }
     if (!uploadName.trim()) {
       setUploadError("Nama template wajib diisi.");
+      return;
+    }
+
+    const lower = uploadFile.name.toLowerCase();
+    const isXlsx = lower.endsWith(".xlsx");
+    const isDocx = lower.endsWith(".docx");
+
+    if (!isXlsx && !isDocx) {
+      setUploadError("Format file tidak didukung. Harap pilih file .docx atau .xlsx.");
       return;
     }
 
@@ -111,12 +137,16 @@ export function TemplateManagerDialog({
     formData.append("contentType", selectedContentType);
     formData.append("file", uploadFile);
 
-    const endpoint = replacingTemplateId
-      ? "/api/templates/docx/replace"
-      : "/api/templates/docx/upload";
-
-    if (replacingTemplateId) {
-      formData.append("oldTemplateId", replacingTemplateId);
+    let endpoint: string;
+    if (replacingTemplate) {
+      formData.append("templateId", replacingTemplate.id);
+      endpoint = isXlsx
+        ? "/api/templates/xlsx/replace"
+        : "/api/templates/docx/replace";
+    } else {
+      endpoint = isXlsx
+        ? "/api/templates/xlsx/upload"
+        : "/api/templates/docx/upload";
     }
 
     try {
@@ -137,13 +167,14 @@ export function TemplateManagerDialog({
       }
 
       setSuccessMessage(
-        replacingTemplateId
+        replacingTemplate
           ? `Template '${uploadName}' berhasil diperbarui!`
           : `Template '${uploadName}' berhasil disimpan!`
       );
       setUploadFile(null);
       setUploadName("");
-      setReplacingTemplateId(null);
+      setDetectedFormat(null);
+      setReplacingTemplate(null);
       await loadTemplates();
       if (onTemplateUpdated) onTemplateUpdated();
     } catch (err: unknown) {
@@ -171,18 +202,20 @@ export function TemplateManagerDialog({
   };
 
   const startReplace = (t: DocumentTemplateItem) => {
-    setReplacingTemplateId(t.id);
+    setReplacingTemplate(t);
     setUploadName(t.name);
     setUploadFile(null);
+    setDetectedFormat(t.format);
     setUploadError(null);
     setUnsupportedTags([]);
     setSuccessMessage(null);
   };
 
   const cancelReplace = () => {
-    setReplacingTemplateId(null);
+    setReplacingTemplate(null);
     setUploadName("");
     setUploadFile(null);
+    setDetectedFormat(null);
     setUploadError(null);
     setUnsupportedTags([]);
   };
@@ -193,9 +226,9 @@ export function TemplateManagerDialog({
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Kelola Template Word (.docx)</h2>
+            <h2 className="text-lg font-bold text-slate-800">Kelola Template Word & Excel</h2>
             <p className="text-xs text-slate-500">
-              Gunakan format dokumen Word Anda sendiri dengan tag placeholder otomatis
+              Gunakan format dokumen Word (.docx) atau Excel (.xlsx) dengan tag placeholder otomatis
             </p>
           </div>
           <button
@@ -207,24 +240,62 @@ export function TemplateManagerDialog({
           </button>
         </div>
 
-        {/* Content Type Filter */}
-        <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 flex gap-2 overflow-x-auto">
-          {(Object.keys(CONTENT_TYPE_LABELS) as AiContentType[]).map((type) => (
+        {/* Filters: Content Type & Format */}
+        <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+          {/* Content Type Tabs */}
+          <div className="flex gap-1.5 overflow-x-auto">
+            {(Object.keys(CONTENT_TYPE_LABELS) as AiContentType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setSelectedContentType(type);
+                  cancelReplace();
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
+                  selectedContentType === type
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                {CONTENT_TYPE_LABELS[type]}
+              </button>
+            ))}
+          </div>
+
+          {/* Format Filter */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-slate-400 font-medium mr-1">Format:</span>
             <button
-              key={type}
-              onClick={() => {
-                setSelectedContentType(type);
-                cancelReplace();
-              }}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
-                selectedContentType === type
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+              onClick={() => setFormatFilter("ALL")}
+              className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                formatFilter === "ALL"
+                  ? "bg-slate-800 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
-              {CONTENT_TYPE_LABELS[type]}
+              Semua
             </button>
-          ))}
+            <button
+              onClick={() => setFormatFilter("DOCX")}
+              className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                formatFilter === "DOCX"
+                  ? "bg-blue-600 text-white"
+                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+              }`}
+            >
+              Word (.docx)
+            </button>
+            <button
+              onClick={() => setFormatFilter("XLSX")}
+              className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                formatFilter === "XLSX"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              }`}
+            >
+              Excel (.xlsx)
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -255,19 +326,30 @@ export function TemplateManagerDialog({
           <form
             onSubmit={handleUploadOrReplace}
             className={`p-4 rounded-xl border transition-all ${
-              replacingTemplateId
+              replacingTemplate
                 ? "bg-amber-50/50 border-amber-300"
                 : "bg-indigo-50/30 border-indigo-100"
             }`}
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <span>{replacingTemplateId ? "🔄 Ganti File Template" : "📤 Unggah Template Baru"}</span>
+                <span>{replacingTemplate ? "🔄 Ganti Berkas Template" : "📤 Unggah Template Baru"}</span>
                 <span className="text-[10px] font-normal text-slate-500">
-                  (Maks. 2 MB • .docx saja)
+                  (Maks. 2 MB • .docx / .xlsx)
                 </span>
+                {detectedFormat && (
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                      detectedFormat === "XLSX"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : "bg-blue-100 text-blue-800 border border-blue-300"
+                    }`}
+                  >
+                    {detectedFormat}
+                  </span>
+                )}
               </h3>
-              {replacingTemplateId && (
+              {replacingTemplate && (
                 <button
                   type="button"
                   onClick={cancelReplace}
@@ -288,18 +370,18 @@ export function TemplateManagerDialog({
                   value={uploadName}
                   onChange={(e) => setUploadName(e.target.value)}
                   placeholder="Misal: Format Modul Standar Kurikulum Merdeka"
-                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Pilih Berkas Word (.docx)
+                  Pilih Berkas (.docx / .xlsx)
                 </label>
                 <input
                   type="file"
-                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".docx,.xlsx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={handleFileChange}
                   className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
                   required
@@ -316,7 +398,11 @@ export function TemplateManagerDialog({
                 disabled={isUploading || !uploadFile}
                 className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-sm flex items-center gap-1.5"
               >
-                {isUploading ? "Memvalidasi & Mengunggah..." : replacingTemplateId ? "Simpan Perubahan File" : "Unggah Template"}
+                {isUploading
+                  ? "Memvalidasi & Mengunggah..."
+                  : replacingTemplate
+                  ? "Simpan Perubahan Berkas"
+                  : "Unggah Template"}
               </button>
             </div>
           </form>
@@ -335,7 +421,7 @@ export function TemplateManagerDialog({
                   Belum ada template kustom untuk kategori ini.
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Unggah file .docx dengan tag placeholder seperti {"{{JUDUL}}"} dan {"{{ISI_KONTEN}}"}.
+                  Unggah file .docx atau .xlsx dengan tag placeholder seperti {"{{JUDUL}}"} dan {"{{ISI_KONTEN}}"}.
                 </p>
               </div>
             ) : (
@@ -347,6 +433,15 @@ export function TemplateManagerDialog({
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            t.format === "XLSX"
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : "bg-blue-50 text-blue-800 border-blue-200"
+                          }`}
+                        >
+                          {t.format || "DOCX"}
+                        </span>
                         <span className="text-xs font-bold text-slate-800">{t.name}</span>
                         <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 font-semibold rounded-full border border-indigo-100">
                           {CONTENT_TYPE_LABELS[t.contentType]}
@@ -366,6 +461,16 @@ export function TemplateManagerDialog({
                           ))}
                         </span>
                       </div>
+                      {t.placeholderManifest?.locations && t.placeholderManifest.locations.length > 0 && (
+                        <div className="text-[10px] text-slate-400 flex flex-wrap gap-1 mt-0.5">
+                          <span>Lokasi sel:</span>
+                          {t.placeholderManifest.locations.map((loc, idx) => (
+                            <span key={idx} className="bg-slate-50 px-1 py-0.2 rounded text-slate-600 font-mono">
+                              {loc.sheet}!{loc.cell} ({loc.placeholder})
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-center">

@@ -109,6 +109,9 @@ export const CANONICAL_PLACEHOLDER_REGISTRY: Record<string, CanonicalPlaceholder
   },
 };
 
+export const CANONICAL_PLACEHOLDER_DEFINITIONS = CANONICAL_PLACEHOLDER_REGISTRY;
+export const CANONICAL_TAG_SET = new Set(Object.keys(CANONICAL_PLACEHOLDER_REGISTRY));
+
 export function isRecognizedTag(tag: string): boolean {
   return tag in CANONICAL_PLACEHOLDER_REGISTRY;
 }

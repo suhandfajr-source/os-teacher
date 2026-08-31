@@ -344,7 +344,7 @@ test.describe('Stage 06: AI Content Studio E2E & Business Invariant Tests', () =
     await page.locator('button:has-text("Tutup")').click();
 
     // 9. Export using Custom Template
-    const myTemplatesDropdown = page.locator('button:has-text("Template Saya")').first();
+    const myTemplatesDropdown = page.locator('button:has-text("Template Word")').first();
     await expect(myTemplatesDropdown).toBeVisible();
     await myTemplatesDropdown.hover();
 
@@ -360,7 +360,165 @@ test.describe('Stage 06: AI Content Studio E2E & Business Invariant Tests', () =
     expect(downloadedFilename.endsWith('.docx')).toBe(true);
 
     // 11. Ensure loading state restores
-    await expect(page.locator('button:has-text("Template Saya")').first()).toBeEnabled();
+    await expect(page.locator('button:has-text("Template Word")').first()).toBeEnabled();
+  });
+
+  test('10. AI Studio Real Browser Custom XLSX Template Upload, Selection & Export Flow', async ({ page }) => {
+    test.setTimeout(60000);
+
+    // 1. Register teacher through UI
+    const uniqueEmail = `guru_ai_xlsx_${Date.now()}_${Math.floor(Math.random() * 1000)}@sekolah.test`;
+    await page.goto('/register');
+    await page.locator('input[type="text"]').first().fill('Guru AI Studio XLSX');
+    await page.locator('input[type="email"]').first().fill(uniqueEmail);
+    const passwordInputs = page.locator('input[type="password"]');
+    await passwordInputs.nth(0).fill('PasswordRahasia123!');
+    await passwordInputs.nth(1).fill('PasswordRahasia123!');
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/.*onboarding.*/, { timeout: 20000 });
+
+    // 2. Ensure teacher profile and draft exist
+    const { Client } = await import('pg');
+    const dbUrl = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:51214/template1?sslmode=disable";
+    const client = new Client({ connectionString: dbUrl });
+    await client.connect();
+    const userRes = await client.query('SELECT id FROM "user" WHERE email = $1', [uniqueEmail]);
+    const userId = userRes.rows[0].id;
+    const schoolId = `sch_${userId}`;
+    await client.query(`
+      INSERT INTO school (id, name, "normalizedName", "createdAt", "updatedAt") 
+      VALUES ($1, 'SMA Negeri 2 Template', 'sma negeri 2 template', NOW(), NOW())
+    `, [schoolId]);
+
+    const tpCheck = await client.query('SELECT id FROM teacher_profile WHERE "userId" = $1', [userId]);
+    let teacherProfileId: string;
+    if (tpCheck.rows.length > 0) {
+      teacherProfileId = tpCheck.rows[0].id;
+      await client.query(`
+        UPDATE teacher_profile SET "onboardingCompleted" = true, "activeSchoolId" = $1 WHERE id = $2
+      `, [schoolId, teacherProfileId]);
+    } else {
+      teacherProfileId = `tp_${userId}`;
+      await client.query(`
+        INSERT INTO teacher_profile (id, "userId", "preferredName", "onboardingCompleted", "activeSchoolId") 
+        VALUES ($1, $2, 'Guru Excel Studio', true, $3)
+      `, [teacherProfileId, userId, schoolId]);
+    }
+
+    await client.query(`
+      INSERT INTO teacher_school_membership (id, "teacherProfileId", "schoolId", status, "workspaceRole", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, 'ACTIVE', 'OWNER', NOW(), NOW())
+      ON CONFLICT ("teacherProfileId", "schoolId") DO UPDATE SET status = 'ACTIVE'
+    `, [`tsm_${userId}`, teacherProfileId, schoolId]);
+
+    const draftId = `draft_xlsx_${userId}`;
+    await client.query(`
+      INSERT INTO ai_content_draft (id, "teacherProfileId", "schoolId", "contentType", title, topic, content, status, "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, 'LESSON_PLAN', 'Modul Excel Geografi', 'Tata Surya', '# Tata Surya\n\n## Tujuan Pembelajaran\n- Memahami planet', 'ACTIVE', NOW(), NOW())
+    `, [draftId, teacherProfileId, schoolId]);
+    await client.end();
+
+    // 3. Navigate to /ai-studio
+    await page.goto('/ai-studio', { waitUntil: 'networkidle' });
+
+    // 4. Switch to Draf Tersimpan and Open Draft
+    await page.locator('button:has-text("Draf Tersimpan")').click();
+    await expect(page.locator('text=Modul Excel Geografi').first()).toBeVisible({ timeout: 20000 });
+    await page.locator('button:has-text("Buka & Edit")').first().click();
+
+    // 5. Open Custom Template Dialog
+    const templateTrigger = page.locator('button:has-text("Template Excel")').first();
+    await expect(templateTrigger).toBeVisible();
+    await templateTrigger.click();
+
+    // 6. Verify Template Manager Dialog opened
+    await expect(page.locator('h2:has-text("Kelola Template Word & Excel")')).toBeVisible();
+
+    // 7. Prepare valid in-memory XLSX file fixture
+    const PizZip = (await import('pizzip')).default;
+    const zip = new PizZip();
+    zip.file(
+      '[Content_Types].xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+        <Default Extension="xml" ContentType="application/xml"/>
+        <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+        <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+        <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+      </Types>`
+    );
+    zip.file(
+      '_rels/.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+      </Relationships>`
+    );
+    zip.file(
+      'xl/workbook.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
+      </workbook>`
+    );
+    zip.file(
+      'xl/_rels/workbook.xml.rels',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+      </Relationships>`
+    );
+    zip.file(
+      'xl/sharedStrings.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="2" uniqueCount="2">
+        <si><t>{{JUDUL}}</t></si>
+        <si><t>{{ISI_KONTEN}}</t></si>
+      </sst>`
+    );
+    zip.file(
+      'xl/worksheets/sheet1.xml',
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+        <sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="A2" t="s"><v>1</v></c></row></sheetData>
+      </worksheet>`
+    );
+    const validXlsxBuffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer;
+
+    // Fill template upload form
+    await page.locator('input[placeholder*="Format Modul"]').fill('Template Excel Resmi');
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'template_resmi.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      buffer: validXlsxBuffer,
+    });
+
+    // Click Unggah Template
+    await page.locator('button:has-text("Unggah Template")').click();
+
+    // Expect template appearing in list with XLSX badge
+    await expect(page.locator('span:has-text("Template Excel Resmi")').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('span:has-text("XLSX")').first()).toBeVisible();
+
+    // 8. Close Dialog
+    await page.locator('button:has-text("Tutup")').click();
+
+    // 9. Export using Custom Template
+    const myTemplatesDropdown = page.locator('button:has-text("Template Excel")').first();
+    await expect(myTemplatesDropdown).toBeVisible();
+    await myTemplatesDropdown.hover();
+
+    const templateOption = page.locator('button:has-text("Template Excel Resmi")').first();
+    await expect(templateOption).toBeVisible();
+
+    // 10. Click export and intercept download event
+    const downloadPromise = page.waitForEvent('download', { timeout: 20000 });
+    await templateOption.click();
+
+    const download = await downloadPromise;
+    const downloadedFilename = download.suggestedFilename();
+    expect(downloadedFilename.endsWith('.xlsx')).toBe(true);
   });
 });
 

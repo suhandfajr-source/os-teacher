@@ -103,6 +103,7 @@ enum AiDraftStatus {
 
 enum DocumentTemplateFormat {
   DOCX
+  XLSX
 }
 
 // -------------------------------------------------

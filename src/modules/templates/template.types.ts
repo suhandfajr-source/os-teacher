@@ -1,28 +1,40 @@
 import { AiContentType, DocumentTemplateFormat, EntityStatus } from "@prisma/client";
 
 // ============================================================================
-// PHASE B SIZE & RESOURCE LIMITS
+// PHASE B & C SIZE & RESOURCE LIMITS
 // ============================================================================
 export const MAX_TEMPLATE_FILE_BYTES = 2_097_152; // 2 MB
 export const MAX_MULTIPART_REQUEST_BYTES = 3_145_728; // 3 MB
 export const MAX_GENERATED_DOCX_BYTES = 4_194_304; // 4 MB
+export const MAX_GENERATED_XLSX_BYTES = 4_194_304; // 4 MB
 
 export const MAX_ZIP_ENTRIES = 100;
 export const MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES = 5_242_880; // 5 MB
 export const MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES = 10_485_760; // 10 MB
 
+export const MAX_XLSX_CELL_TEXT_UTF16_UNITS = 32_767;
+
 // ============================================================================
 // PLACEHOLDER MANIFEST & REGISTRY
 // ============================================================================
+export interface PlaceholderLocation {
+  sheet: string;
+  cell: string;
+  placeholder: string;
+  sheetVisibility?: "VISIBLE" | "HIDDEN";
+}
+
 export interface PlaceholderManifest {
   version: number;
+  format?: DocumentTemplateFormat;
   detectedPlaceholders: string[];
   recognized: string[];
   unsupported: string[];
   contentBearing: string[];
-  hasHeaders: boolean;
-  hasFooters: boolean;
-  hasTables: boolean;
+  hasHeaders?: boolean;
+  hasFooters?: boolean;
+  hasTables?: boolean;
+  locations?: PlaceholderLocation[];
 }
 
 export interface DocumentTemplateItem {
@@ -51,6 +63,15 @@ export interface SecurityPreflightResult {
     headerXmls: string[];
     footerXmls: string[];
   };
+}
+
+export interface XlsxSecurityPreflightResult {
+  valid: boolean;
+  error?: string;
+  sheetXmlMap?: Record<string, string>; // sheetName or targetPath -> xml
+  sharedStringsXml?: string;
+  workbookXml?: string;
+  workbookRelsXml?: string;
 }
 
 export interface TemplateValidationResult {
