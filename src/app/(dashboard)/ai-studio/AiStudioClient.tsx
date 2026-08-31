@@ -41,9 +41,13 @@ import {
   Lock,
   FileSpreadsheet,
   Presentation,
+  LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportAiDocument, ExportFormat } from "@/lib/export";
+import { TemplateManagerDialog } from "@/components/templates/TemplateManagerDialog";
+import { DocumentTemplateItem } from "@/modules/templates/template.types";
+import { listDocumentTemplatesAction } from "@/modules/templates/template.actions";
 
 interface TeachingContextOption {
   id: string;
@@ -293,6 +297,95 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
     }
   };
 
+  // --------------------------------------------------------------------------
+  // TEMPLATE MANAGEMENT & CUSTOM EXPORT
+  // --------------------------------------------------------------------------
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [availableTemplates, setAvailableTemplates] = useState<DocumentTemplateItem[]>([]);
+
+  const loadTemplatesForContentType = React.useCallback(async (type: AiContentType) => {
+    const res = await listDocumentTemplatesAction({ contentType: type });
+    if (res.success && res.data) {
+      setAvailableTemplates(res.data);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    void listDocumentTemplatesAction({ contentType }).then((res) => {
+      if (isMounted && res.success && res.data) {
+        setAvailableTemplates(res.data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [contentType]);
+
+  const handleExportWithTemplate = async (
+    templateId: string,
+    draftOverride?: {
+      id?: string;
+      title: string;
+      content: string;
+      contentType: AiContentType;
+      teachingContextId?: string;
+    }
+  ) => {
+    if (isExporting) return;
+
+    const targetTitle = draftOverride?.title || draftTitle || "Dokumen Pembelajaran";
+    const targetContent = draftOverride?.content || draftContent;
+    const targetContentType = draftOverride?.contentType || contentType;
+    const targetContextId = draftOverride?.teachingContextId || selectedContextId;
+    const targetDraftId = draftOverride?.id || (isSavedInDb ? currentDraftId : undefined);
+
+    if (!targetContent.trim()) {
+      toast.error("Tidak ada konten untuk diekspor");
+      return;
+    }
+
+    setIsExporting("docx");
+    try {
+      const payload = {
+        templateId,
+        sourceMode: targetDraftId ? ("SAVED_DRAFT" as const) : ("TRANSIENT" as const),
+        draftId: targetDraftId || undefined,
+        title: targetTitle,
+        content: targetContent,
+        contentType: targetContentType,
+        teachingContextId: targetContextId || undefined,
+      };
+
+      const res = await fetch("/api/templates/docx/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || `Gagal ekspor dokumen (Status ${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${targetTitle.replace(/[^\w\s.-]/g, "_")}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Berhasil mengunduh dokumen dengan template kustom!");
+    } catch (err: unknown) {
+      toast.error((err as Error).message);
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   const handleArchiveDraft = (draftIdToArchive?: string) => {
     const targetId = draftIdToArchive || currentDraftId;
     if (!targetId) return;
@@ -496,7 +589,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
 
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Multi-Format Export Group */}
-                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border">
+                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border flex-wrap">
                       <Button
                         type="button"
                         variant="ghost"
@@ -504,11 +597,61 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         disabled={!!isExporting || !draftContent}
                         onClick={() => handleDownloadDocument("docx")}
                         className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
-                        title="Unduh sebagai Dokumen Word (.docx)"
+                        title="Unduh sebagai Dokumen Word Standar (.docx)"
                       >
                         {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
-                        Word
+                        Word Standar
                       </Button>
+
+                      {/* Custom Template Dropdown / Trigger */}
+                      {availableTemplates.length > 0 ? (
+                        <div className="relative group">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={!!isExporting || !draftContent}
+                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-indigo-700 bg-indigo-50/50"
+                            title="Pilih Template Word Kustom Sendiri"
+                          >
+                            <LayoutTemplate className="h-3.5 w-3.5 text-indigo-600" />
+                            Template Saya ({availableTemplates.length})
+                          </Button>
+                          <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
+                            {availableTemplates.map((t) => (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => handleExportWithTemplate(t.id)}
+                                className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg font-medium transition-all"
+                              >
+                                {t.name}
+                              </button>
+                            ))}
+                            <div className="border-t border-slate-100 my-1"></div>
+                            <button
+                              type="button"
+                              onClick={() => setIsTemplateDialogOpen(true)}
+                              className="w-full text-left px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 font-semibold rounded-lg"
+                            >
+                              + Kelola Template...
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsTemplateDialogOpen(true)}
+                          className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
+                          title="Gunakan Template Word Kustom Sendiri"
+                        >
+                          <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
+                          + Template Word
+                        </Button>
+                      )}
+
                       <Button
                         type="button"
                         variant="ghost"
@@ -1267,6 +1410,14 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
           )}
         </div>
       )}
+
+      {/* Custom Template Management Dialog */}
+      <TemplateManagerDialog
+        isOpen={isTemplateDialogOpen}
+        onClose={() => setIsTemplateDialogOpen(false)}
+        defaultContentType={contentType}
+        onTemplateUpdated={() => loadTemplatesForContentType(contentType)}
+      />
     </div>
   );
 }

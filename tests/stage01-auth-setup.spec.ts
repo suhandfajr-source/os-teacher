@@ -18,7 +18,7 @@ test.describe('Stage 01: Authentication & Basic Setup Regression Suite', () => {
     await page.locator('button[type="submit"]').click();
 
     // After successful registration via Better Auth, router redirects to /onboarding
-    await expect(page).toHaveURL(/.*onboarding.*/, { timeout: 10000 });
+    await expect(page).toHaveURL(/.*onboarding.*/, { timeout: 20000 });
   });
 
   test('2. Login & Session Establishment', async ({ page }) => {

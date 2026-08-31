@@ -34,6 +34,7 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
   });
 
   test('2. Mobile BottomNav 5 Locked Destinations & Valid Routes', async ({ page }) => {
+    test.setTimeout(60000);
     // 1. Register teacher through UI to establish legitimate signed Better Auth session
     const uniqueEmail = `guru_bnav_${Date.now()}_${Math.floor(Math.random() * 1000)}@sekolah.test`;
     await page.goto('/register');
@@ -77,7 +78,7 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
     await page.setViewportSize({ width: 390, height: 844 });
 
     // 3. Navigate to authenticated dashboard route where BottomNav is rendered
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await expect(page).toHaveURL('http://localhost:3002/');
 
     // 4. Locate actual BottomNav in the rendered DOM

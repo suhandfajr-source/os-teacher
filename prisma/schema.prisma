@@ -101,6 +101,10 @@ enum AiDraftStatus {
   ARCHIVED
 }
 
+enum DocumentTemplateFormat {
+  DOCX
+}
+
 // -------------------------------------------------
 // ENUMS (STAGE 07)
 // -------------------------------------------------
@@ -224,6 +228,7 @@ model School {
   classes          Class[]
   teachingContexts TeachingContext[]
   aiContentDrafts  AiContentDraft[]
+  documentTemplates DocumentTemplate[]
   importSessions   ImportSession[]
 
   @@index([normalizedName])
@@ -302,6 +307,7 @@ model TeacherProfile {
   memberships                    TeacherSchoolMembership[]
   teachingContexts               TeachingContext[]
   aiContentDrafts                AiContentDraft[]
+  documentTemplates              DocumentTemplate[]
   createdParentInvitations       ParentInvitation[]     @relation("CreatedParentInvitations")
   grantedParentTeachingAccesses  ParentTeachingAccess[] @relation("GrantedParentTeachingAccesses")
   importSessions                 ImportSession[]
@@ -620,6 +626,31 @@ model AiContentDraft {
   @@index([teachingContextId])
   @@index([contentType])
   @@map("ai_content_draft")
+}
+
+model DocumentTemplate {
+  id                  String                 @id @default(cuid())
+  teacherProfileId    String
+  teacherProfile      TeacherProfile         @relation(fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  schoolId            String
+  school              School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  name                String
+  contentType         AiContentType
+  format              DocumentTemplateFormat @default(DOCX)
+  originalFileName    String
+  mimeType            String
+  fileBytes           Bytes
+  fileSize            Int
+  checksumSha256      String
+  placeholderManifest Json
+  status              EntityStatus           @default(ACTIVE)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  archivedAt          DateTime?
+
+  @@index([teacherProfileId, schoolId, status])
+  @@index([contentType, format, status])
+  @@map("document_template")
 }
 
 // -------------------------------------------------
