@@ -684,7 +684,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                       Pratinjau Dokumen
                     </Button>
 
-                    {/* Multi-Format Export Group */}
+                    {/* Multi-Format Export Group (Modul Ajar / RPP is Word only) */}
                     <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border flex-wrap">
                       <Button
                         type="button"
@@ -692,7 +692,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         size="sm"
                         disabled={!!isExporting || !draftContent}
                         onClick={() => handleDownloadDocument("docx")}
-                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                        className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/40"
                         title="Unduh sebagai Dokumen Word Standar (.docx)"
                       >
                         {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
@@ -706,7 +706,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                             variant="ghost"
                             size="sm"
                             disabled={!!isExporting || !draftContent}
-                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/50"
+                            className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/50"
                             title="Pilih Template Word Kustom"
                           >
                             <LayoutTemplate className="h-3.5 w-3.5 text-blue-600" />
@@ -741,7 +741,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           variant="ghost"
                           size="sm"
                           onClick={() => setIsTemplateDialogOpen(true)}
-                          className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
+                          className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
                           title="Gunakan Template Word Kustom Sendiri"
                         >
                           <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
@@ -749,93 +749,98 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         </Button>
                       )}
 
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={!!isExporting || !draftContent}
-                        onClick={() => handleDownloadDocument("pdf")}
-                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
-                        title="Unduh sebagai Dokumen PDF (.pdf)"
-                      >
-                        {isExporting === "pdf" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-red-600" />}
-                        PDF
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={!!isExporting || !draftContent}
-                        onClick={() => handleDownloadDocument("pptx")}
-                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
-                        title="Unduh sebagai Slide PowerPoint (.pptx)"
-                      >
-                        {isExporting === "pptx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Presentation className="h-3.5 w-3.5 text-orange-600" />}
-                        PPT
-                      </Button>
-
-                      {/* Excel Export Button & Custom Templates */}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={!!isExporting || !draftContent}
-                        onClick={() => handleDownloadDocument("xlsx")}
-                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
-                        title="Unduh sebagai Spreadsheet Excel Standar (.xlsx)"
-                      >
-                        {isExporting === "xlsx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />}
-                        Excel Standar
-                      </Button>
-
-                      {availableTemplates.filter((t) => t.format === "XLSX").length > 0 ? (
-                        <div className="relative group">
+                      {/* PDF, PPT, and Excel are hidden for LESSON_PLAN / Modul Ajar */}
+                      {contentType !== "LESSON_PLAN" && (
+                        <>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             disabled={!!isExporting || !draftContent}
-                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-emerald-700 bg-emerald-50/50"
-                            title="Pilih Template Excel Kustom"
+                            onClick={() => handleDownloadDocument("pdf")}
+                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                            title="Unduh sebagai Dokumen PDF (.pdf)"
                           >
-                            <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600" />
-                            Template Excel ({availableTemplates.filter((t) => t.format === "XLSX").length})
+                            {isExporting === "pdf" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-red-600" />}
+                            PDF
                           </Button>
-                          <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
-                            {availableTemplates
-                              .filter((t) => t.format === "XLSX")
-                              .map((t) => (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={!!isExporting || !draftContent}
+                            onClick={() => handleDownloadDocument("pptx")}
+                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                            title="Unduh sebagai Slide PowerPoint (.pptx)"
+                          >
+                            {isExporting === "pptx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Presentation className="h-3.5 w-3.5 text-orange-600" />}
+                            PPT
+                          </Button>
+
+                          {/* Excel Export Button & Custom Templates */}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={!!isExporting || !draftContent}
+                            onClick={() => handleDownloadDocument("xlsx")}
+                            className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
+                            title="Unduh sebagai Spreadsheet Excel Standar (.xlsx)"
+                          >
+                            {isExporting === "xlsx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />}
+                            Excel Standar
+                          </Button>
+
+                          {availableTemplates.filter((t) => t.format === "XLSX").length > 0 ? (
+                            <div className="relative group">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={!!isExporting || !draftContent}
+                                className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-emerald-700 bg-emerald-50/50"
+                                title="Pilih Template Excel Kustom"
+                              >
+                                <LayoutTemplate className="h-3.5 w-3.5 text-emerald-600" />
+                                Template Excel ({availableTemplates.filter((t) => t.format === "XLSX").length})
+                              </Button>
+                              <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
+                                {availableTemplates
+                                  .filter((t) => t.format === "XLSX")
+                                  .map((t) => (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() => handleExportWithTemplate(t)}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg font-medium transition-all"
+                                    >
+                                      {t.name}
+                                    </button>
+                                  ))}
+                                <div className="border-t border-slate-100 my-1"></div>
                                 <button
-                                  key={t.id}
                                   type="button"
-                                  onClick={() => handleExportWithTemplate(t)}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 rounded-lg font-medium transition-all"
+                                  onClick={() => setIsTemplateDialogOpen(true)}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 font-semibold rounded-lg"
                                 >
-                                  {t.name}
+                                  + Kelola Template...
                                 </button>
-                              ))}
-                            <div className="border-t border-slate-100 my-1"></div>
-                            <button
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
                               type="button"
+                              variant="ghost"
+                              size="sm"
                               onClick={() => setIsTemplateDialogOpen(true)}
-                              className="w-full text-left px-3 py-1.5 text-xs text-emerald-600 hover:bg-emerald-50 font-semibold rounded-lg"
+                              className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
+                              title="Gunakan Template Excel Kustom Sendiri"
                             >
-                              + Kelola Template...
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsTemplateDialogOpen(true)}
-                          className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
-                          title="Gunakan Template Excel Kustom Sendiri"
-                        >
-                          <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
-                          + Template Excel
-                        </Button>
+                              <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
+                              + Template Excel
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -1688,69 +1693,74 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           <FileText className="h-3 w-3 mr-0.5" />
                           Word
                         </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={!!isExporting}
-                          onClick={() =>
-                            handleDownloadDocument(
-                              "pdf",
-                              draft.title,
-                              draft.content,
-                              draft.teachingContext?.subject.name,
-                              undefined,
-                              draft.teachingContext?.class.name
-                            )
-                          }
-                          className="h-6 px-1.5 text-[10px] text-red-600 hover:bg-red-50"
-                          title="Download PDF"
-                        >
-                          <FileText className="h-3 w-3 mr-0.5" />
-                          PDF
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={!!isExporting}
-                          onClick={() =>
-                            handleDownloadDocument(
-                              "pptx",
-                              draft.title,
-                              draft.content,
-                              draft.teachingContext?.subject.name,
-                              undefined,
-                              draft.teachingContext?.class.name
-                            )
-                          }
-                          className="h-6 px-1.5 text-[10px] text-orange-600 hover:bg-orange-50"
-                          title="Download PPT"
-                        >
-                          <Presentation className="h-3 w-3 mr-0.5" />
-                          PPT
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={!!isExporting}
-                          onClick={() =>
-                            handleDownloadDocument(
-                              "xlsx",
-                              draft.title,
-                              draft.content,
-                              draft.teachingContext?.subject.name,
-                              undefined,
-                              draft.teachingContext?.class.name
-                            )
-                          }
-                          className="h-6 px-1.5 text-[10px] text-emerald-600 hover:bg-emerald-50"
-                          title="Download Excel"
-                        >
-                          <FileSpreadsheet className="h-3 w-3 mr-0.5" />
-                          Excel
-                        </Button>
+
+                        {draft.contentType !== "LESSON_PLAN" && (
+                          <>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!!isExporting}
+                              onClick={() =>
+                                handleDownloadDocument(
+                                  "pdf",
+                                  draft.title,
+                                  draft.content,
+                                  draft.teachingContext?.subject.name,
+                                  undefined,
+                                  draft.teachingContext?.class.name
+                                )
+                              }
+                              className="h-6 px-1.5 text-[10px] text-red-600 hover:bg-red-50"
+                              title="Download PDF"
+                            >
+                              <FileText className="h-3 w-3 mr-0.5" />
+                              PDF
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!!isExporting}
+                              onClick={() =>
+                                handleDownloadDocument(
+                                  "pptx",
+                                  draft.title,
+                                  draft.content,
+                                  draft.teachingContext?.subject.name,
+                                  undefined,
+                                  draft.teachingContext?.class.name
+                                )
+                              }
+                              className="h-6 px-1.5 text-[10px] text-orange-600 hover:bg-orange-50"
+                              title="Download PPT"
+                            >
+                              <Presentation className="h-3 w-3 mr-0.5" />
+                              PPT
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!!isExporting}
+                              onClick={() =>
+                                handleDownloadDocument(
+                                  "xlsx",
+                                  draft.title,
+                                  draft.content,
+                                  draft.teachingContext?.subject.name,
+                                  undefined,
+                                  draft.teachingContext?.class.name
+                                )
+                              }
+                              className="h-6 px-1.5 text-[10px] text-emerald-600 hover:bg-emerald-50"
+                              title="Download Excel"
+                            >
+                              <FileSpreadsheet className="h-3 w-3 mr-0.5" />
+                              Excel
+                            </Button>
+                          </>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1">
