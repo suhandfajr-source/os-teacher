@@ -80,8 +80,14 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   a.download = filename;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    try {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // safe ignore
+    }
+  }, 1000);
 }
 
 export { exportToWord, exportToPowerPoint, exportToPdf, exportToExcel };

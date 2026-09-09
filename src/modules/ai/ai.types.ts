@@ -13,6 +13,81 @@ export const AI_CONTENT_TYPES = [
 
 export type AiContentType = (typeof AI_CONTENT_TYPES)[number];
 
+export type AiStudioFlowType =
+  | "LESSON_PLAN"
+  | "ASSESSMENT_QUIZ"
+  | "LKPD"
+  | "PRESENTATION"
+  | "LEARNING_MATERIAL"
+  | "RUBRIC";
+
+export interface FlowOptionMeta {
+  id: AiStudioFlowType;
+  parentContentType: AiContentType;
+  title: string;
+  subtitle: string;
+  badge: string;
+  recommendedExport: "docx" | "xlsx" | "pptx" | "pdf";
+  iconName: "BookOpen" | "FileQuestion" | "CheckSquare" | "Presentation" | "FileText" | "Sliders";
+}
+
+export const AI_STUDIO_FLOWS: Record<AiStudioFlowType, FlowOptionMeta> = {
+  LESSON_PLAN: {
+    id: "LESSON_PLAN",
+    parentContentType: "LESSON_PLAN",
+    title: "Modul Ajar / RPP",
+    subtitle: "Struktur lengkap CP, TP, model pembelajaran (PBL/PjBL), langkah kegiatan, dan alokasi waktu",
+    badge: "Pedagogis Lengkap",
+    recommendedExport: "docx",
+    iconName: "BookOpen",
+  },
+  ASSESSMENT_QUIZ: {
+    id: "ASSESSMENT_QUIZ",
+    parentContentType: "TASK_INSTRUCTION",
+    title: "Bank Soal & Kisi-Kisi",
+    subtitle: "Distribusi Taksonomi Bloom (LOTS/HOTS), kuota PG/Essay, kunci jawaban, dan rubrik",
+    badge: "Matriks Evaluasi",
+    recommendedExport: "xlsx",
+    iconName: "FileQuestion",
+  },
+  LKPD: {
+    id: "LKPD",
+    parentContentType: "TASK_INSTRUCTION",
+    title: "LKPD (Lembar Kerja)",
+    subtitle: "Aktivitas praktikum, studi kasus, stimulus fenomena, instruksi terstruktur, dan ruang isian siswa",
+    badge: "Aktivitas Siswa",
+    recommendedExport: "docx",
+    iconName: "CheckSquare",
+  },
+  PRESENTATION: {
+    id: "PRESENTATION",
+    parentContentType: "LEARNING_MATERIAL",
+    title: "Slide Presentasi",
+    subtitle: "Struktur slide terurut, poin-poin visual ringkas, dan catatan penjelasan guru (Speaker Notes)",
+    badge: "Media PPTX",
+    recommendedExport: "pptx",
+    iconName: "Presentation",
+  },
+  LEARNING_MATERIAL: {
+    id: "LEARNING_MATERIAL",
+    parentContentType: "LEARNING_MATERIAL",
+    title: "Bahan Bacaan & Ringkasan",
+    subtitle: "Materi diferensiasi level kesiapan belajar (Dasar/Pengayaan), konsep kunci, dan glosarium",
+    badge: "Diferensiasi Belajar",
+    recommendedExport: "docx",
+    iconName: "FileText",
+  },
+  RUBRIC: {
+    id: "RUBRIC",
+    parentContentType: "RUBRIC",
+    title: "Rubrik Penilaian",
+    subtitle: "Kriteria deskriptif per level pencapaian (Perlu Bimbingan, Cukup, Cakap, Mahir)",
+    badge: "Asesmen Autentik",
+    recommendedExport: "docx",
+    iconName: "Sliders",
+  },
+};
+
 export const AI_DRAFT_STATUSES = ["ACTIVE", "ARCHIVED"] as const;
 export type AiDraftStatus = (typeof AI_DRAFT_STATUSES)[number];
 
@@ -105,7 +180,7 @@ export const generateAiContentSchema = z.object({
     .max(300, "Topik pembelajaran maksimal 300 karakter"),
   instruction: z
     .string()
-    .max(1000, "Instruksi tambahan maksimal 1000 karakter")
+    .max(10000, "Instruksi tambahan maksimal 10000 karakter")
     .optional(),
   teachingContextId: z.string().optional(),
   includeHistoricalTopics: z.boolean().optional().default(false),
@@ -127,7 +202,7 @@ export const refineAiContentSchema = z.object({
   refinementInstruction: z
     .string()
     .min(2, "Instruksi penyesuaian minimal 2 karakter")
-    .max(500, "Instruksi penyesuaian maksimal 500 karakter"),
+    .max(2000, "Instruksi penyesuaian maksimal 2000 karakter"),
   teachingContextId: z.string().optional(),
 });
 
@@ -144,7 +219,7 @@ export const saveAiDraftSchema = z.object({
     .string()
     .min(1, "Topik harus diisi")
     .max(300, "Topik maksimal 300 karakter"),
-  instruction: z.string().max(1000).optional(),
+  instruction: z.string().max(10000).optional(),
   content: z
     .string()
     .min(1, "Konten draft harus diisi")

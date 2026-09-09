@@ -70,10 +70,17 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
   const flushTable = () => {
     if (tableRows.length === 0) return;
     const [headers, ...data] = tableRows;
+
+    // Clean headers and cell data from markdown symbols & replace <br> with newline
+    const cleanHeaders = headers.map((h) => cleanMarkdownString(h));
+    const cleanData = data.map((row) =>
+      row.map((cell) => cleanMarkdownString(cell))
+    );
+
     autoTable(doc, {
       startY: cursorY,
-      head: [headers],
-      body: data,
+      head: [cleanHeaders],
+      body: cleanData,
       theme: "striped",
       headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: "bold" },
       margin: { left: margin, right: margin },
@@ -108,7 +115,7 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
       cursorY = 20;
     }
 
-    if (!trimmed) {
+    if (!trimmed || trimmed === "---" || trimmed === "***") {
       cursorY += 4;
       continue;
     }
@@ -119,28 +126,89 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
       doc.setFontSize(13);
       doc.setTextColor(30, 41, 59);
       cursorY += 4;
-      doc.text(trimmed.replace("# ", ""), margin, cursorY);
+      doc.text(cleanHeadingText(trimmed), margin, cursorY);
       cursorY += 6;
       continue;
     }
 
-    // Heading 2 / 3
-    if (trimmed.startsWith("## ") || trimmed.startsWith("### ")) {
+    // Heading 2
+    if (trimmed.startsWith("## ")) {
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
+      doc.setFontSize(11.5);
       doc.setTextColor(51, 65, 85);
       cursorY += 3;
-      doc.text(trimmed.replace(/^#+\s*/, ""), margin, cursorY);
+      doc.text(cleanHeadingText(trimmed), margin, cursorY);
       cursorY += 5;
       continue;
     }
 
-    // Bullet / Normal Text
+    // Heading 3
+    if (trimmed.startsWith("### ")) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(51, 65, 85);
+      cursorY += 3;
+      doc.text(cleanHeadingText(trimmed), margin, cursorY);
+      cursorY += 5;
+      continue;
+    }
+
+    // Heading 4, 5, 6
+    if (/^#{4,}\s+/.test(trimmed)) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      cursorY += 2;
+      doc.text(cleanHeadingText(trimmed), margin, cursorY);
+      cursorY += 4;
+      continue;
+    }
+
+    // Bullet / List
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+
+      const bulletText = `•  ${cleanMarkdownString(trimmed.slice(2))}`;
+      const splitLines = doc.splitTextToSize(bulletText, contentWidth - 4);
+      for (const textLine of splitLines) {
+        if (cursorY > pageHeight - 20) {
+          doc.addPage();
+          cursorY = 20;
+        }
+        doc.text(textLine, margin + 4, cursorY);
+        cursorY += 5;
+      }
+      continue;
+    }
+
+    // Numbered list
+    const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
+    if (numMatch) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+
+      const numText = `${numMatch[1]}. ${cleanMarkdownString(numMatch[2])}`;
+      const splitLines = doc.splitTextToSize(numText, contentWidth - 4);
+      for (const textLine of splitLines) {
+        if (cursorY > pageHeight - 20) {
+          doc.addPage();
+          cursorY = 20;
+        }
+        doc.text(textLine, margin + 4, cursorY);
+        cursorY += 5;
+      }
+      continue;
+    }
+
+    // Normal Text
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(51, 65, 85);
 
-    const cleanText = trimmed.replace(/\*\*(.*?)\*\*/g, "$1");
+    const cleanText = cleanMarkdownString(trimmed);
     const splitLines = doc.splitTextToSize(cleanText, contentWidth);
 
     for (const textLine of splitLines) {
@@ -173,4 +241,19 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
 
   const safeFilename = `${title.replace(/[^a-zA-Z0-9_-]/g, "_")}.pdf`;
   doc.save(safeFilename);
+}
+
+function cleanHeadingText(text: string): string {
+  return text.replace(/^#+\s*/, "").replace(/[*_#`~]+/g, "").trim();
+}
+
+function cleanMarkdownString(text: string): string {
+  return text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/(\*\*\*|___)(.*?)\1/g, "$2")
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")
+    .replace(/(\*|_)(.*?)\1/g, "$2")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#+\s*/, "")
+    .trim();
 }

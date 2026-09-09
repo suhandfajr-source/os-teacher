@@ -7,6 +7,8 @@ import {
   CONTENT_TYPE_LABELS,
   AiDraftStatus,
   TransientAiPreview,
+  AiStudioFlowType,
+  AI_STUDIO_FLOWS,
 } from "@/modules/ai/ai.types";
 import {
   generateAiContentAction,
@@ -42,12 +44,21 @@ import {
   FileSpreadsheet,
   Presentation,
   LayoutTemplate,
+  HelpCircle,
+  GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportAiDocument, ExportFormat } from "@/lib/export";
 import { TemplateManagerDialog } from "@/components/templates/TemplateManagerDialog";
 import { DocumentTemplateItem } from "@/modules/templates/template.types";
 import { listDocumentTemplatesAction } from "@/modules/templates/template.actions";
+import { DocumentPreviewModal, PreviewFormat } from "@/components/templates/DocumentPreviewModal";
+import { LessonPlanFlow } from "@/components/ai-studio/forms/LessonPlanFlow";
+import { AssessmentQuizFlow } from "@/components/ai-studio/forms/AssessmentQuizFlow";
+import { LkpdFlow } from "@/components/ai-studio/forms/LkpdFlow";
+import { PresentationFlow } from "@/components/ai-studio/forms/PresentationFlow";
+import { LearningMaterialFlow } from "@/components/ai-studio/forms/LearningMaterialFlow";
+import { RubricFlow } from "@/components/ai-studio/forms/RubricFlow";
 
 interface TeachingContextOption {
   id: string;
@@ -87,6 +98,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
   const [activeTab, setActiveTab] = useState<"CREATE" | "SAVED">("CREATE");
 
   // Generator inputs
+  const [selectedFlow, setSelectedFlow] = useState<AiStudioFlowType>("LESSON_PLAN");
   const [contentType, setContentType] = useState<AiContentType>("LESSON_PLAN");
   const [selectedContextId, setSelectedContextId] = useState<string>("");
   const [includeHistoricalTopics, setIncludeHistoricalTopics] = useState<boolean>(false);
@@ -105,6 +117,10 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
   const [draftContent, setDraftContent] = useState<string>("");
   const [activePreviewInfo, setActivePreviewInfo] = useState<TransientAiPreview | null>(null);
   const [isSavedInDb, setIsSavedInDb] = useState<boolean>(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
+  const [previewFormatInitial, setPreviewFormatInitial] = useState<PreviewFormat>("docx");
+  const [selectedPreviewTemplateId, setSelectedPreviewTemplateId] = useState<string | null>(null);
+  const [editorViewMode, setEditorViewMode] = useState<"EDIT" | "PREVIEW">("EDIT");
 
   // Refinement state
   const [refinementInstruction, setRefinementInstruction] = useState<string>("");
@@ -130,22 +146,31 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
   // HANDLERS: GENERATION & REFINEMENT
   // --------------------------------------------------------------------------
 
-  const handleGenerate = () => {
+  const handleSelectFlow = (flowId: AiStudioFlowType) => {
+    setSelectedFlow(flowId);
+    setContentType(AI_STUDIO_FLOWS[flowId].parentContentType);
+  };
+
+  const handleGenerateWithFlow = (
+    composedInstruction: string,
+    toneChoice: "CONCISE" | "STANDARD" | "DETAILED" = "STANDARD"
+  ) => {
     if (!topic.trim()) {
-      toast.error("Silakan masukkan topik atau pokok bahasan");
+      toast.error("Silakan masukkan topik atau materi pokok");
       return;
     }
 
     setGenerateError(null);
 
     startGenerating(async () => {
+      const activeParentType = AI_STUDIO_FLOWS[selectedFlow].parentContentType;
       const res = await generateAiContentAction({
-        contentType,
+        contentType: activeParentType,
         topic: topic.trim(),
-        instruction: instruction.trim() || undefined,
+        instruction: composedInstruction,
         teachingContextId: selectedContextId || undefined,
         includeHistoricalTopics,
-        tone,
+        tone: toneChoice,
       });
 
       if (!res.success || !res.data) {
@@ -166,6 +191,10 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
 
       toast.success("Draf AI berhasil dibuat! Periksa dan sesuaikan sebelum disimpan.");
     });
+  };
+
+  const handleGenerate = () => {
+    handleGenerateWithFlow(instruction.trim(), tone);
   };
 
   const handleRefine = (customPrompt?: string) => {
@@ -380,8 +409,14 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
       a.download = `${targetTitle.replace(/[^\w\s.-]/g, "_")}.${ext}`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => {
+        try {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch {
+          // safe ignore
+        }
+      }, 1000);
 
       toast.success(`Berhasil mengunduh dokumen dengan template kustom ${ext.toUpperCase()}!`);
     } catch (err: unknown) {
@@ -433,6 +468,27 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
     setCurrentDraftId(draft.id);
     setDraftStatus(draft.status);
     setContentType(draft.contentType);
+
+    if (draft.contentType === "LESSON_PLAN") {
+      setSelectedFlow("LESSON_PLAN");
+    } else if (draft.contentType === "RUBRIC") {
+      setSelectedFlow("RUBRIC");
+    } else if (draft.contentType === "TASK_INSTRUCTION") {
+      const lower = (draft.title + " " + draft.topic).toLowerCase();
+      if (lower.includes("soal") || lower.includes("kisi") || lower.includes("kuis") || lower.includes("evaluasi") || lower.includes("pts") || lower.includes("pas")) {
+        setSelectedFlow("ASSESSMENT_QUIZ");
+      } else {
+        setSelectedFlow("LKPD");
+      }
+    } else if (draft.contentType === "LEARNING_MATERIAL") {
+      const lower = (draft.title + " " + draft.topic).toLowerCase();
+      if (lower.includes("slide") || lower.includes("presentasi") || lower.includes("deck") || lower.includes("ppt")) {
+        setSelectedFlow("PRESENTATION");
+      } else {
+        setSelectedFlow("LEARNING_MATERIAL");
+      }
+    }
+
     setTopic(draft.topic);
     setInstruction(draft.instruction || "");
     setSelectedContextId(draft.teachingContext?.id || "");
@@ -484,6 +540,24 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
         return <FileText className="h-5 w-5 text-amber-600" />;
       case "RUBRIC":
         return <CheckSquare className="h-5 w-5 text-sky-600" />;
+    }
+  };
+
+  // Helper icons for specialized teacher flows
+  const getFlowIcon = (flowId: AiStudioFlowType) => {
+    switch (flowId) {
+      case "LESSON_PLAN":
+        return <BookOpen className="h-5 w-5 text-indigo-600" />;
+      case "ASSESSMENT_QUIZ":
+        return <HelpCircle className="h-5 w-5 text-emerald-600" />;
+      case "LKPD":
+        return <CheckSquare className="h-5 w-5 text-amber-600" />;
+      case "PRESENTATION":
+        return <Presentation className="h-5 w-5 text-purple-600" />;
+      case "LEARNING_MATERIAL":
+        return <FileText className="h-5 w-5 text-blue-600" />;
+      case "RUBRIC":
+        return <Sliders className="h-5 w-5 text-rose-600" />;
     }
   };
 
@@ -593,22 +667,25 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                 </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Primary Preview Action */}
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      disabled={!draftContent}
+                      onClick={() => {
+                        setPreviewFormatInitial("docx");
+                        setIsPreviewModalOpen(true);
+                      }}
+                      className="h-8 px-3 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm gap-1.5 rounded-lg"
+                      title="Buka Pratinjau Dokumen Lengkap Sebelum Diunduh"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Pratinjau Dokumen
+                    </Button>
+
                     {/* Multi-Format Export Group */}
                     <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border flex-wrap">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={!!isExporting || !draftContent}
-                        onClick={() => handleDownloadDocument("docx")}
-                        className="h-8 px-2 text-xs font-semibold hover:bg-background gap-1"
-                        title="Unduh sebagai Dokumen Word Standar (.docx)"
-                      >
-                        {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
-                        Word Standar
-                      </Button>
-
-                      {/* Word Export Button & Custom Templates */}
                       <Button
                         type="button"
                         variant="ghost"
@@ -808,15 +885,45 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
               <div className="grid grid-cols-1 gap-6">
                 <Card className="shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center justify-between">
-                      <span>Editor Konten Pembelajaran</span>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {draftStatus === "ARCHIVED" ? "Mode Hanya-Baca" : "Dapat diedit langsung"}
-                      </span>
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Ubah teks secara manual di bawah ini sebelum menyimpan atau membagikannya kepada siswa.
-                    </CardDescription>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <span>Editor Konten Pembelajaran</span>
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {draftStatus === "ARCHIVED" ? "Mode Hanya-Baca" : "Dapat diedit langsung"}
+                          </span>
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-0.5">
+                          Ubah teks secara manual di bawah ini sebelum menyimpan atau membagikannya kepada siswa.
+                        </CardDescription>
+                      </div>
+
+                      {/* View Mode Toggle */}
+                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border">
+                        <button
+                          type="button"
+                          onClick={() => setEditorViewMode("EDIT")}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                            editorViewMode === "EDIT"
+                              ? "bg-white text-indigo-700 shadow-sm"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          ✏️ Mode Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditorViewMode("PREVIEW")}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                            editorViewMode === "PREVIEW"
+                              ? "bg-white text-indigo-700 shadow-sm"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          👁️ Pratinjau Teks
+                        </button>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-1.5">
@@ -835,22 +942,193 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                       />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Isi Konten (Format Markdown)
-                      </label>
-                      <Textarea
-                        value={draftContent}
-                        disabled={draftStatus === "ARCHIVED"}
-                        onChange={(e) => {
-                          setDraftContent(e.target.value);
-                          setIsSavedInDb(false);
-                        }}
-                        placeholder="Isi konten pembelajaran..."
-                        rows={16}
-                        className="font-mono text-sm leading-relaxed"
-                      />
-                    </div>
+                    {editorViewMode === "EDIT" ? (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Isi Konten (Format Markdown)
+                        </label>
+                        <Textarea
+                          value={draftContent}
+                          disabled={draftStatus === "ARCHIVED"}
+                          onChange={(e) => {
+                            setDraftContent(e.target.value);
+                            setIsSavedInDb(false);
+                          }}
+                          placeholder="Isi konten pembelajaran..."
+                          rows={16}
+                          className="font-mono text-sm leading-relaxed"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Pratinjau Tampilan Rapi
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPreviewFormatInitial("docx");
+                              setIsPreviewModalOpen(true);
+                            }}
+                            className="h-6 px-2 text-[11px] text-indigo-600 hover:bg-indigo-50 font-semibold"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Buka Modal Pratinjau Lengkap & Unduh
+                          </Button>
+                        </div>
+                        <div className="p-6 border rounded-xl bg-slate-50/50 max-h-[460px] overflow-y-auto space-y-2 text-sm text-slate-800 leading-relaxed font-sans">
+                          {(() => {
+                            const lines = draftContent.split("\n");
+                            const elements: React.ReactNode[] = [];
+                            let tableRows: string[][] = [];
+                            let inTable = false;
+
+                            const renderInline = (text: string) => {
+                              const clean = text.trim();
+                              if (!clean) return null;
+                              const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|___[^_]+___|__[^_]+__|_[^_]+_|`[^`]+`)/g;
+                              const parts = clean.split(regex);
+                              return parts.map((part, i) => {
+                                if (!part) return null;
+                                if (part.startsWith("***") && part.endsWith("***") && part.length > 6) {
+                                  return <strong key={i} className="font-bold italic">{part.slice(3, -3)}</strong>;
+                                }
+                                if ((part.startsWith("**") && part.endsWith("**") && part.length > 4) || (part.startsWith("__") && part.endsWith("__") && part.length > 4)) {
+                                  return <strong key={i} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
+                                }
+                                if ((part.startsWith("*") && part.endsWith("*") && part.length > 2) || (part.startsWith("_") && part.endsWith("_") && part.length > 2)) {
+                                  return <em key={i} className="italic text-slate-800">{part.slice(1, -1)}</em>;
+                                }
+                                if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
+                                  return <code key={i} className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono">{part.slice(1, -1)}</code>;
+                                }
+                                return <span key={i}>{part}</span>;
+                              });
+                            };
+
+                            const flushTable = (k: number) => {
+                              if (tableRows.length === 0) return;
+                              const [headers, ...dataRows] = tableRows;
+                              elements.push(
+                                <div key={`tbl-${k}`} className="overflow-x-auto my-3 rounded-lg border border-slate-200 shadow-sm">
+                                  <table className="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-800 font-semibold">
+                                        {headers.map((h, hi) => (
+                                          <th key={hi} className="px-3 py-2 border-r border-slate-200 last:border-r-0">
+                                            {renderInline(h)}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                      {dataRows.map((row, ri) => (
+                                        <tr key={ri} className={ri % 2 === 1 ? "bg-slate-50/50" : ""}>
+                                          {row.map((cell, ci) => (
+                                            <td key={ci} className="px-3 py-2 border-r border-slate-100 last:border-r-0 align-top text-slate-700">
+                                              {cell.split(/<br\s*\/?>/gi).map((cLine, cli) => (
+                                                <div key={cli} className={cli > 0 ? "mt-0.5" : ""}>
+                                                  {renderInline(cLine)}
+                                                </div>
+                                              ))}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              );
+                              tableRows = [];
+                              inTable = false;
+                            };
+
+                            lines.forEach((line, li) => {
+                              const trimmed = line.trim();
+
+                              if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+                                if (trimmed.replace(/[|\-\s:]/g, "").length === 0) return;
+                                const cells = trimmed.split("|").slice(1, -1).map((c) => c.trim());
+                                tableRows.push(cells);
+                                inTable = true;
+                                return;
+                              } else if (inTable) {
+                                flushTable(li);
+                              }
+
+                              if (!trimmed || trimmed === "---" || trimmed === "***") {
+                                elements.push(<div key={li} className="h-2" />);
+                                return;
+                              }
+
+                              if (trimmed.startsWith("# ")) {
+                                elements.push(
+                                  <h1 key={li} className="text-lg font-bold text-slate-900 border-b pb-1 mt-3 mb-1">
+                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
+                                  </h1>
+                                );
+                                return;
+                              }
+                              if (trimmed.startsWith("## ")) {
+                                elements.push(
+                                  <h2 key={li} className="text-sm font-bold text-indigo-900 border-l-2 border-indigo-600 pl-2 mt-3 mb-1">
+                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
+                                  </h2>
+                                );
+                                return;
+                              }
+                              if (trimmed.startsWith("### ")) {
+                                elements.push(
+                                  <h3 key={li} className="text-xs font-bold text-slate-800 mt-2.5 mb-1">
+                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
+                                  </h3>
+                                );
+                                return;
+                              }
+                              if (/^#{4,}\s+/.test(trimmed)) {
+                                elements.push(
+                                  <h4 key={li} className="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-2 mb-0.5">
+                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
+                                  </h4>
+                                );
+                                return;
+                              }
+                              if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                                elements.push(
+                                  <li key={li} className="ml-4 list-disc text-xs text-slate-700 my-0.5">
+                                    {renderInline(trimmed.replace(/^[-*]\s*/, ""))}
+                                  </li>
+                                );
+                                return;
+                              }
+                              if (/^\d+\.\s/.test(trimmed)) {
+                                const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
+                                elements.push(
+                                  <li key={li} className="ml-4 list-decimal text-xs text-slate-700 my-0.5">
+                                    {numMatch ? renderInline(numMatch[2]) : renderInline(trimmed)}
+                                  </li>
+                                );
+                                return;
+                              }
+                              elements.push(
+                                <p key={li} className="text-xs text-slate-700 my-1">
+                                  {renderInline(trimmed)}
+                                </p>
+                              );
+                            });
+
+                            if (inTable) {
+                              flushTable(lines.length);
+                            }
+
+                            return elements;
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -941,39 +1219,61 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column: Form Settings */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Step 1: Content Type Selection */}
+                {/* Step 1: Flow Selection */}
                 <Card className="shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">1. Pilih Jenis Konten</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">1. Pilih Alur Kebutuhan Guru</CardTitle>
+                      <Badge variant="outline" className="text-xs font-normal">
+                        6 Alur Spesifik
+                      </Badge>
+                    </div>
                     <CardDescription className="text-xs">
-                      Pilih format draf pembelajaran yang ingin Anda buat bersama AI Studio.
+                      Pilih format dan model alur kerja yang sesuai dengan kebutuhan mengajar Anda saat ini.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {AI_CONTENT_TYPES.map((type) => {
-                        const info = CONTENT_TYPE_LABELS[type];
-                        const isSelected = contentType === type;
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {(Object.keys(AI_STUDIO_FLOWS) as AiStudioFlowType[]).map((flowId) => {
+                        const flow = AI_STUDIO_FLOWS[flowId];
+                        const isSelected = selectedFlow === flowId;
                         return (
                           <div
-                            key={type}
-                            onClick={() => setContentType(type)}
-                            className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                            key={flowId}
+                            onClick={() => handleSelectFlow(flowId)}
+                            className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between ${
                               isSelected
                                 ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
-                                : "hover:border-primary/50 hover:bg-muted/50"
+                                : "hover:border-primary/40 hover:bg-muted/40 bg-card"
                             }`}
                           >
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 rounded-lg bg-background border shadow-xs">
-                                {getContentTypeIcon(type)}
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="p-2 rounded-lg bg-background border shadow-xs">
+                                  {getFlowIcon(flowId)}
+                                </div>
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-[10px] font-semibold px-2 py-0.5 ${
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {flow.badge}
+                                </Badge>
                               </div>
-                              <div className="space-y-1">
-                                <h3 className="text-sm font-semibold leading-none">{info.title}</h3>
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {info.subtitle}
+                              <div>
+                                <h3 className="text-sm font-bold text-foreground">{flow.title}</h3>
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                                  {flow.subtitle}
                                 </p>
                               </div>
+                            </div>
+
+                            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                              <span>Ekspor: <strong className="uppercase text-slate-700 font-semibold">{flow.recommendedExport}</strong></span>
+                              {isSelected && <span className="text-primary font-bold">✓ Aktif</span>}
                             </div>
                           </div>
                         );
@@ -1038,57 +1338,22 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                   </CardContent>
                 </Card>
 
-                {/* Step 3: Topic & Guidance */}
+                {/* Step 3: Specialized Flow Configuration Form */}
                 <Card className="shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">3. Topik & Petunjuk Pembuatan</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <span>3. Konfigurasi {AI_STUDIO_FLOWS[selectedFlow].title}</span>
+                      </CardTitle>
+                      <Badge variant="outline" className="text-xs font-normal">
+                        Flow Khusus
+                      </Badge>
+                    </div>
                     <CardDescription className="text-xs">
-                      Tentukan topik materi dan petunjuk khusus yang Anda inginkan.
+                      Isi parameter di bawah ini. AI Studio akan menyusun draf dokumen secara runtut dan terstruktur.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-foreground">
-                        Topik / Pokok Bahasan <span className="text-destructive">*</span>
-                      </label>
-                      <Input
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                        placeholder="Contoh: Hukum Newton tentang Gerak, Teks Narasi, Aljabar Linear..."
-                        className="text-sm"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-muted-foreground">
-                          Gaya & Kedalaman Konten
-                        </label>
-                        <select
-                          value={tone}
-                          onChange={(e) => setTone(e.target.value as "CONCISE" | "STANDARD" | "DETAILED")}
-                          className="w-full h-10 px-3 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        >
-                          <option value="STANDARD">Standar & Komprehensif</option>
-                          <option value="CONCISE">Ringkas & Langsung pada Inti</option>
-                          <option value="DETAILED">Mendalam & Elaboratif</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">
-                        Instruksi Tambahan (Opsional)
-                      </label>
-                      <Textarea
-                        value={instruction}
-                        onChange={(e) => setInstruction(e.target.value)}
-                        placeholder="Contoh: Sertakan analogi dari kehidupan sehari-hari anak SMP, sediakan 3 pertanyaan pemantik di awal, dan alokasikan waktu 2 JP (80 menit)..."
-                        rows={3}
-                        className="text-sm"
-                      />
-                    </div>
-
                     {generateError && (
                       <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
@@ -1097,27 +1362,65 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                       </Alert>
                     )}
 
-                    <div className="pt-2">
-                      <Button
-                        type="button"
-                        size="lg"
-                        disabled={isGenerating || !topic.trim()}
-                        onClick={handleGenerate}
-                        className="w-full bg-primary hover:bg-primary/90 font-semibold"
-                      >
-                        {isGenerating ? (
-                          <>
-                            <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                            Sedang Menyusun Draf AI...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-5 w-5 mr-2" />
-                            Generate Draf AI
-                          </>
-                        )}
-                      </Button>
-                    </div>
+                    {selectedFlow === "LESSON_PLAN" && (
+                      <LessonPlanFlow
+                        topic={topic}
+                        setTopic={setTopic}
+                        onSubmit={handleGenerateWithFlow}
+                        isGenerating={isGenerating}
+                        selectedContextLabel={selectedContext ? `${selectedContext.subjectName} (${selectedContext.className})` : undefined}
+                      />
+                    )}
+
+                    {selectedFlow === "ASSESSMENT_QUIZ" && (
+                      <AssessmentQuizFlow
+                        topic={topic}
+                        setTopic={setTopic}
+                        onSubmit={handleGenerateWithFlow}
+                        isGenerating={isGenerating}
+                        selectedContextLabel={selectedContext ? `${selectedContext.subjectName} (${selectedContext.className})` : undefined}
+                      />
+                    )}
+
+                    {selectedFlow === "LKPD" && (
+                      <LkpdFlow
+                        topic={topic}
+                        setTopic={setTopic}
+                        onSubmit={handleGenerateWithFlow}
+                        isGenerating={isGenerating}
+                        selectedContextLabel={selectedContext ? `${selectedContext.subjectName} (${selectedContext.className})` : undefined}
+                      />
+                    )}
+
+                    {selectedFlow === "PRESENTATION" && (
+                      <PresentationFlow
+                        topic={topic}
+                        setTopic={setTopic}
+                        onSubmit={handleGenerateWithFlow}
+                        isGenerating={isGenerating}
+                        selectedContextLabel={selectedContext ? `${selectedContext.subjectName} (${selectedContext.className})` : undefined}
+                      />
+                    )}
+
+                    {selectedFlow === "LEARNING_MATERIAL" && (
+                      <LearningMaterialFlow
+                        topic={topic}
+                        setTopic={setTopic}
+                        onSubmit={handleGenerateWithFlow}
+                        isGenerating={isGenerating}
+                        selectedContextLabel={selectedContext ? `${selectedContext.subjectName} (${selectedContext.className})` : undefined}
+                      />
+                    )}
+
+                    {selectedFlow === "RUBRIC" && (
+                      <RubricFlow
+                        topic={topic}
+                        setTopic={setTopic}
+                        onSubmit={handleGenerateWithFlow}
+                        isGenerating={isGenerating}
+                        selectedContextLabel={selectedContext ? `${selectedContext.subjectName} (${selectedContext.className})` : undefined}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1489,6 +1792,31 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
         onClose={() => setIsTemplateDialogOpen(false)}
         defaultContentType={contentType}
         onTemplateUpdated={() => loadTemplatesForContentType(contentType)}
+      />
+
+      {/* Document Preview & Download Modal */}
+      <DocumentPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        title={draftTitle || "Dokumen Pembelajaran"}
+        content={draftContent}
+        contentType={contentType}
+        schoolName="SMA Negeri 1 Jakarta"
+        teacherName="Guru Pengampu"
+        subjectName={selectedContext?.subjectName || "Mata Pelajaran"}
+        className={selectedContext?.className || "Kelas"}
+        academicPeriod={selectedContext?.academicPeriod || "T.A. 2026/2027"}
+        availableTemplates={availableTemplates}
+        selectedTemplateId={selectedPreviewTemplateId}
+        onSelectTemplate={setSelectedPreviewTemplateId}
+        onDownload={async (format, template) => {
+          if (template) {
+            await handleExportWithTemplate(template);
+          } else {
+            await handleDownloadDocument(format);
+          }
+        }}
+        isDownloading={!!isExporting}
       />
     </div>
   );

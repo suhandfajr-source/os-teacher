@@ -310,5 +310,41 @@ Refleksi siswa terhadap pembelajaran.`;
 
       expect(rendered.length).toBeGreaterThan(0);
     });
+
+    it("RECOMMENDATION B: injects native Word tables (<w:tbl>) for markdown tables into template output", async () => {
+      const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:p><w:r><w:t>KOP SURAT SEKOLAH</w:t></w:r></w:p>
+          <w:p><w:r><w:t>{{JUDUL}}</w:t></w:r></w:p>
+          <w:p><w:r><w:t>{{ISI_KONTEN}}</w:t></w:r></w:p>
+        </w:body>
+      </w:document>`;
+
+      const docx = createDocxWithDocXml(docXml);
+      const res = await validateAndParseDocxTemplate(docx, "LESSON_PLAN");
+
+      const tableContent = `# MODUL AJAR PROBLEM BASED LEARNING\n\n| Komponen | Keterangan Rinci |\n|---|---|\n| Satuan Pendidikan | SMA Negeri 1 |\n| Mata Pelajaran | PAI |\n\n- Poin refleksi guru`;
+
+      const rendered = await renderDocxTemplate(docx, res.manifest!, {
+        title: "Modul Ajar PBL",
+        content: tableContent,
+        contentType: "LESSON_PLAN",
+      });
+
+      const zip = new PizZip(rendered);
+      const outputDocXml = zip.file("word/document.xml")?.asText() || "";
+
+      // Must preserve the template's Kop Surat
+      expect(outputDocXml).toContain("KOP SURAT SEKOLAH");
+      // Must generate real Word XML table
+      expect(outputDocXml).toContain("<w:tbl>");
+      expect(outputDocXml).toContain("<w:tr>");
+      expect(outputDocXml).toContain("<w:tc>");
+      expect(outputDocXml).toContain("Komponen");
+      expect(outputDocXml).toContain("SMA Negeri 1");
+      // Must not have raw pipe separators
+      expect(outputDocXml).not.toContain("| Komponen |");
+    });
   });
 });

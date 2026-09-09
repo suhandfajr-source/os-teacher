@@ -96,25 +96,22 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
     const docxRows = tableRows.map((row, rIdx) => {
       const isHeader = rIdx === 0;
       return new TableRow({
-        children: row.map(
-          (cellText) =>
-            new TableCell({
-              width: { size: 100 / row.length, type: WidthType.PERCENTAGE },
-              shading: isHeader ? { fill: "E2E8F0" } : undefined,
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: cellText.trim(),
-                      bold: isHeader,
-                      size: 20,
-                      font: "Arial",
-                    }),
-                  ],
-                }),
-              ],
-            })
-        ),
+        children: row.map((cellText) => {
+          const cellLines = cellText.split(/<br\s*\/?>|\n/gi);
+          const cellParagraphs = cellLines.map(
+            (cLine) =>
+              new Paragraph({
+                children: parseFormattedRuns(cLine.trim(), isHeader, 20),
+                spacing: { before: 40, after: 40 },
+              })
+          );
+
+          return new TableCell({
+            width: { size: Math.round(100 / Math.max(row.length, 1)), type: WidthType.PERCENTAGE },
+            shading: isHeader ? { fill: "E2E8F0" } : undefined,
+            children: cellParagraphs.length > 0 ? cellParagraphs : [new Paragraph({ text: "" })],
+          });
+        }),
       });
     });
 
@@ -150,19 +147,20 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
       flushTable();
     }
 
-    if (!trimmed) {
+    if (!trimmed || trimmed === "---" || trimmed === "***") {
       children.push(new Paragraph({ text: "", spacing: { after: 100 } }));
       continue;
     }
 
-    // Heading 1
+    // Heading 1 (# Title)
     if (trimmed.startsWith("# ")) {
+      const text = trimmed.replace(/^#+\s*/, "").replace(/[*_#`]+/g, "").trim();
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
           children: [
             new TextRun({
-              text: trimmed.replace("# ", ""),
+              text,
               bold: true,
               size: 28,
               font: "Arial",
@@ -175,14 +173,15 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
       continue;
     }
 
-    // Heading 2
+    // Heading 2 (## Subtitle)
     if (trimmed.startsWith("## ")) {
+      const text = trimmed.replace(/^#+\s*/, "").replace(/[*_#`]+/g, "").trim();
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
           children: [
             new TextRun({
-              text: trimmed.replace("## ", ""),
+              text,
               bold: true,
               size: 24,
               font: "Arial",
@@ -195,14 +194,15 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
       continue;
     }
 
-    // Heading 3
+    // Heading 3 (### Section)
     if (trimmed.startsWith("### ")) {
+      const text = trimmed.replace(/^#+\s*/, "").replace(/[*_#`]+/g, "").trim();
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_3,
           children: [
             new TextRun({
-              text: trimmed.replace("### ", ""),
+              text,
               bold: true,
               size: 22,
               font: "Arial",
@@ -215,7 +215,28 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
       continue;
     }
 
-    // Bullet points
+    // Heading 4, 5, 6 (#### Subsection)
+    if (/^#{4,}\s+/.test(trimmed)) {
+      const text = trimmed.replace(/^#+\s*/, "").replace(/[*_#`]+/g, "").trim();
+      children.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_4,
+          children: [
+            new TextRun({
+              text,
+              bold: true,
+              size: 21,
+              font: "Arial",
+              color: "475569",
+            }),
+          ],
+          spacing: { before: 120, after: 60 },
+        })
+      );
+      continue;
+    }
+
+    // Bullet points (- or *)
     if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
       const text = trimmed.slice(2);
       children.push(
@@ -234,7 +255,7 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
       children.push(
         new Paragraph({
           children: [
-            new TextRun({ text: `${numberMatch[1]}. `, bold: true, font: "Arial" }),
+            new TextRun({ text: `${numberMatch[1]}. `, bold: true, font: "Arial", size: 22 }),
             ...parseFormattedRuns(numberMatch[2]),
           ],
           spacing: { after: 60 },
@@ -278,33 +299,65 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
 }
 
 /**
- * Parse bold (**text**) and italic (*text*) into TextRuns
+ * Parse bold (**text** or __text__), italic (*text* or _text_) and plain text into TextRuns
  */
-function parseFormattedRuns(rawText: string): TextRun[] {
+function parseFormattedRuns(rawText: string, forceBold = false, baseSize = 22): TextRun[] {
+  const clean = rawText.trim();
+  if (!clean) return [];
+
+  // Split by Markdown bold (***...***, **...**, *...*, ___...___, __...__, _..._)
+  const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|___[^_]+___|__[^_]+__|_[^_]+_)/g;
+  const parts = clean.split(regex);
   const runs: TextRun[] = [];
-  // Split by markdown bold (**...**)
-  const parts = rawText.split(/(\*\*[^*]+\*\*)/g);
 
   for (const part of parts) {
-    if (part.startsWith("**") && part.endsWith("**")) {
+    if (!part) continue;
+
+    if (part.startsWith("***") && part.endsWith("***") && part.length > 6) {
+      runs.push(
+        new TextRun({
+          text: part.slice(3, -3),
+          bold: true,
+          italics: true,
+          font: "Arial",
+          size: baseSize,
+        })
+      );
+    } else if (
+      (part.startsWith("**") && part.endsWith("**") && part.length > 4) ||
+      (part.startsWith("__") && part.endsWith("__") && part.length > 4)
+    ) {
       runs.push(
         new TextRun({
           text: part.slice(2, -2),
           bold: true,
           font: "Arial",
-          size: 22, // 11pt
+          size: baseSize,
         })
       );
-    } else if (part) {
+    } else if (
+      (part.startsWith("*") && part.endsWith("*") && part.length > 2) ||
+      (part.startsWith("_") && part.endsWith("_") && part.length > 2)
+    ) {
+      runs.push(
+        new TextRun({
+          text: part.slice(1, -1),
+          italics: true,
+          font: "Arial",
+          size: baseSize,
+        })
+      );
+    } else {
       runs.push(
         new TextRun({
           text: part,
+          bold: forceBold,
           font: "Arial",
-          size: 22,
+          size: baseSize,
         })
       );
     }
   }
 
-  return runs.length > 0 ? runs : [new TextRun({ text: rawText, font: "Arial", size: 22 })];
+  return runs.length > 0 ? runs : [new TextRun({ text: clean, bold: forceBold, font: "Arial", size: baseSize })];
 }

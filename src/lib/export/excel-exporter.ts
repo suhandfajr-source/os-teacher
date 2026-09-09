@@ -24,7 +24,7 @@ export async function exportToExcel(options: ExportExcelOptions): Promise<void> 
       const cells = trimmed
         .split("|")
         .slice(1, -1)
-        .map((c) => c.trim());
+        .map((c) => cleanExcelText(c));
       tableRows.push(cells);
     }
   }
@@ -47,7 +47,7 @@ export async function exportToExcel(options: ExportExcelOptions): Promise<void> 
       let maxLen = 12;
       tableRows.forEach((row) => {
         if (row[colIdx]) {
-          maxLen = Math.max(maxLen, row[colIdx].length);
+          maxLen = Math.max(maxLen, String(row[colIdx]).length);
         }
       });
       return { wch: Math.min(maxLen + 4, 50) };
@@ -67,8 +67,8 @@ export async function exportToExcel(options: ExportExcelOptions): Promise<void> 
     let rowNum = 1;
     for (const line of lines) {
       const trimmed = line.trim();
-      if (!trimmed) continue;
-      wsData.push([rowNum++, trimmed.replace(/^[-*•#]+\s*/, "")]);
+      if (!trimmed || trimmed === "---" || trimmed === "***") continue;
+      wsData.push([rowNum++, cleanExcelText(trimmed.replace(/^[-*•#]+\s*/, ""))]);
     }
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -78,4 +78,15 @@ export async function exportToExcel(options: ExportExcelOptions): Promise<void> 
 
   const safeFilename = `${title.replace(/[^a-zA-Z0-9_-]/g, "_")}.xlsx`;
   XLSX.writeFile(wb, safeFilename);
+}
+
+function cleanExcelText(text: string): string {
+  return text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/(\*\*\*|___)(.*?)\1/g, "$2")
+    .replace(/(\*\*|__)(.*?)\1/g, "$2")
+    .replace(/(\*|_)(.*?)\1/g, "$2")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#+\s*/, "")
+    .trim();
 }

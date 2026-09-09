@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { prisma } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -23,6 +24,13 @@ import {
 } from "./ai.types";
 import { buildSafeContextPack, formatContextSummary } from "./ai.service";
 import { getAiContentProvider } from "./providers/ai-provider.factory";
+
+function formatActionError(error: unknown, fallback: string): string {
+  if (error instanceof z.ZodError) {
+    return error.issues?.[0]?.message || "Input parameter tidak valid";
+  }
+  return error instanceof Error ? error.message : fallback;
+}
 
 // ============================================================================
 // 1. GENERATION & REFINEMENT ACTIONS (TRANSIENT - NEVER PERSISTS TO DB)
@@ -106,8 +114,7 @@ export async function generateAiContentAction(
 
     return { success: true, data: preview };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Gagal membuat konten AI";
-    return { success: false, error: message };
+    return { success: false, error: formatActionError(error, "Gagal membuat konten AI") };
   }
 }
 
@@ -164,8 +171,7 @@ export async function refineAiContentAction(
 
     return { success: true, data: preview };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Gagal menyesuaikan konten AI";
-    return { success: false, error: message };
+    return { success: false, error: formatActionError(error, "Gagal menyesuaikan konten AI") };
   }
 }
 
@@ -230,8 +236,7 @@ export async function saveAiDraftAction(
     revalidatePath("/ai-studio");
     return { success: true, data: { id: newDraft.id } };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Gagal menyimpan draf AI";
-    return { success: false, error: message };
+    return { success: false, error: formatActionError(error, "Gagal menyimpan draf AI") };
   }
 }
 

@@ -53,68 +53,125 @@ export class GeminiAiContentProvider implements AiContentProvider {
   private async callGeminiWithTimeout(
     prompt: string,
     systemInstruction: string,
-    timeoutMs = 30000
+    timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 120000,
+    maxRetries = 1
   ): Promise<AiProviderResult> {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () =>
-          reject(
-            new Error(
-              "Permintaan ke Google Gemini melebihi batas waktu (timeout). Silakan coba lagi."
-            )
-          ),
-        timeoutMs
-      )
-    );
+    let lastError: unknown;
 
-    try {
-      const generatePromise = this.ai.models.generateContent({
-        model: this.model,
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        },
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        console.log(`[Gemini Provider] Retrying attempt ${attempt}/${maxRetries} after transient error...`);
+        await new Promise((res) => setTimeout(res, 1500 * attempt));
+      }
+
+      let timeoutHandle: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () =>
+            reject(
+              new Error(
+                "Permintaan ke Google Gemini melebihi batas waktu (timeout). Silakan coba lagi."
+              )
+            ),
+          timeoutMs
+        );
       });
 
-      const response = await Promise.race([generatePromise, timeoutPromise]);
-      const rawText = response.text || "";
+      const startTime = Date.now();
 
-      if (!rawText.trim()) {
-        throw new Error("Penyedia AI memberikan respons kosong.");
+      try {
+        console.log(`[Gemini Provider] Calling Gemini API (model: ${this.model})...`);
+        const generatePromise = this.ai.models.generateContent({
+          model: this.model,
+          contents: prompt,
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+          },
+        });
+
+        const response = await Promise.race([generatePromise, timeoutPromise]);
+        const elapsed = Date.now() - startTime;
+        console.log(`[Gemini Provider] Response received in ${elapsed}ms`);
+
+        const rawText = response.text || "";
+
+        if (!rawText.trim()) {
+          throw new Error("Penyedia AI memberikan respons kosong.");
+        }
+
+        const validated = validateAiOutput(rawText);
+
+        return {
+          title: validated.title,
+          content: validated.content,
+          modelUsed: this.model,
+        };
+      } catch (error: unknown) {
+        lastError = error;
+        const elapsed = Date.now() - startTime;
+        console.error(`[Gemini Provider] Error after ${elapsed}ms:`, error instanceof Error ? error.message : error);
+
+        if (error instanceof Error) {
+          const msg = error.message.toLowerCase();
+          const isTransient =
+            msg.includes("503") ||
+            msg.includes("high demand") ||
+            msg.includes("unavailable") ||
+            msg.includes("overloaded") ||
+            msg.includes("econnreset") ||
+            msg.includes("etimedout");
+
+          if (isTransient && attempt < maxRetries) {
+            continue; // Retry on transient errors
+          }
+
+          if (
+            msg.includes("429") ||
+            msg.includes("quota") ||
+            msg.includes("rate limit") ||
+            msg.includes("resource_exhausted")
+          ) {
+            throw new Error(
+              "Batas kuota Gemini API tercapai (Rate Limit / Quota Exceeded). Silakan coba beberapa saat lagi."
+            );
+          }
+          if (
+            msg.includes("503") ||
+            msg.includes("high demand") ||
+            msg.includes("unavailable") ||
+            msg.includes("overloaded")
+          ) {
+            throw new Error(
+              "Layanan AI Google Gemini sedang mengalami lonjakan trafik tinggi sementara (High Demand / 503). Silakan coba beberapa detik lagi."
+            );
+          }
+          if (
+            msg.includes("api_key") ||
+            msg.includes("unauthenticated") ||
+            msg.includes("403") ||
+            msg.includes("invalid api key")
+          ) {
+            throw new Error(
+              "Kunci API Google Gemini tidak valid atau tidak diizinkan. Periksa konfigurasi server."
+            );
+          }
+          if (msg.includes("timeout") || msg.includes("melebihi batas waktu")) {
+            throw error;
+          }
+          throw new Error(`Gagal memproses permintaan AI: ${error.message}`);
+        }
+      } finally {
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+        }
       }
-
-      const validated = validateAiOutput(rawText);
-
-      return {
-        title: validated.title,
-        content: validated.content,
-        modelUsed: this.model,
-      };
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        const msg = error.message.toLowerCase();
-        if (
-          msg.includes("429") ||
-          msg.includes("quota") ||
-          msg.includes("rate limit") ||
-          msg.includes("resource_exhausted")
-        ) {
-          throw new Error(
-            "Batas kuota Gemini API tercapai (Rate Limit / Quota Exceeded). Silakan coba beberapa saat lagi."
-          );
-        }
-        if (msg.includes("api_key") || msg.includes("unauthenticated") || msg.includes("403") || msg.includes("invalid api key")) {
-          throw new Error(
-            "Kunci API Google Gemini tidak valid atau tidak diizinkan. Periksa konfigurasi server."
-          );
-        }
-        if (msg.includes("timeout") || msg.includes("melebihi batas waktu")) {
-          throw error;
-        }
-        throw new Error(`Gagal memproses permintaan AI: ${error.message}`);
-      }
-      throw new Error("Terjadi kesalahan tidak terduga saat menghubungi penyedia AI.");
     }
+
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+    throw new Error("Terjadi kesalahan tidak terduga saat menghubungi penyedia AI.");
   }
 }
