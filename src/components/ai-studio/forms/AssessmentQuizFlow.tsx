@@ -57,10 +57,14 @@ export function AssessmentQuizFlow({
     }
 
     parts.push(`- Format Penulisan:
-1. Tabel Kisi-kisi Soal (Nomor, Indikator Soal, Level Kognitif, Bentuk Soal).
-2. Naskah Butir Soal (tertata rapi dengan stimulus kasus atau paragraf jika HOTS).
-3. Kunci Jawaban & Pembahasan Lengkap.
-4. Rubrik & Pedoman Penskoran Uraian.`);
+1. Tabel Kisi-kisi Soal (Nomor, Indikator Soal, Level Kognitif / C1-C6, Bentuk Soal).
+2. Naskah Butir Soal (Format Siap Cetak & Siap Digunakan Siswa):
+   - WAJIB BERSIH: JANGAN cantumkan label seperti '(HOTS)', '(LOTS)', '(MOTS)', atau '(C1-C6)' pada teks naskah butir soal. Tulis langsung nomor dan soalnya (contoh: '20. Nabi Ibrahim AS berhasil...'). Keterangan level kognitif HANYA boleh ada di Tabel Kisi-kisi dan Kunci Jawaban.
+   - JANGAN gunakan simbol blockquote '>' untuk teks bacaan/stimulus soal. Tuliskan teks bacaan/stimulus langsung sebagai teks narasi biasa tanpa karakter '>'.
+   - Opsi pilihan ganda A, B, C, D, E diletakkan pada baris baru terpisah.
+3. Kunci Jawaban & Pembahasan (Sajikan kunci jawaban dan pembahasan secara padat, presisi, dan to-the-point untuk seluruh nomor soal).
+4. Rubrik & Pedoman Penskoran Uraian.
+- KETENTUAN WAJIB: Tuliskan seluruh butir soal nomor 1 s.d. selesai dan tuntaskan seluruh bagian kunci jawaban serta rubrik hingga selesai tanpa terputus.`);
 
     onSubmit(parts.join("\n"), "STANDARD");
   };

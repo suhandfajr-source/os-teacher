@@ -131,7 +131,9 @@ export function constructGenerationPrompt(request: AiProviderGenerateRequest): s
   parts.push(`\n--- PETUNJUK FORMAT OUTPUT ---`);
   parts.push(`1. Berikan Judul Konten yang jelas dan menarik pada baris pertama menggunakan heading '# Judul'.`);
   parts.push(`2. Susun isi konten pembelajaran dalam format Markdown yang rapi, runtut, dan mudah dibaca.`);
-  parts.push(`3. Jangan sertakan metadata JSON atau blok kode pembungkus di luar draf.`);
+  parts.push(`3. KELENGKAPAN WAJIB: Tuntaskan seluruh butir soal/konten dari nomor 1 sampai selesai, beserta seluruh bagian kunci jawaban, pembahasan, dan rubrik pedoman penskoran secara lengkap tanpa memotong atau menggunakan placeholder '...'.`);
+  parts.push(`4. FORMAT BERSIH: JANGAN gunakan simbol blockquote '>' untuk kutipan atau stimulus. Tuliskan teks secara langsung.`);
+  parts.push(`5. Jangan sertakan metadata JSON atau blok kode pembungkus di luar draf.`);
 
   return parts.join("\n");
 }

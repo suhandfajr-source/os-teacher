@@ -93,22 +93,82 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
 
   const flushTable = () => {
     if (tableRows.length === 0) return;
-    const docxRows = tableRows.map((row, rIdx) => {
+
+    // Filter out separator lines (e.g. |---|---|)
+    const validRows = tableRows.filter((r) => {
+      const combined = r.join("").replace(/[|\-\s:]/g, "");
+      return combined.length > 0;
+    });
+
+    if (validRows.length === 0) {
+      tableRows = [];
+      inTable = false;
+      return;
+    }
+
+    const maxCols = Math.max(...validRows.map((r) => r.length), 1);
+    const normalizedRows = validRows.map((row) => {
+      const padded = [...row];
+      while (padded.length < maxCols) {
+        padded.push("");
+      }
+      return padded;
+    });
+
+    // Calculate column widths in DXA (A4 printable width ~ 9000 DXA)
+    const totalTableWidthDxa = 9000;
+    const colWidths: number[] = [];
+
+    // Detect if column 0 is a narrow number/index column (e.g. "No", "1", "2")
+    const isCol0Short =
+      maxCols > 1 &&
+      normalizedRows.every(
+        (r, idx) => idx === 0 || r[0].trim().length <= 4
+      );
+
+    if (maxCols === 1) {
+      colWidths.push(totalTableWidthDxa);
+    } else if (isCol0Short) {
+      const col0Width = 800; // ~0.8 inch for "No"
+      const remainingWidth = totalTableWidthDxa - col0Width;
+      const otherColWidth = Math.floor(remainingWidth / (maxCols - 1));
+      colWidths.push(col0Width);
+      for (let i = 1; i < maxCols; i++) {
+        colWidths.push(
+          i === maxCols - 1
+            ? totalTableWidthDxa - col0Width - otherColWidth * (maxCols - 2)
+            : otherColWidth
+        );
+      }
+    } else {
+      const equalWidth = Math.floor(totalTableWidthDxa / maxCols);
+      for (let i = 0; i < maxCols; i++) {
+        colWidths.push(
+          i === maxCols - 1
+            ? totalTableWidthDxa - equalWidth * (maxCols - 1)
+            : equalWidth
+        );
+      }
+    }
+
+    const docxRows = normalizedRows.map((row, rIdx) => {
       const isHeader = rIdx === 0;
       return new TableRow({
-        children: row.map((cellText) => {
+        tableHeader: isHeader,
+        children: row.map((cellText, cIdx) => {
           const cellLines = cellText.split(/<br\s*\/?>|\n/gi);
           const cellParagraphs = cellLines.map(
             (cLine) =>
               new Paragraph({
-                children: parseFormattedRuns(cLine.trim(), isHeader, 20),
-                spacing: { before: 40, after: 40 },
+                children: parseFormattedRuns(cLine.trim(), isHeader, isHeader ? 20 : 19),
+                spacing: { before: 50, after: 50 },
               })
           );
 
           return new TableCell({
-            width: { size: Math.round(100 / Math.max(row.length, 1)), type: WidthType.PERCENTAGE },
-            shading: isHeader ? { fill: "E2E8F0" } : undefined,
+            width: { size: colWidths[cIdx], type: WidthType.DXA },
+            shading: isHeader ? { fill: "F1F5F9" } : undefined,
+            margins: { top: 120, bottom: 120, left: 140, right: 140 },
             children: cellParagraphs.length > 0 ? cellParagraphs : [new Paragraph({ text: "" })],
           });
         }),
@@ -117,7 +177,8 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
 
     children.push(
       new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+        width: { size: totalTableWidthDxa, type: WidthType.DXA },
+        columnWidths: colWidths,
         rows: docxRows,
       })
     );
@@ -244,6 +305,23 @@ export async function exportToWord(options: ExportDocumentOptions): Promise<Blob
           bullet: { level: 0 },
           children: parseFormattedRuns(text),
           spacing: { after: 60 },
+        })
+      );
+      continue;
+    }
+
+    // Blockquotes or reading passage stimulus (> Text)
+    if (trimmed.startsWith(">")) {
+      const cleanQuote = trimmed.replace(/^>+\s*/, "").trim();
+      if (!cleanQuote) {
+        children.push(new Paragraph({ text: "", spacing: { after: 60 } }));
+        continue;
+      }
+      children.push(
+        new Paragraph({
+          children: parseFormattedRuns(cleanQuote),
+          indent: { left: 360 },
+          spacing: { before: 40, after: 60 },
         })
       );
       continue;

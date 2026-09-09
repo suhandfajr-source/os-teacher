@@ -361,61 +361,16 @@ export function DocumentPreviewModal({
 
         {/* FORMAT SELECTOR BAR */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-slate-100 bg-white">
-          {/* Format Tabs (Modul Ajar / RPP is Word only) */}
+          {/* Format Tabs (Unified Word Only) */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
             <button
               type="button"
               onClick={() => handleFormatChange("docx")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                activeFormat === "docx"
-                  ? "bg-white text-blue-700 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm transition-all"
             >
               <FileText className="h-3.5 w-3.5 text-blue-600" />
               Word (.docx)
             </button>
-
-            {contentType !== "LESSON_PLAN" && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleFormatChange("xlsx")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    activeFormat === "xlsx"
-                      ? "bg-white text-emerald-700 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                  Excel (.xlsx)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormatChange("pdf")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    activeFormat === "pdf"
-                      ? "bg-white text-red-700 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <FileText className="h-3.5 w-3.5 text-red-600" />
-                  PDF (.pdf)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormatChange("pptx")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    activeFormat === "pptx"
-                      ? "bg-white text-orange-700 shadow-sm"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  <Presentation className="h-3.5 w-3.5 text-orange-600" />
-                  PowerPoint (.pptx)
-                </button>
-              </>
-            )}
           </div>
 
           {/* Template Selector (Word & Excel only) */}
