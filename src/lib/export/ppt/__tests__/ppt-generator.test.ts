@@ -389,4 +389,37 @@ describe("AI STUDIO EXPORT V2 — Phase A: Automatic PPTX Generator", () => {
       ).rejects.toThrow("Judul materi pembelajaran tidak boleh kosong.");
     });
   });
+
+  // --------------------------------------------------------------------------
+  // 5. ADAPTIVE PPT V1 — SLIDE ROLE & SANITIZATION TESTS
+  // --------------------------------------------------------------------------
+  describe("Adaptive PPT V1 — Slide Roles & Sanitization", () => {
+    it("sanitizes machine prefixes like 'Slide 1:' and pagination '(1/3)'", () => {
+      const md = `# Meneladani Nabi Ibrahim\n\n## Slide 1: Pertanyaan Pemantik (1/2)\n- Mengapa keteguhan hati penting?\n\n## Slide 2: Perbandingan: Sabar vs Pasrah\n- Sabar adalah ikhtiar maksimal\n- Pasrah adalah menerima takdir`;
+      const parsed = parseMarkdownForPpt(md);
+
+      expect(parsed.sections[0].heading).toBe("Pertanyaan Pemantik");
+      expect(parsed.sections[0].type).toBe("HOOK");
+      expect(parsed.sections[1].heading).toBe("Perbandingan: Sabar vs Pasrah");
+      expect(parsed.sections[1].type).toBe("SPLIT");
+    });
+
+    it("correctly generates HOOK_STATEMENT, SPLIT_COLUMN, and CARDS_GRID slides", async () => {
+      const md = `# Nilai-Nilai Keteladanan\n\n## Pertanyaan Pemantik\nBagaimana sikap kita saat menghadapi ujian hidup?\n\n## Perbandingan: Karakter Positif vs Negatif\n- Jujur dan amanah\n- Tanggung jawab\n- Bohong dan curang\n- Lepas tangan\n\n## Tiga Pilar Utama\n- Pilar 1: Keteguhan Iman\n- Pilar 2: Keikhlasan Hati\n- Pilar 3: Keberanian Moral\n\n## Kuis Pemahaman\n- Sebutkan hikmah dari kisah Nabi Ibrahim!`;
+      
+      const parsed = parseMarkdownForPpt(md);
+      const model = resolvePresentationLayout(parsed, {
+        title: "Nilai-Nilai Keteladanan",
+      });
+
+      expect(model.slides[0].type).toBe("COVER");
+      expect(model.slides[1].type).toBe("HOOK_STATEMENT");
+      expect(model.slides[2].type).toBe("SPLIT_COLUMN");
+      expect(model.slides[3].type).toBe("CARDS_GRID");
+      expect(model.slides[4].type).toBe("REFLECTION_OR_QUIZ");
+
+      // Verify render does not throw
+      await expect(renderPresentationPptx(model)).resolves.not.toThrow();
+    });
+  });
 });

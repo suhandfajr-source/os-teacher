@@ -33,24 +33,40 @@ export function PresentationFlow({
     e.preventDefault();
 
     const parts: string[] = [];
-    parts.push(`[PANDUAN SLIDE PRESENTASI PEMBELAJARAN (DECK)]`);
-    parts.push(`- Target Jumlah Slide: Tepat ${slideCount} Slide`);
-    parts.push(`- Gaya Penulisan Slide: ${slideStyle} (Hindari paragraf panjang/tebal, utamakan bullet points tajam)`);
-    parts.push(`- Sertakan Catatan Penjelasan Guru (Speaker Notes): ${includeSpeakerNotes ? "YA (Wajib ada di setiap slide)" : "TIDAK"}`);
-    parts.push(`- Sertakan Saran Ilustrasi / Visual: ${includeVisualPrompts ? "YA (Beri tag [Visual: ...])" : "TIDAK"}`);
+    parts.push(`[PANDUAN PEMBUATAN SLIDE PRESENTASI ADAPTIF (DECK)]`);
+    parts.push(`- Target Jumlah Slide: Tepat ${slideCount} Slide Materi`);
+    parts.push(`- Gaya Paparan Slide: ${slideStyle}`);
+    parts.push(`- Sertakan Catatan Guru (Speaker Notes): ${includeSpeakerNotes ? "YA (Wajib ada di setiap slide)" : "TIDAK"}`);
+    parts.push(`- Sertakan Saran Visual / Ilustrasi: ${includeVisualPrompts ? "YA (Beri tag [Visual: Deskripsi visual kontekstual])" : "TIDAK"}`);
 
     if (sessionGoal.trim()) {
-      parts.push(`- Tujuan Pembelajaran Sesi Ini:\n"${sessionGoal.trim()}"`);
+      parts.push(`- Tujuan / Penekanan Khusus Sesi Ini:\n"${sessionGoal.trim()}"`);
     }
 
-    parts.push(`- Format Penulisan Slide:
-Pisahkan antar slide dengan baris horizontal '---' atau penomoran jelas:
-## Slide 1: Judul Materi & Pembuka
-- Poin pembuka
-> [Speaker Notes]: Catatan apa yang harus disampaikan guru secara lisan.
-
-## Slide 2: Masalah / Pertanyaan Pemantik
-... dst hingga Slide ${slideCount}.`);
+    parts.push(`
+--- STRUKTUR & ATURAN PENULISAN SLIDE (WAJIB DIIKUTI) ---
+1. Baris Pertama Dokumen: Tuliskan Judul Utama Deck Presentasi menggunakan '# Judul Materi'.
+2. Judul Setiap Slide: Gunakan '## Judul Slide yang Alami dan Kontekstual'.
+   ⚠️ DILARANG KERAS menggunakan judul output mesin seperti 'Slide 1:', 'Slide 2:', '(1/2)', '(1/3)', 'Slide Pembuka', dsb.
+   Contoh judul yang baik:
+   - 'Pertanyaan Pemantik: Apa yang Terjadi Saat Kita Bernapas?'
+   - 'Tujuan Pembelajaran Sesi Ini'
+   - 'Perbandingan: Pembuluh Nadi (Arteri) vs Pembuluh Balik (Vena)'
+   - 'Tiga Pilar Utama Ekosistem'
+   - 'Kuis Cepat Pemahaman'
+   - 'Refleksi & Rangkuman Inti'
+3. Struktur Isi Setiap Slide:
+   - [Role: Hook / Objectives / Split / Cards / Concept / Story / Quiz / Summary] (Tentukan peran slide secara semantik)
+   - Tuliskan 1 kalimat Pesan Utama / Fokus Bahasan yang tajam.
+   - Sajikan 2-4 poin penjelas ringkas (hindari paragraf tebal bertumpuk).
+   - Cantumkan [Speaker Notes]: penjelasan lisan guru.
+   - Cantumkan [Visual: saran ilustrasi/diagram kontekstual].
+4. Variasi Alur Slide (Rekomendasi ${slideCount} Slide):
+   - Slide 1: Pertanyaan Pemantik / Hook / Fakta Menarik Pembuka
+   - Slide 2: Capaian / Tujuan Pembelajaran
+   - Slide 3 s.d. ${slideCount - 2}: Materi Inti dengan variasi (Konsep, Perbandingan/Split, Alur Proses, atau Studi Kasus)
+   - Slide ${slideCount - 1}: Kuis Cepat / Cek Pemahaman Interaktif
+   - Slide ${slideCount}: Rangkuman Inti / Refleksi`);
 
     onSubmit(parts.join("\n"), "STANDARD");
   };

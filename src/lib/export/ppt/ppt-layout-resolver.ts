@@ -14,6 +14,10 @@ import {
   ContentSlide,
   TakeawaySlide,
   ReflectionOrQuizSlide,
+  HookStatementSlide,
+  SplitColumnSlide,
+  CardsGridSlide,
+  StoryConceptSlide,
   BulletItem,
   LayoutConstraints,
   DEFAULT_LAYOUT_CONSTRAINTS,
@@ -133,7 +137,7 @@ function chunkBulletItems(
 }
 
 /**
- * Resolves a parsed document into a structured presentation model
+ * Resolves a parsed document into a structured presentation model with role-based layouts
  */
 export function resolvePresentationLayout(
   parsedDoc: ParsedPresentationDoc,
@@ -183,6 +187,8 @@ export function resolvePresentationLayout(
   };
   slides.push(coverSlide);
 
+  let lastSlideType: string = "COVER";
+
   // 3. Process Sections
   for (let sIdx = 0; sIdx < parsedDoc.sections.length; sIdx++) {
     const sec = parsedDoc.sections[sIdx];
@@ -198,12 +204,146 @@ export function resolvePresentationLayout(
       }
     }
 
-    if (bulletItems.length === 0) {
-      // Empty section, skip
+    if (bulletItems.length === 0 && sec.rawParagraphs.length === 0) {
       continue;
     }
 
-    // Handle by section type
+    // Defensive Check: If section 0 is an intro heading ("Judul Materi & Pembuka" / "Pembuka")
+    // and contains "Tujuan Pembelajaran", convert it to an Objectives slide instead of duplicate content card
+    const normH = sec.heading.toLowerCase();
+    const isRedundantCoverIntro =
+      sIdx === 0 &&
+      (normH.includes("judul materi") ||
+        normH.includes("pembuka") ||
+        normH === "cover" ||
+        normH.includes("pengantar"));
+
+    if (isRedundantCoverIntro) {
+      const objItem = bulletItems.find((b) =>
+        b.text.toLowerCase().includes("tujuan pembelajaran:")
+      );
+      const otherItems = bulletItems
+        .filter((b) => !b.text.toLowerCase().includes("tujuan pembelajaran:"))
+        .map((b) => b.text.replace(/^(materi utama|gelar utama|topik utama):\s*/i, ""));
+
+      if (objItem) {
+        const cleanObj = objItem.text.replace(/^tujuan pembelajaran:\s*/i, "");
+        const objSlide: ObjectivesSlide = {
+          id: `slide-obj-intro`,
+          type: "OBJECTIVES",
+          title: "Tujuan Pembelajaran",
+          categoryLabel: "🎯 CAPAIAN PEMBELAJARAN",
+          objectives: [cleanObj, ...otherItems.slice(0, 2)],
+          slideNumber: slides.length + 1,
+          totalSlides: slides.length + 1,
+        };
+        slides.push(objSlide);
+        lastSlideType = "OBJECTIVES";
+        continue;
+      }
+    }
+
+    // Role: HOOK
+    if (sec.type === "HOOK") {
+      const primaryStatement =
+        sec.rawParagraphs[0] ||
+        (bulletItems.length > 0 ? bulletItems[0].text : sec.heading);
+      const supporting =
+        sec.rawParagraphs.length > 1
+          ? sec.rawParagraphs.slice(1).join(" ")
+          : bulletItems.length > 1
+          ? bulletItems.slice(1).map((b) => b.text).join(" • ")
+          : undefined;
+
+      const hookSlide: HookStatementSlide = {
+        id: `slide-hook-${sIdx}`,
+        type: "HOOK_STATEMENT",
+        title: sec.heading,
+        statement: primaryStatement,
+        supportingText: supporting,
+        categoryLabel: "💡 PERTANYAAN PEMANTIK",
+        slideNumber: slides.length + 1,
+        totalSlides: slides.length + 1,
+      };
+      slides.push(hookSlide);
+      lastSlideType = "HOOK_STATEMENT";
+      continue;
+    }
+
+    // Role: SPLIT / COMPARISON
+    if (sec.type === "SPLIT") {
+      const half = Math.ceil(bulletItems.length / 2);
+      const leftItems = bulletItems.slice(0, half).map((b) => b.text);
+      const rightItems = bulletItems.slice(half).map((b) => b.text);
+
+      const splitSlide: SplitColumnSlide = {
+        id: `slide-split-${sIdx}`,
+        type: "SPLIT_COLUMN",
+        title: sec.heading,
+        leftColumnTitle: "Karakteristik & Poin A",
+        leftColumnItems: leftItems.length > 0 ? leftItems : ["Analisis Aspek 1"],
+        rightColumnTitle: "Karakteristik & Poin B",
+        rightColumnItems: rightItems.length > 0 ? rightItems : ["Analisis Aspek 2"],
+        categoryLabel: "⚖️ PERBANDINGAN & ANALISIS",
+        slideNumber: slides.length + 1,
+        totalSlides: slides.length + 1,
+      };
+      slides.push(splitSlide);
+      lastSlideType = "SPLIT_COLUMN";
+      continue;
+    }
+
+    // Role: CARDS
+    if (sec.type === "CARDS") {
+      const cardList = bulletItems.map((b) => {
+        // Check if text has title prefix like "Pilar 1: Deskripsi"
+        const parts = b.text.split(/:\s*(.+)/);
+        if (parts.length > 1) {
+          return { title: parts[0].trim(), text: parts[1].trim() };
+        }
+        return { text: b.text };
+      });
+
+      const cardsSlide: CardsGridSlide = {
+        id: `slide-cards-${sIdx}`,
+        type: "CARDS_GRID",
+        title: sec.heading,
+        cards: cardList.slice(0, 4),
+        categoryLabel: "🏛️ PILAR & ASPEK UTAMA",
+        slideNumber: slides.length + 1,
+        totalSlides: slides.length + 1,
+      };
+      slides.push(cardsSlide);
+      lastSlideType = "CARDS_GRID";
+      continue;
+    }
+
+    // Role: STORY / CONCEPT
+    if (sec.type === "STORY") {
+      const core =
+        sec.rawParagraphs[0] ||
+        (bulletItems.length > 0 ? bulletItems[0].text : "Kisah & Pembelajaran Utama");
+      const points =
+        bulletItems.length > 1
+          ? bulletItems.slice(1).map((b) => b.text)
+          : sec.rawParagraphs.slice(1);
+
+      const storySlide: StoryConceptSlide = {
+        id: `slide-story-${sIdx}`,
+        type: "STORY_CONCEPT",
+        title: sec.heading,
+        coreMessage: core,
+        supportingPoints: points.length > 0 ? points : [core],
+        categoryLabel: "📖 KISAH & HIKMAH",
+        slideNumber: slides.length + 1,
+        totalSlides: slides.length + 1,
+      };
+      slides.push(storySlide);
+      lastSlideType = "STORY_CONCEPT";
+      continue;
+    }
+
+    // Role: OBJECTIVES
     if (sec.type === "OBJECTIVES") {
       const textList = bulletItems.map((b) => b.text);
       const chunks = splitArray(textList, constraints.maxItemsPerSlide);
@@ -215,14 +355,19 @@ export function resolvePresentationLayout(
           id: `slide-obj-${sIdx}-${cIdx + 1}`,
           type: "OBJECTIVES",
           title: `${sec.heading}${headingSuffix}`,
-          categoryLabel: "Capaian & Tujuan Pembelajaran",
+          categoryLabel: "🎯 CAPAIAN PEMBELAJARAN",
           objectives: chunk,
           slideNumber: slides.length + 1,
           totalSlides: slides.length + 1,
         };
         slides.push(objSlide);
       });
-    } else if (sec.type === "QUIZ" || sec.type === "REFLECTION") {
+      lastSlideType = "OBJECTIVES";
+      continue;
+    }
+
+    // Role: QUIZ or REFLECTION
+    if (sec.type === "QUIZ" || sec.type === "REFLECTION") {
       const textList = bulletItems.map((b) => b.text);
       const chunks = splitArray(textList, constraints.maxItemsPerSlide);
 
@@ -241,7 +386,12 @@ export function resolvePresentationLayout(
         };
         slides.push(quizSlide);
       });
-    } else if (sec.type === "TAKEAWAY") {
+      lastSlideType = "REFLECTION_OR_QUIZ";
+      continue;
+    }
+
+    // Role: TAKEAWAY
+    if (sec.type === "TAKEAWAY") {
       const textList = bulletItems.map((b) => b.text);
       const chunks = splitArray(textList, constraints.maxItemsPerSlide);
 
@@ -259,28 +409,53 @@ export function resolvePresentationLayout(
         };
         slides.push(takeawaySlide);
       });
-    } else {
-      // Standard CONTENT Section
-      const itemChunks = chunkBulletItems(bulletItems, constraints);
-      const totalParts = itemChunks.length;
-
-      itemChunks.forEach((chunk, cIdx) => {
-        const partIndex = cIdx + 1;
-        const headingSuffix = totalParts > 1 ? ` (${partIndex}/${totalParts})` : "";
-        const contentSlide: ContentSlide = {
-          id: `slide-content-${sIdx}-${partIndex}`,
-          type: "CONTENT",
-          title: `${sec.heading}${headingSuffix}`,
-          sectionTitle: sec.heading,
-          partIndex: totalParts > 1 ? partIndex : undefined,
-          totalParts: totalParts > 1 ? totalParts : undefined,
-          items: chunk,
-          slideNumber: slides.length + 1,
-          totalSlides: slides.length + 1,
-        };
-        slides.push(contentSlide);
-      });
+      lastSlideType = "TAKEAWAY";
+      continue;
     }
+
+    // Default CONTENT Section
+    // If consecutive slides were standard CONTENT and items clearly have title headers ("Pilar 1: ..."), adapt into Cards
+    const allHaveTitleColons = bulletItems.length === 3 && bulletItems.every((b) => b.text.includes(":"));
+    if (lastSlideType === "CONTENT" && allHaveTitleColons) {
+      const cardList = bulletItems.map((b) => {
+        const parts = b.text.split(/:\s*(.+)/);
+        return { title: parts[0].trim(), text: parts[1].trim() };
+      });
+
+      const cardsSlide: CardsGridSlide = {
+        id: `slide-cards-${sIdx}`,
+        type: "CARDS_GRID",
+        title: sec.heading,
+        cards: cardList,
+        categoryLabel: "📌 POKOK BAHASAN",
+        slideNumber: slides.length + 1,
+        totalSlides: slides.length + 1,
+      };
+      slides.push(cardsSlide);
+      lastSlideType = "CARDS_GRID";
+      continue;
+    }
+
+    const itemChunks = chunkBulletItems(bulletItems, constraints);
+    const totalParts = itemChunks.length;
+
+    itemChunks.forEach((chunk, cIdx) => {
+      const partIndex = cIdx + 1;
+      const headingSuffix = totalParts > 1 ? ` (${partIndex}/${totalParts})` : "";
+      const contentSlide: ContentSlide = {
+        id: `slide-content-${sIdx}-${partIndex}`,
+        type: "CONTENT",
+        title: `${sec.heading}${headingSuffix}`,
+        sectionTitle: sec.heading,
+        partIndex: totalParts > 1 ? partIndex : undefined,
+        totalParts: totalParts > 1 ? totalParts : undefined,
+        items: chunk,
+        slideNumber: slides.length + 1,
+        totalSlides: slides.length + 1,
+      };
+      slides.push(contentSlide);
+    });
+    lastSlideType = "CONTENT";
   }
 
   // 4. Defensive Check: Slide count limitation

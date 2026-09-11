@@ -128,12 +128,25 @@ export function constructGenerationPrompt(request: AiProviderGenerateRequest): s
     }
   }
 
+  const isPresentation =
+    request.contentType === "LEARNING_MATERIAL" &&
+    request.instruction &&
+    request.instruction.includes("[PANDUAN PEMBUATAN SLIDE PRESENTASI");
+
   parts.push(`\n--- PETUNJUK FORMAT OUTPUT ---`);
-  parts.push(`1. Berikan Judul Konten yang jelas dan menarik pada baris pertama menggunakan heading '# Judul'.`);
-  parts.push(`2. Susun isi konten pembelajaran dalam format Markdown yang rapi, runtut, dan mudah dibaca.`);
-  parts.push(`3. KELENGKAPAN WAJIB: Tuntaskan seluruh butir soal/konten dari nomor 1 sampai selesai, beserta seluruh bagian kunci jawaban, pembahasan, dan rubrik pedoman penskoran secara lengkap tanpa memotong atau menggunakan placeholder '...'.`);
-  parts.push(`4. FORMAT BERSIH: JANGAN gunakan simbol blockquote '>' untuk kutipan atau stimulus. Tuliskan teks secara langsung.`);
-  parts.push(`5. Jangan sertakan metadata JSON atau blok kode pembungkus di luar draf.`);
+  if (isPresentation) {
+    parts.push(`1. Buat judul deck presentasi di baris pertama menggunakan '# Judul Materi Deck'.`);
+    parts.push(`2. Buat setiap slide menggunakan '## Judul Slide Alami' (DILARANG menggunakan prefiks mesin 'Slide 1:', 'Slide 2:', '(1/2)', dll).`);
+    parts.push(`3. Berikan variasi peran slide ([Role: Hook], [Role: Objectives], [Role: Split], [Role: Cards], [Role: Concept], [Role: Story], [Role: Quiz], [Role: Summary]).`);
+    parts.push(`4. Sajikan poin ringkas, tajam, dan visual. Sertakan catatan guru [Speaker Notes]: ... pada setiap slide.`);
+    parts.push(`5. Jangan sertakan metadata JSON atau blok kode di luar draf.`);
+  } else {
+    parts.push(`1. Berikan Judul Konten yang jelas dan menarik pada baris pertama menggunakan heading '# Judul'.`);
+    parts.push(`2. Susun isi konten pembelajaran dalam format Markdown yang rapi, runtut, dan mudah dibaca.`);
+    parts.push(`3. KELENGKAPAN WAJIB: Tuntaskan seluruh butir soal/konten dari nomor 1 sampai selesai, beserta seluruh bagian kunci jawaban, pembahasan, dan rubrik pedoman penskoran secara lengkap tanpa memotong atau menggunakan placeholder '...'.`);
+    parts.push(`4. FORMAT BERSIH: JANGAN gunakan simbol blockquote '>' untuk kutipan atau stimulus. Tuliskan teks secara langsung.`);
+    parts.push(`5. Jangan sertakan metadata JSON atau blok kode pembungkus di luar draf.`);
+  }
 
   return parts.join("\n");
 }

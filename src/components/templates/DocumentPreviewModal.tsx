@@ -14,7 +14,6 @@ import {
   Building2,
   BookOpen,
   LayoutTemplate,
-  Layers,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,7 @@ interface DocumentPreviewModalProps {
   title: string;
   content: string;
   contentType: AiContentType;
+  initialFormat?: PreviewFormat;
   schoolName?: string;
   teacherName?: string;
   subjectName?: string;
@@ -49,6 +49,7 @@ export function DocumentPreviewModal({
   title,
   content,
   contentType,
+  initialFormat,
   schoolName = "SMA / SMK Negeri",
   teacherName = "Guru Pengampu",
   subjectName = "Mata Pelajaran",
@@ -65,7 +66,16 @@ export function DocumentPreviewModal({
   onDownload,
   isDownloading = false,
 }: DocumentPreviewModalProps) {
-  const [activeFormat, setActiveFormat] = useState<PreviewFormat>("docx");
+  const isPresentationDoc =
+    contentType === "LEARNING_MATERIAL" &&
+    (/slide|presentasi|powerpoint|pptx/i.test(title) ||
+      content.includes("## Slide") ||
+      content.includes("[Speaker Notes]") ||
+      content.includes("[PANDUAN SLIDE"));
+
+  const effectiveInitialFormat = initialFormat || (isPresentationDoc ? "pptx" : "docx");
+  const [userSelectedFormat, setUserSelectedFormat] = useState<PreviewFormat | null>(null);
+  const activeFormat = userSelectedFormat || effectiveInitialFormat;
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(selectedTemplateId);
 
   if (!isOpen) return null;
@@ -78,7 +88,7 @@ export function DocumentPreviewModal({
   });
 
   const handleFormatChange = (format: PreviewFormat) => {
-    setActiveFormat(format);
+    setUserSelectedFormat(format);
     // Reset selected template if incompatible
     if (format === "docx" || format === "xlsx") {
       const firstCompat = availableTemplates.find((t) =>
@@ -100,25 +110,63 @@ export function DocumentPreviewModal({
   // Helper to split content into slide decks simulation for PPT
   const getPptSlides = () => {
     const lines = content.split("\n");
-    const slides: Array<{ title: string; bullets: string[] }> = [];
-    let currentSlideTitle = title;
+    const slides: Array<{ title: string; bullets: string[]; roleTag?: string }> = [];
+    
+    // First slide is always the Hero Cover Slide
+    slides.push({
+      title: title || "Materi Pembelajaran",
+      bullets: [
+        `Mata Pelajaran: ${subjectName}`,
+        `Kelas / Tingkat: ${className}`,
+        `Guru Pengampu: ${teacherName}`,
+        `Satuan Pendidikan: ${schoolName}`,
+      ],
+      roleTag: "COVER",
+    });
+
+    let currentSlideTitle = "";
     let currentBullets: string[] = [];
+    let currentRole: string | undefined = undefined;
 
     lines.forEach((line) => {
       const trimmed = line.trim();
       if (!trimmed || trimmed === "---" || trimmed === "***") return;
 
+      // Filter out Speaker Notes or Visual tag from slide bullets preview
+      if (/^>?\s*\[?(?:Speaker Notes|Catatan Guru|Visual|Ilustrasi)\]?:/i.test(trimmed)) {
+        return;
+      }
+
+      // Check role tag
+      const roleMatch = trimmed.match(/^\[(?:Role|Peran):\s*([^\]]+)\]/i);
+      if (roleMatch) {
+        currentRole = roleMatch[1].trim();
+        return;
+      }
+
       if (/^#{1,6}\s+/.test(trimmed)) {
-        if (currentBullets.length > 0 || slides.length > 0) {
+        const rawHeading = trimmed.replace(/^#+\s*/, "").replace(/[*_#`~]+/g, "").trim();
+        // Skip document H1 title as it's already in the cover slide
+        if (trimmed.startsWith("# ") && !currentSlideTitle) {
+          return;
+        }
+
+        if (currentSlideTitle && currentBullets.length > 0) {
           slides.push({
             title: currentSlideTitle,
-            bullets: currentBullets.length > 0 ? currentBullets : ["(Materi Pembelajaran)"],
+            bullets: currentBullets,
+            roleTag: currentRole,
           });
           currentBullets = [];
+          currentRole = undefined;
         }
-        currentSlideTitle = trimmed.replace(/^#+\s*/, "").replace(/[*_#`~]+/g, "").trim();
+
+        // Sanitize machine prefix like "Slide 1:" or "Slide 02 -"
+        currentSlideTitle = rawHeading
+          .replace(/^(slide|bagian|bab)\s*\d+[\s:.-]*/i, "")
+          .replace(/[\(\[]\s*\d+\s*[\/\-]\s*\d+\s*[\)\]]$/i, "")
+          .trim() || rawHeading;
       } else if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-        // Skip table dividers in slide bullets
         if (trimmed.replace(/[|\-\s:]/g, "").length === 0) return;
         const cells = trimmed.split("|").slice(1, -1).map((c) => c.replace(/<br\s*\/?>/gi, " ").replace(/[*_#`~]+/g, "").trim());
         currentBullets.push(cells.join(" — "));
@@ -133,21 +181,24 @@ export function DocumentPreviewModal({
             .trim()
         );
       } else {
-        currentBullets.push(
-          trimmed
-            .replace(/(\*\*\*|___)(.*?)\1/g, "$2")
-            .replace(/(\*\*|__)(.*?)\1/g, "$2")
-            .replace(/(\*|_)(.*?)\1/g, "$2")
-            .replace(/`([^`]+)`/g, "$1")
-            .trim()
-        );
+        const cleanP = trimmed
+          .replace(/^>\s*/, "")
+          .replace(/(\*\*\*|___)(.*?)\1/g, "$2")
+          .replace(/(\*\*|__)(.*?)\1/g, "$2")
+          .replace(/(\*|_)(.*?)\1/g, "$2")
+          .replace(/`([^`]+)`/g, "$1")
+          .trim();
+        if (cleanP && !cleanP.startsWith("#")) {
+          currentBullets.push(cleanP);
+        }
       }
     });
 
-    if (currentBullets.length > 0 || slides.length === 0) {
+    if (currentSlideTitle && currentBullets.length > 0) {
       slides.push({
         title: currentSlideTitle,
-        bullets: currentBullets.length > 0 ? currentBullets : ["(Materi Pembelajaran)"],
+        bullets: currentBullets,
+        roleTag: currentRole,
       });
     }
 
@@ -341,8 +392,17 @@ export function DocumentPreviewModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-slate-900">Pratinjau Dokumen Pembelajaran</h2>
-                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
-                  {CONTENT_TYPE_LABELS[contentType]?.title || contentType}
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${
+                    isPresentationDoc || activeFormat === "pptx"
+                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                      : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                  }`}
+                >
+                  {isPresentationDoc || activeFormat === "pptx"
+                    ? "Slide Presentasi"
+                    : CONTENT_TYPE_LABELS[contentType]?.title || contentType}
                 </Badge>
               </div>
               <p className="text-xs text-slate-500">
@@ -361,16 +421,27 @@ export function DocumentPreviewModal({
 
         {/* FORMAT SELECTOR BAR */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b border-slate-100 bg-white">
-          {/* Format Tabs (Unified Word Only) */}
+          {/* Format Tabs */}
           <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-            <button
-              type="button"
-              onClick={() => handleFormatChange("docx")}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm transition-all"
-            >
-              <FileText className="h-3.5 w-3.5 text-blue-600" />
-              Word (.docx)
-            </button>
+            {isPresentationDoc || activeFormat === "pptx" ? (
+              <button
+                type="button"
+                onClick={() => handleFormatChange("pptx")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-purple-700 shadow-sm transition-all"
+              >
+                <Presentation className="h-3.5 w-3.5 text-purple-600" />
+                PowerPoint (.pptx)
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleFormatChange("docx")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm transition-all"
+              >
+                <FileText className="h-3.5 w-3.5 text-blue-600" />
+                Word (.docx)
+              </button>
+            )}
           </div>
 
           {/* Template Selector (Word & Excel only) */}
@@ -468,48 +539,90 @@ export function DocumentPreviewModal({
               {activeFormat === "pptx" ? (
                 /* PPTX SLIDE DECK CARDS PREVIEW */
                 <div className="space-y-4 my-6">
-                  <div className="text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-2 rounded-lg flex items-center gap-2">
-                    <Presentation className="h-4 w-4" />
-                    Simulasi {getPptSlides().length} Slide Presentasi PowerPoint Otomatis
+                  <div className="text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-3.5 py-2.5 rounded-xl flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Presentation className="h-4 w-4 text-purple-600" />
+                      Pratinjau Simulasi {getPptSlides().length} Slide Presentasi PowerPoint (.pptx)
+                    </span>
+                    <Badge className="bg-purple-600 text-white text-[10px]">
+                      Format PPTX
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {getPptSlides().map((slide, i) => (
-                      <div
-                        key={i}
-                        className="bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-md flex flex-col justify-between min-h-[160px]"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2 border-b border-slate-800 pb-1">
-                            <span>Slide {i + 1}</span>
-                            <span>{subjectName}</span>
+                    {getPptSlides().map((slide, i) => {
+                      const isCover = i === 0;
+                      const titleLower = slide.title.toLowerCase();
+                      const roleLower = (slide.roleTag || "").toLowerCase();
+
+                      let badgeText = "📌 POKOK BAHASAN";
+                      let badgeBg = "bg-blue-50 text-blue-700 border-blue-200";
+
+                      if (isCover) {
+                        badgeText = "✨ COVER UTAMA";
+                        badgeBg = "bg-indigo-900/60 text-indigo-200 border-indigo-500/40";
+                      } else if (titleLower.includes("pemantik") || roleLower.includes("hook")) {
+                        badgeText = "💡 PEMANTIK";
+                        badgeBg = "bg-amber-50 text-amber-700 border-amber-200";
+                      } else if (titleLower.includes("tujuan") || roleLower.includes("obj")) {
+                        badgeText = "🎯 TUJUAN BELAJAR";
+                        badgeBg = "bg-emerald-50 text-emerald-700 border-emerald-200";
+                      } else if (titleLower.includes("kuis") || roleLower.includes("quiz")) {
+                        badgeText = "📝 KUIS CEPAT";
+                        badgeBg = "bg-purple-50 text-purple-700 border-purple-200";
+                      } else if (titleLower.includes("rangkum") || titleLower.includes("kesimpulan") || roleLower.includes("sum")) {
+                        badgeText = "✨ RANGKUMAN INTI";
+                        badgeBg = "bg-indigo-50 text-indigo-700 border-indigo-200";
+                      } else if (titleLower.includes("vs") || titleLower.includes("banding") || roleLower.includes("split")) {
+                        badgeText = "⚖️ PERBANDINGAN";
+                        badgeBg = "bg-cyan-50 text-cyan-700 border-cyan-200";
+                      }
+
+                      return (
+                        <div
+                          key={i}
+                          className={`p-5 rounded-2xl border shadow-sm flex flex-col justify-between min-h-[175px] transition-all ${
+                            isCover
+                              ? "bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border-slate-700 shadow-md"
+                              : "bg-white text-slate-900 border-slate-200 hover:border-indigo-300 hover:shadow-md"
+                          }`}
+                        >
+                          <div>
+                            <div className={`flex items-center justify-between text-[11px] mb-2.5 pb-2 border-b ${isCover ? "border-slate-700 text-slate-300" : "border-slate-100 text-slate-500"}`}>
+                              <span className="font-bold flex items-center gap-1.5">
+                                <span className={isCover ? "text-indigo-400" : "text-indigo-600"}>●</span> Slide {i + 1}
+                              </span>
+                              <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${badgeBg}`}>
+                                {badgeText}
+                              </span>
+                            </div>
+                            <h4 className={`font-bold text-sm leading-snug mb-2.5 ${isCover ? "text-white text-base" : "text-slate-900"}`}>
+                              {slide.title}
+                            </h4>
+                            <ul className={`space-y-1.5 text-xs ${isCover ? "text-slate-200" : "text-slate-600"}`}>
+                              {slide.bullets.slice(0, 4).map((b, bi) => (
+                                <li key={bi} className="truncate flex items-start gap-1.5">
+                                  <span className={isCover ? "text-indigo-400 font-bold" : "text-indigo-600 font-bold"}>•</span>
+                                  <span className="truncate">{b}</span>
+                                </li>
+                              ))}
+                              {slide.bullets.length > 4 && (
+                                <li className={`text-[10px] italic ${isCover ? "text-slate-400" : "text-slate-400"}`}>
+                                  + {slide.bullets.length - 4} poin lainnya...
+                                </li>
+                              )}
+                            </ul>
                           </div>
-                          <h4 className="font-bold text-sm text-indigo-300 leading-snug mb-2">
-                            {slide.title}
-                          </h4>
-                          <ul className="space-y-1 text-xs text-slate-200">
-                            {slide.bullets.slice(0, 4).map((b, bi) => (
-                              <li key={bi} className="truncate flex items-start gap-1.5">
-                                <span className="text-indigo-400 font-bold">•</span>
-                                <span className="truncate">{b}</span>
-                              </li>
-                            ))}
-                            {slide.bullets.length > 4 && (
-                              <li className="text-[10px] text-slate-400 italic">
-                                + {slide.bullets.length - 4} poin lainnya...
-                              </li>
-                            )}
-                          </ul>
+                          <div className={`text-[10px] mt-3 pt-2 border-t flex justify-between ${isCover ? "border-slate-700 text-slate-400" : "border-slate-100 text-slate-400"}`}>
+                            <span>{schoolName}</span>
+                            <span className="font-medium">{teacherName}</span>
+                          </div>
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-3 pt-1 border-t border-slate-800 flex justify-between">
-                          <span>{schoolName}</span>
-                          <span>{teacherName}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : activeFormat === "xlsx" ? (
-                /* EXCEL GRID SIMULATION PREVIEW */
+                /* EXCEL SHEET SIMULATOR PREVIEW */
                 <div className="space-y-4 my-6">
                   <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg flex items-center justify-between">
                     <span className="flex items-center gap-2">
@@ -629,11 +742,17 @@ export function DocumentPreviewModal({
               type="button"
               disabled={isDownloading}
               onClick={() => onDownload(activeFormat, currentTemplate)}
-              className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md rounded-xl gap-2 transition-all hover:scale-[1.02]"
+              className={`px-5 py-2 text-xs font-bold text-white shadow-md rounded-xl gap-2 transition-all hover:scale-[1.02] ${
+                activeFormat === "pptx"
+                  ? "bg-purple-600 hover:bg-purple-700"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
             >
               <Download className="h-4 w-4" />
               {isDownloading
                 ? "Menyiapkan Dokumen..."
+                : activeFormat === "pptx"
+                ? "Unduh Slide PowerPoint (.PPTX)"
                 : `Unduh Dokumen ${activeFormat.toUpperCase()} Sekarang`}
             </Button>
           </div>

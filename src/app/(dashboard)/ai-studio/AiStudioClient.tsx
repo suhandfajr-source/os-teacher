@@ -627,170 +627,216 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
           {draftTitle && draftContent ? (
             <div className="space-y-6">
               {/* Draft Header & Meta */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border rounded-2xl p-4 md:p-6 shadow-sm">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="font-semibold">
-                      {CONTENT_TYPE_LABELS[contentType].title}
-                    </Badge>
+              {(() => {
+                const isPresentationDraft =
+                  selectedFlow === "PRESENTATION" ||
+                  (contentType === "LEARNING_MATERIAL" &&
+                    (/slide|presentasi|powerpoint|pptx/i.test(draftTitle + " " + topic) ||
+                      draftContent.includes("## Slide") ||
+                      draftContent.includes("[Speaker Notes]") ||
+                      draftContent.includes("[PANDUAN SLIDE")));
 
-                    {draftStatus === "ARCHIVED" ? (
-                      <Badge variant="destructive" className="flex items-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        Terarsip (Hanya Baca)
-                      </Badge>
-                    ) : isSavedInDb ? (
-                      <Badge className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Tersimpan di Database
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300">
-                        Pratinjau Draf (Belum Disimpan)
-                      </Badge>
-                    )}
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border rounded-2xl p-4 md:p-6 shadow-sm">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          variant="outline"
+                          className={`font-semibold ${
+                            isPresentationDraft
+                              ? "bg-purple-50 text-purple-700 border-purple-200"
+                              : ""
+                          }`}
+                        >
+                          {isPresentationDraft
+                            ? "Slide Presentasi"
+                            : CONTENT_TYPE_LABELS[contentType].title}
+                        </Badge>
 
-                    {activePreviewInfo?.modelUsed && (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        Model: {activePreviewInfo.modelUsed}
-                      </Badge>
-                    )}
-                  </div>
-                  <h2 className="text-xl font-bold tracking-tight text-foreground mt-1">
-                    {draftTitle}
-                  </h2>
-                  {activePreviewInfo?.contextSummary.isContextAware && (
-                    <p className="text-xs text-muted-foreground">
-                      Konteks: {activePreviewInfo.contextSummary.subjectName} — Kelas {activePreviewInfo.contextSummary.className} ({activePreviewInfo.contextSummary.academicPeriod})
-                    </p>
-                  )}
-                </div>
+                        {draftStatus === "ARCHIVED" ? (
+                          <Badge variant="destructive" className="flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Terarsip (Hanya Baca)
+                          </Badge>
+                        ) : isSavedInDb ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Tersimpan di Database
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300">
+                            Pratinjau Draf (Belum Disimpan)
+                          </Badge>
+                        )}
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {/* Primary Preview Action */}
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      disabled={!draftContent}
-                      onClick={() => {
-                        setPreviewFormatInitial("docx");
-                        setIsPreviewModalOpen(true);
-                      }}
-                      className="h-8 px-3 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm gap-1.5 rounded-lg"
-                      title="Buka Pratinjau Dokumen Lengkap Sebelum Diunduh"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      Pratinjau Dokumen
-                    </Button>
+                        {activePreviewInfo?.modelUsed && (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            Model: {activePreviewInfo.modelUsed}
+                          </Badge>
+                        )}
+                      </div>
+                      <h2 className="text-xl font-bold tracking-tight text-foreground mt-1">
+                        {draftTitle}
+                      </h2>
+                      {activePreviewInfo?.contextSummary.isContextAware && (
+                        <p className="text-xs text-muted-foreground">
+                          Konteks: {activePreviewInfo.contextSummary.subjectName} — Kelas {activePreviewInfo.contextSummary.className} ({activePreviewInfo.contextSummary.academicPeriod})
+                        </p>
+                      )}
+                    </div>
 
-                    {/* Multi-Format Export Group (Modul Ajar / RPP is Word only) */}
-                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Primary Preview Action */}
                       <Button
                         type="button"
-                        variant="ghost"
+                        variant="default"
                         size="sm"
-                        disabled={!!isExporting || !draftContent}
-                        onClick={() => handleDownloadDocument("docx")}
-                        className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/40"
-                        title="Unduh sebagai Dokumen Word Standar (.docx)"
+                        disabled={!draftContent}
+                        onClick={() => {
+                          setPreviewFormatInitial(isPresentationDraft ? "pptx" : "docx");
+                          setIsPreviewModalOpen(true);
+                        }}
+                        className={`h-8 px-3 text-xs font-bold shadow-sm gap-1.5 rounded-lg text-white ${
+                          isPresentationDraft
+                            ? "bg-purple-600 hover:bg-purple-700"
+                            : "bg-indigo-600 hover:bg-indigo-700"
+                        }`}
+                        title="Buka Pratinjau Dokumen Lengkap Sebelum Diunduh"
                       >
-                        {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
-                        Word Standar
+                        <Eye className="h-3.5 w-3.5" />
+                        Pratinjau Dokumen
                       </Button>
 
-                      {availableTemplates.filter((t) => (t.format || "DOCX") === "DOCX").length > 0 ? (
-                        <div className="relative group">
+                      {/* Export Actions: Specific PPTX for Presentation, Word for others */}
+                      {isPresentationDraft ? (
+                        <div className="flex items-center gap-1 bg-purple-50/70 p-1 rounded-lg border border-purple-200 flex-wrap">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             disabled={!!isExporting || !draftContent}
-                            className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/50"
-                            title="Pilih Template Word Kustom"
+                            onClick={() => handleDownloadDocument("pptx")}
+                            className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-purple-700 bg-purple-100/60"
+                            title="Unduh sebagai Slide Presentasi PowerPoint (.pptx)"
                           >
-                            <LayoutTemplate className="h-3.5 w-3.5 text-blue-600" />
-                            Template Word ({availableTemplates.filter((t) => (t.format || "DOCX") === "DOCX").length})
+                            {isExporting === "pptx" ? (
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Presentation className="h-3.5 w-3.5 text-purple-600" />
+                            )}
+                            PowerPoint (.pptx)
                           </Button>
-                          <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
-                            {availableTemplates
-                              .filter((t) => (t.format || "DOCX") === "DOCX")
-                              .map((t) => (
-                                <button
-                                  key={t.id}
-                                  type="button"
-                                  onClick={() => handleExportWithTemplate(t)}
-                                  className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg font-medium transition-all"
-                                >
-                                  {t.name}
-                                </button>
-                              ))}
-                            <div className="border-t border-slate-100 my-1"></div>
-                            <button
-                              type="button"
-                              onClick={() => setIsTemplateDialogOpen(true)}
-                              className="w-full text-left px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 font-semibold rounded-lg"
-                            >
-                              + Kelola Template...
-                            </button>
-                          </div>
                         </div>
                       ) : (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsTemplateDialogOpen(true)}
-                          className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
-                          title="Gunakan Template Word Kustom Sendiri"
-                        >
-                          <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
-                          + Template Word
-                        </Button>
-                      )}
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleResetEditor}
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-1.5" />
-                      Buat Draf Baru
-                    </Button>
-
-                    {draftStatus === "ACTIVE" && (
-                      <>
-                        {currentDraftId && (
+                        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border flex-wrap">
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            disabled={isArchiving}
-                            onClick={() => handleArchiveDraft()}
-                            className="text-destructive hover:bg-destructive/10"
+                            disabled={!!isExporting || !draftContent}
+                            onClick={() => handleDownloadDocument("docx")}
+                            className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/40"
+                            title="Unduh sebagai Dokumen Word Standar (.docx)"
                           >
-                            <Archive className="h-4 w-4 mr-1.5" />
-                            Arsipkan
+                            {isExporting === "docx" ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-blue-600" />}
+                            Word Standar
                           </Button>
-                        )}
 
-                        <Button
-                          type="button"
-                          variant="default"
-                          size="sm"
-                          disabled={isSaving}
-                          onClick={handleSaveDraft}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          <Save className="h-4 w-4 mr-1.5" />
-                          {isSaving ? "Menyimpan..." : currentDraftId ? "Simpan Perubahan" : "Simpan Draf"}
-                        </Button>
-                      </>
-                    )}
+                          {availableTemplates.filter((t) => (t.format || "DOCX") === "DOCX").length > 0 ? (
+                            <div className="relative group">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={!!isExporting || !draftContent}
+                                className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-blue-700 bg-blue-50/50"
+                                title="Pilih Template Word Kustom"
+                              >
+                                <LayoutTemplate className="h-3.5 w-3.5 text-blue-600" />
+                                Template Word ({availableTemplates.filter((t) => (t.format || "DOCX") === "DOCX").length})
+                              </Button>
+                              <div className="absolute left-0 top-full mt-1 hidden group-hover:block z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-1 min-w-[220px]">
+                                {availableTemplates
+                                  .filter((t) => (t.format || "DOCX") === "DOCX")
+                                  .map((t) => (
+                                    <button
+                                      key={t.id}
+                                      type="button"
+                                      onClick={() => handleExportWithTemplate(t)}
+                                      className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg font-medium transition-all"
+                                    >
+                                      {t.name}
+                                    </button>
+                                  ))}
+                                <div className="border-t border-slate-100 my-1"></div>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsTemplateDialogOpen(true)}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50 font-semibold rounded-lg"
+                                >
+                                  + Kelola Template...
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsTemplateDialogOpen(true)}
+                              className="h-8 px-2.5 text-xs font-semibold hover:bg-background gap-1 text-slate-600"
+                              title="Gunakan Template Word Kustom Sendiri"
+                            >
+                              <LayoutTemplate className="h-3.5 w-3.5 text-slate-500" />
+                              + Template Word
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleResetEditor}
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-1.5" />
+                        Buat Draf Baru
+                      </Button>
+
+                      {draftStatus === "ACTIVE" && (
+                        <>
+                          {currentDraftId && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={isArchiving}
+                              onClick={() => handleArchiveDraft()}
+                              className="text-destructive hover:bg-destructive/10"
+                            >
+                              <Archive className="h-4 w-4 mr-1.5" />
+                              Arsipkan
+                            </Button>
+                          )}
+
+                          <Button
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            disabled={isSaving}
+                            onClick={handleSaveDraft}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Save className="h-4 w-4 mr-1.5" />
+                            {isSaving ? "Menyimpan..." : currentDraftId ? "Simpan Perubahan" : "Simpan Draf"}
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
-              </div>
+                );
+              })()}
 
               {/* Title & Content Editor */}
               <div className="grid grid-cols-1 gap-6">
@@ -1536,99 +1582,141 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {draftsList.map((draft) => (
-                <Card
-                  key={draft.id}
-                  className="hover:shadow-md transition-shadow border flex flex-col justify-between"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <Badge variant="outline" className="text-[11px] font-medium">
-                        {CONTENT_TYPE_LABELS[draft.contentType].title}
-                      </Badge>
-                      {draft.status === "ARCHIVED" ? (
-                        <Badge variant="destructive" className="text-[10px] flex items-center gap-1">
-                          <Lock className="h-2.5 w-2.5" />
-                          Arsip
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-[10px]">
-                          Aktif
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-base font-bold line-clamp-2 mt-1">
-                      {draft.title}
-                    </CardTitle>
-                    <CardDescription className="text-xs line-clamp-1">
-                      Topik: {draft.topic}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 pt-0">
-                    {draft.teachingContext ? (
-                      <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
-                        {draft.teachingContext.subject.name} — Kelas {draft.teachingContext.class.name} ({draft.teachingContext.academicPeriod.year})
-                      </div>
-                    ) : (
-                      <div className="text-xs text-muted-foreground italic">
-                        Draf Konten Umum
-                      </div>
-                    )}
+              {draftsList.map((draft) => {
+                const isPptDraft =
+                  draft.contentType === "LEARNING_MATERIAL" &&
+                  (/slide|presentasi|powerpoint|pptx/i.test(draft.title + " " + draft.topic) ||
+                    draft.content.includes("## Slide") ||
+                    draft.content.includes("[Speaker Notes]") ||
+                    draft.content.includes("[PANDUAN SLIDE]"));
 
-                    {/* Quick export bar for draft card */}
-                    <div className="flex items-center justify-between gap-1 pt-2 border-t">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={!!isExporting}
-                          onClick={() =>
-                            handleDownloadDocument(
-                              "docx",
-                              draft.title,
-                              draft.content,
-                              draft.teachingContext?.subject.name,
-                              undefined,
-                              draft.teachingContext?.class.name
-                            )
-                          }
-                          className="h-6 px-1.5 text-[10px] text-blue-600 hover:bg-blue-50"
-                          title="Download Word (.docx)"
+                return (
+                  <Card
+                    key={draft.id}
+                    className="hover:shadow-md transition-shadow border flex flex-col justify-between"
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <Badge
+                          variant="outline"
+                          className={`text-[11px] font-medium ${
+                            isPptDraft
+                              ? "bg-purple-50 text-purple-700 border-purple-200"
+                              : ""
+                          }`}
                         >
-                          <FileText className="h-3 w-3 mr-0.5" />
-                          Word
-                        </Button>
+                          {isPptDraft
+                            ? "Slide Presentasi"
+                            : CONTENT_TYPE_LABELS[draft.contentType].title}
+                        </Badge>
+                        {draft.status === "ARCHIVED" ? (
+                          <Badge variant="destructive" className="text-[10px] flex items-center gap-1">
+                            <Lock className="h-2.5 w-2.5" />
+                            Arsip
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Aktif
+                          </Badge>
+                        )}
                       </div>
+                      <CardTitle className="text-base font-bold line-clamp-2 mt-1">
+                        {draft.title}
+                      </CardTitle>
+                      <CardDescription className="text-xs line-clamp-1">
+                        Topik: {draft.topic}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-0">
+                      {draft.teachingContext ? (
+                        <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded-lg">
+                          {draft.teachingContext.subject.name} — Kelas {draft.teachingContext.class.name} ({draft.teachingContext.academicPeriod.year})
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground italic">
+                          Draf Konten Umum
+                        </div>
+                      )}
 
-                      <div className="flex items-center gap-1">
-                        {draft.status === "ACTIVE" && (
+                      {/* Quick export bar for draft card */}
+                      <div className="flex items-center justify-between gap-1 pt-2 border-t">
+                        <div className="flex items-center gap-1">
+                          {isPptDraft ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!!isExporting}
+                              onClick={() =>
+                                handleDownloadDocument(
+                                  "pptx",
+                                  draft.title,
+                                  draft.content,
+                                  draft.teachingContext?.subject.name,
+                                  undefined,
+                                  draft.teachingContext?.class.name
+                                )
+                              }
+                              className="h-6 px-1.5 text-[10px] text-purple-600 hover:bg-purple-50 font-medium"
+                              title="Download PowerPoint (.pptx)"
+                            >
+                              <Presentation className="h-3 w-3 mr-0.5" />
+                              PowerPoint (.pptx)
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={!!isExporting}
+                              onClick={() =>
+                                handleDownloadDocument(
+                                  "docx",
+                                  draft.title,
+                                  draft.content,
+                                  draft.teachingContext?.subject.name,
+                                  undefined,
+                                  draft.teachingContext?.class.name
+                                )
+                              }
+                              className="h-6 px-1.5 text-[10px] text-blue-600 hover:bg-blue-50"
+                              title="Download Word (.docx)"
+                            >
+                              <FileText className="h-3 w-3 mr-0.5" />
+                              Word
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {draft.status === "ACTIVE" && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleArchiveDraft(draft.id)}
+                              className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                            >
+                              <Archive className="h-3.5 w-3.5 mr-1" />
+                              Arsip
+                            </Button>
+                          )}
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => handleArchiveDraft(draft.id)}
-                            className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                            onClick={() => handleOpenDraft(draft)}
+                            className="h-7 px-2.5 text-xs font-semibold"
                           >
-                            <Archive className="h-3.5 w-3.5 mr-1" />
-                            Arsip
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            {draft.status === "ACTIVE" ? "Buka & Edit" : "Lihat"}
                           </Button>
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDraft(draft)}
-                          className="h-7 px-2.5 text-xs font-semibold"
-                        >
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          {draft.status === "ACTIVE" ? "Buka & Edit" : "Lihat"}
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1649,6 +1737,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
         title={draftTitle || "Dokumen Pembelajaran"}
         content={draftContent}
         contentType={contentType}
+        initialFormat={previewFormatInitial}
         schoolName="SMA Negeri 1 Jakarta"
         teacherName="Guru Pengampu"
         subjectName={selectedContext?.subjectName || "Mata Pelajaran"}

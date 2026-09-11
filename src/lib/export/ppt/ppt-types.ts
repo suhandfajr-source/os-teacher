@@ -17,7 +17,11 @@ export type SlideType =
   | "OBJECTIVES"
   | "CONTENT"
   | "TAKEAWAY"
-  | "REFLECTION_OR_QUIZ";
+  | "REFLECTION_OR_QUIZ"
+  | "HOOK_STATEMENT"
+  | "SPLIT_COLUMN"
+  | "CARDS_GRID"
+  | "STORY_CONCEPT";
 
 export interface BulletItem {
   text: string;
@@ -70,12 +74,45 @@ export interface ReflectionOrQuizSlide extends BaseSlide {
   questions: string[];
 }
 
+export interface HookStatementSlide extends BaseSlide {
+  type: "HOOK_STATEMENT";
+  statement: string;
+  supportingText?: string;
+  categoryLabel?: string;
+}
+
+export interface SplitColumnSlide extends BaseSlide {
+  type: "SPLIT_COLUMN";
+  leftColumnTitle: string;
+  leftColumnItems: string[];
+  rightColumnTitle: string;
+  rightColumnItems: string[];
+  categoryLabel?: string;
+}
+
+export interface CardsGridSlide extends BaseSlide {
+  type: "CARDS_GRID";
+  cards: Array<{ title?: string; text: string; subtext?: string }>;
+  categoryLabel?: string;
+}
+
+export interface StoryConceptSlide extends BaseSlide {
+  type: "STORY_CONCEPT";
+  coreMessage: string;
+  supportingPoints: string[];
+  categoryLabel?: string;
+}
+
 export type PresentationSlide =
   | CoverSlide
   | ObjectivesSlide
   | ContentSlide
   | TakeawaySlide
-  | ReflectionOrQuizSlide;
+  | ReflectionOrQuizSlide
+  | HookStatementSlide
+  | SplitColumnSlide
+  | CardsGridSlide
+  | StoryConceptSlide;
 
 export interface PresentationModel {
   metadata: PresentationMetadata;
