@@ -8,6 +8,7 @@ import {
   Sparkles, 
   BarChart, 
   GraduationCap, 
+  FileQuestion,
   Settings
 } from 'lucide-react';
 
@@ -17,6 +18,7 @@ const mainNavItems = [
   { href: '/kelas', label: 'Kelas Saya', icon: Users },
   { href: '/siswa', label: 'Daftar Siswa', icon: UserCircle },
   { href: '/ai-studio', label: 'AI Studio', icon: Sparkles },
+  { href: '/quiz', label: 'Quiz', icon: FileQuestion },
   { href: '/laporan', label: 'Laporan', icon: BarChart },
 ];
 

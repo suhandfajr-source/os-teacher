@@ -18,6 +18,7 @@ import {
   getAiDraftsAction,
   generateSlideIllustrationAction,
 } from "@/modules/ai/ai.actions";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import {
   Sparkles,
   BookOpen,
   FileText,
+  FileQuestion,
   CheckSquare,
   ListOrdered,
   Save,
@@ -49,6 +51,8 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { createQuizAction } from "@/modules/quiz/quiz.actions";
+import { convertDocumentToQuizAction } from "@/modules/quiz/quiz-convert.action";
 import { exportAiDocument, ExportFormat } from "@/lib/export";
 import { TemplateManagerDialog } from "@/components/templates/TemplateManagerDialog";
 import { DocumentTemplateItem } from "@/modules/templates/template.types";
@@ -278,6 +282,57 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
   };
 
   const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
+  const [isConvertingQuiz, setIsConvertingQuiz] = useState(false);
+  const router = useRouter();
+
+  const isQuizDraft =
+    /soal|kuis|quiz|ulangan|latihan soal/i.test(draftTitle + " " + topic) &&
+    !(
+      selectedFlow === "PRESENTATION" ||
+      (contentType === "LEARNING_MATERIAL" &&
+        (/slide|presentasi|powerpoint|pptx/i.test(draftTitle + " " + topic) ||
+          draftContent.includes("## Slide") ||
+          draftContent.includes("[Speaker Notes]")))
+    );
+
+  const handleConvertToQuiz = async () => {
+    if (!selectedContextId) {
+      toast.error("Pilih kelas & mata pelajaran terlebih dahulu di bagian atas");
+      return;
+    }
+    setIsConvertingQuiz(true);
+    try {
+      const convertRes = await convertDocumentToQuizAction({ documentText: draftContent });
+      if (!convertRes.success || !convertRes.data) {
+        toast.error(convertRes.error ?? "Konversi soal gagal");
+        return;
+      }
+      const createRes = await createQuizAction({
+        teachingContextId: selectedContextId,
+        title: draftTitle || "Quiz dari AI Studio",
+        description: "Dibuat otomatis dari draf AI Studio",
+        shuffleQuestions: true,
+        shuffleOptions: true,
+        questions: convertRes.data.questions.map((q) => ({
+          text: q.text,
+          options: q.options,
+          correctIndex: q.correctIndex,
+          points: q.points,
+          explanation: q.explanation,
+        })),
+      });
+      if (createRes.success && createRes.data) {
+        toast.success("Quiz berhasil dibuat dari draf AI!");
+        router.push(`/quiz/${createRes.data.quizId}`);
+      } else {
+        toast.error(createRes.error ?? "Gagal membuat quiz");
+      }
+    } catch {
+      toast.error("Terjadi kesalahan saat membuat quiz");
+    } finally {
+      setIsConvertingQuiz(false);
+    }
+  };
 
   const handleDownloadDocument = async (
     format: ExportFormat,
@@ -691,6 +746,26 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         </p>
                       )}
                     </div>
+
+                      {/* Quiz → Online Quiz handoff */}
+                      {isQuizDraft && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={isConvertingQuiz || !draftContent}
+                          onClick={handleConvertToQuiz}
+                          className="h-8 px-3 text-xs font-semibold hover:bg-background gap-1 text-emerald-700 bg-emerald-50/60 border border-emerald-200"
+                          title="Ubah draf ini menjadi quiz online yang bisa dikerjakan siswa"
+                        >
+                          {isConvertingQuiz ? (
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <FileQuestion className="h-3.5 w-3.5 text-emerald-600" />
+                          )}
+                          Jadikan Quiz Online
+                        </Button>
+                      )}
 
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Primary Preview Action */}

@@ -222,15 +222,15 @@ model School {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  memberships      TeacherSchoolMembership[]
-  students         Student[]
-  academicPeriods  AcademicPeriod[]
-  subjects         Subject[]
-  classes          Class[]
-  teachingContexts TeachingContext[]
-  aiContentDrafts  AiContentDraft[]
+  memberships       TeacherSchoolMembership[]
+  students          Student[]
+  academicPeriods   AcademicPeriod[]
+  subjects          Subject[]
+  classes           Class[]
+  teachingContexts  TeachingContext[]
+  aiContentDrafts   AiContentDraft[]
   documentTemplates DocumentTemplate[]
-  importSessions   ImportSession[]
+  importSessions    ImportSession[]
 
   @@index([normalizedName])
   @@index([npsn])
@@ -271,6 +271,7 @@ model Student {
   monitoringNotes   StudentMonitoringNote[]
   parentRelations   ParentStudentRelation[]
   parentInvitations ParentInvitation[]
+  quizAttempts      QuizAttempt[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -305,13 +306,13 @@ model TeacherProfile {
   preferredName       String?
   onboardingCompleted Boolean @default(false)
 
-  memberships                    TeacherSchoolMembership[]
-  teachingContexts               TeachingContext[]
-  aiContentDrafts                AiContentDraft[]
-  documentTemplates              DocumentTemplate[]
-  createdParentInvitations       ParentInvitation[]     @relation("CreatedParentInvitations")
-  grantedParentTeachingAccesses  ParentTeachingAccess[] @relation("GrantedParentTeachingAccesses")
-  importSessions                 ImportSession[]
+  memberships                   TeacherSchoolMembership[]
+  teachingContexts              TeachingContext[]
+  aiContentDrafts               AiContentDraft[]
+  documentTemplates             DocumentTemplate[]
+  createdParentInvitations      ParentInvitation[]        @relation("CreatedParentInvitations")
+  grantedParentTeachingAccesses ParentTeachingAccess[]    @relation("GrantedParentTeachingAccesses")
+  importSessions                ImportSession[]
 
   @@map("teacher_profile")
 }
@@ -386,6 +387,7 @@ model TeachingContext {
   parentInvitations      ParentInvitation[]
   parentTeachingAccesses ParentTeachingAccess[]
   importSessions         ImportSession[]
+  quizzes                Quiz[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -513,22 +515,22 @@ model GradePolicyItem {
 }
 
 model Assessment {
-  id                         String           @id @default(cuid())
-  teachingContextId          String
-  teachingContext            TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
-  assessmentTypeId           String
-  assessmentType             AssessmentType   @relation(fields: [assessmentTypeId], references: [id], onDelete: Restrict)
-  teachingSessionId          String?
-  teachingSession            TeachingSession? @relation(fields: [teachingSessionId], references: [id], onDelete: SetNull)
-  title                      String
-  description                String?
-  assessmentDate             DateTime         @db.Date
-  maxScore                   Decimal          @db.Decimal(10, 2)
-  minimumPassingScore        Decimal?         @db.Decimal(5, 2)
-  status                     AssessmentStatus @default(DRAFT)
+  id                        String           @id @default(cuid())
+  teachingContextId         String
+  teachingContext           TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  assessmentTypeId          String
+  assessmentType            AssessmentType   @relation(fields: [assessmentTypeId], references: [id], onDelete: Restrict)
+  teachingSessionId         String?
+  teachingSession           TeachingSession? @relation(fields: [teachingSessionId], references: [id], onDelete: SetNull)
+  title                     String
+  description               String?
+  assessmentDate            DateTime         @db.Date
+  maxScore                  Decimal          @db.Decimal(10, 2)
+  minimumPassingScore       Decimal?         @db.Decimal(5, 2)
+  status                    AssessmentStatus @default(DRAFT)
   participantsInitializedAt DateTime?
-  createdAt                  DateTime         @default(now())
-  updatedAt                  DateTime         @updatedAt
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
 
   results                AssessmentResult[]
   learningObjectiveLinks AssessmentLearningObjective[]
@@ -683,8 +685,8 @@ model LearningObjective {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
-  sessionLinks      TeachingSessionLearningObjective[]
-  assessmentLinks   AssessmentLearningObjective[]
+  sessionLinks    TeachingSessionLearningObjective[]
+  assessmentLinks AssessmentLearningObjective[]
 
   @@index([teachingContextId, status])
   @@index([teachingContextId, orderIndex])
@@ -777,24 +779,24 @@ model ParentStudentRelation {
 }
 
 model ParentInvitation {
-  id                          String                 @id @default(cuid())
-  tokenHash                   String                 @unique
-  recipientEmail              String
-  relationshipLabel           String?
-  studentId                   String
-  student                     Student                @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  teachingContextId           String
-  teachingContext             TeachingContext        @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
-  teacherProfileId            String
-  teacherProfile              TeacherProfile         @relation("CreatedParentInvitations", fields: [teacherProfileId], references: [id], onDelete: Restrict)
-  status                      ParentInvitationStatus @default(PENDING)
-  expiresAt                   DateTime
-  acceptedAt                  DateTime?
-  acceptedByParentProfileId   String?
-  acceptedByParentProfile     ParentProfile?         @relation("AcceptedByParent", fields: [acceptedByParentProfileId], references: [id], onDelete: Restrict)
-  revokedAt                   DateTime?
-  createdAt                   DateTime               @default(now())
-  updatedAt                   DateTime               @updatedAt
+  id                        String                 @id @default(cuid())
+  tokenHash                 String                 @unique
+  recipientEmail            String
+  relationshipLabel         String?
+  studentId                 String
+  student                   Student                @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  teachingContextId         String
+  teachingContext           TeachingContext        @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  teacherProfileId          String
+  teacherProfile            TeacherProfile         @relation("CreatedParentInvitations", fields: [teacherProfileId], references: [id], onDelete: Restrict)
+  status                    ParentInvitationStatus @default(PENDING)
+  expiresAt                 DateTime
+  acceptedAt                DateTime?
+  acceptedByParentProfileId String?
+  acceptedByParentProfile   ParentProfile?         @relation("AcceptedByParent", fields: [acceptedByParentProfileId], references: [id], onDelete: Restrict)
+  revokedAt                 DateTime?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
 
   @@index([tokenHash])
   @@index([recipientEmail])
@@ -804,17 +806,17 @@ model ParentInvitation {
 }
 
 model ParentTeachingAccess {
-  id                          String                 @id @default(cuid())
-  parentStudentRelationId     String
-  parentStudentRelation       ParentStudentRelation  @relation(fields: [parentStudentRelationId], references: [id], onDelete: Restrict)
-  teachingContextId           String
-  teachingContext             TeachingContext        @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
-  grantedByTeacherProfileId   String
-  grantedByTeacherProfile     TeacherProfile         @relation("GrantedParentTeachingAccesses", fields: [grantedByTeacherProfileId], references: [id], onDelete: Restrict)
-  status                      ParentAccessStatus     @default(ACTIVE)
-  revokedAt                   DateTime?
-  createdAt                   DateTime               @default(now())
-  updatedAt                   DateTime               @updatedAt
+  id                        String                @id @default(cuid())
+  parentStudentRelationId   String
+  parentStudentRelation     ParentStudentRelation @relation(fields: [parentStudentRelationId], references: [id], onDelete: Restrict)
+  teachingContextId         String
+  teachingContext           TeachingContext       @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  grantedByTeacherProfileId String
+  grantedByTeacherProfile   TeacherProfile        @relation("GrantedParentTeachingAccesses", fields: [grantedByTeacherProfileId], references: [id], onDelete: Restrict)
+  status                    ParentAccessStatus    @default(ACTIVE)
+  revokedAt                 DateTime?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
 
   @@unique([parentStudentRelationId, teachingContextId])
   @@index([teachingContextId, status])
@@ -847,4 +849,104 @@ model ImportSession {
   @@map("import_session")
 }
 
+// -------------------------------------------------
+// QUIZ ONLINE SCHEMA (DEV STAGE 10)
+// -------------------------------------------------
 
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum QuizQuestionType {
+  MULTIPLE_CHOICE
+}
+
+enum QuizAttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+}
+
+model Quiz {
+  id                String          @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?
+  status            QuizStatus      @default(DRAFT)
+  shareToken        String          @unique @default(cuid())
+  durationMinutes   Int?
+  shuffleQuestions  Boolean         @default(true)
+  shuffleOptions    Boolean         @default(true)
+  standardScore     Decimal?        @db.Decimal(5, 2)
+  deadline          DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@index([teachingContextId, status])
+  @@index([status, deadline])
+  @@map("quiz")
+}
+
+model QuizQuestion {
+  id           String           @id @default(cuid())
+  quizId       String
+  quiz         Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order        Int
+  type         QuizQuestionType @default(MULTIPLE_CHOICE)
+  text         String
+  options      Json
+  correctIndex Int?
+  points       Decimal          @default(1) @db.Decimal(5, 2)
+  explanation  String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  answers QuizAnswer[]
+
+  @@index([quizId, order])
+  @@map("quiz_question")
+}
+
+model QuizAttempt {
+  id            String            @id @default(cuid())
+  quizId        String
+  quiz          Quiz              @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status        QuizAttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime          @default(now())
+  submittedAt   DateTime?
+  score         Decimal?          @db.Decimal(5, 2)
+  isRemedial    Boolean           @default(false)
+  questionOrder Json
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  answers QuizAnswer[]
+
+  @@unique([quizId, studentId])
+  @@index([quizId, status])
+  @@index([studentId])
+  @@map("quiz_attempt")
+}
+
+model QuizAnswer {
+  id            String       @id @default(cuid())
+  attemptId     String
+  attempt       QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedIndex Int?
+  isCorrect     Boolean?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+  @@map("quiz_answer")
+}

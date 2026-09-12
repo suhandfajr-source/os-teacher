@@ -1,0 +1,89 @@
+import { describe, it, expect } from "vitest";
+import {
+  shuffleArray,
+  shuffleOptions,
+  gradeAttempt,
+  normalizeScore,
+  generateShareToken,
+  isAttemptExpired,
+} from "../quiz.service";
+
+describe("quiz.service", () => {
+  describe("shuffleArray", () => {
+    it("mempertahankan semua elemen", () => {
+      const input = [1, 2, 3, 4, 5, 6, 7, 8];
+      const output = shuffleArray(input);
+      expect([...output].sort()).toEqual([...input].sort());
+    });
+
+    it("tidak mengubah array asli", () => {
+      const input = [1, 2, 3];
+      shuffleArray(input);
+      expect(input).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe("shuffleOptions", () => {
+    it("menjaga posisi jawaban benar konsisten dengan opsi baru", () => {
+      const options = ["Jawa", "Sumatra", "Bali", "Kalimantan"];
+      const { options: shuffled, correctIndex } = shuffleOptions(options, 2); // Bali benar
+      expect(shuffled[correctIndex]).toBe("Bali");
+    });
+  });
+
+  describe("gradeAttempt", () => {
+    const questions = [
+      { id: "q1", correctIndex: 0, points: 1 },
+      { id: "q2", correctIndex: 2, points: 3 },
+      { id: "q3", correctIndex: 1, points: 1 },
+    ];
+
+    it("mengoreksi jawaban benar/salah/tidak dijawab", () => {
+      const { score, totalPoints, perQuestion } = gradeAttempt(questions, [
+        { questionId: "q1", selectedIndex: 0 },
+        { questionId: "q2", selectedIndex: 1 },
+      ]);
+      expect(score).toBe(1);
+      expect(totalPoints).toBe(5);
+      expect(perQuestion[0].isCorrect).toBe(true);
+      expect(perQuestion[1].isCorrect).toBe(false);
+      expect(perQuestion[2].isCorrect).toBe(false);
+      expect(perQuestion[2].selectedIndex).toBeNull();
+    });
+  });
+
+  describe("normalizeScore", () => {
+    it("menormalkan ke skala 0-100", () => {
+      expect(normalizeScore(4, 5)).toBe(80);
+      expect(normalizeScore(0, 5)).toBe(0);
+      expect(normalizeScore(5, 5)).toBe(100);
+      expect(normalizeScore(3, 0)).toBe(0);
+    });
+  });
+
+  describe("generateShareToken", () => {
+    it("menghasilkan token panjang yang unik", () => {
+      const a = generateShareToken();
+      const b = generateShareToken();
+      expect(a).toHaveLength(32);
+      expect(a).not.toBe(b);
+      expect(a).toMatch(/^[a-z0-9]+$/);
+    });
+  });
+
+  describe("isAttemptExpired", () => {
+    it("false tanpa durasi", () => {
+      expect(isAttemptExpired(new Date(Date.now() - 3_600_000), null)).toBe(false);
+    });
+
+    it("true saat waktu habis (dengan grace 60 detik)", () => {
+      const started = new Date(Date.now() - 32 * 60_000);
+      expect(isAttemptExpired(started, 30)).toBe(true);
+    });
+
+    it("false saat masih dalam masa pengerjaan", () => {
+      const started = new Date(Date.now() - 10 * 60_000);
+      expect(isAttemptExpired(started, 30)).toBe(false);
+    });
+  });
+});
