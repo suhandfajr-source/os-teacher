@@ -34,6 +34,8 @@ export interface BaseSlide {
   title: string;
   slideNumber: number;
   totalSlides: number;
+  /** Teacher-facing speaker notes carried over from the AI draft. */
+  speakerNotes?: string;
 }
 
 export interface CoverSlide extends BaseSlide {

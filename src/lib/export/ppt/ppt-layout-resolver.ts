@@ -193,6 +193,15 @@ export function resolvePresentationLayout(
   for (let sIdx = 0; sIdx < parsedDoc.sections.length; sIdx++) {
     const sec = parsedDoc.sections[sIdx];
 
+    // Carry speaker notes from the parsed section into every slide it produces.
+    const sectionNotes = sec.speakerNotes?.trim() || undefined;
+    const pushSlide = (slide: PresentationSlide) => {
+      if (sectionNotes) {
+        slide.speakerNotes = sectionNotes;
+      }
+      slides.push(slide);
+    };
+
     // Combine raw paragraphs into items if items are empty
     const bulletItems = [...sec.items];
     if (bulletItems.length === 0 && sec.rawParagraphs.length > 0) {
@@ -238,6 +247,7 @@ export function resolvePresentationLayout(
           totalSlides: slides.length + 1,
         };
         slides.push(objSlide);
+        objSlide.speakerNotes = sectionNotes;
         lastSlideType = "OBJECTIVES";
         continue;
       }
@@ -265,7 +275,7 @@ export function resolvePresentationLayout(
         slideNumber: slides.length + 1,
         totalSlides: slides.length + 1,
       };
-      slides.push(hookSlide);
+      pushSlide(hookSlide);
       lastSlideType = "HOOK_STATEMENT";
       continue;
     }
@@ -288,7 +298,7 @@ export function resolvePresentationLayout(
         slideNumber: slides.length + 1,
         totalSlides: slides.length + 1,
       };
-      slides.push(splitSlide);
+      pushSlide(splitSlide);
       lastSlideType = "SPLIT_COLUMN";
       continue;
     }
@@ -313,7 +323,7 @@ export function resolvePresentationLayout(
         slideNumber: slides.length + 1,
         totalSlides: slides.length + 1,
       };
-      slides.push(cardsSlide);
+      pushSlide(cardsSlide);
       lastSlideType = "CARDS_GRID";
       continue;
     }
@@ -338,7 +348,7 @@ export function resolvePresentationLayout(
         slideNumber: slides.length + 1,
         totalSlides: slides.length + 1,
       };
-      slides.push(storySlide);
+      pushSlide(storySlide);
       lastSlideType = "STORY_CONCEPT";
       continue;
     }
@@ -360,7 +370,7 @@ export function resolvePresentationLayout(
           slideNumber: slides.length + 1,
           totalSlides: slides.length + 1,
         };
-        slides.push(objSlide);
+        pushSlide(objSlide);
       });
       lastSlideType = "OBJECTIVES";
       continue;
@@ -384,7 +394,7 @@ export function resolvePresentationLayout(
           slideNumber: slides.length + 1,
           totalSlides: slides.length + 1,
         };
-        slides.push(quizSlide);
+        pushSlide(quizSlide);
       });
       lastSlideType = "REFLECTION_OR_QUIZ";
       continue;
@@ -407,7 +417,7 @@ export function resolvePresentationLayout(
           slideNumber: slides.length + 1,
           totalSlides: slides.length + 1,
         };
-        slides.push(takeawaySlide);
+        pushSlide(takeawaySlide);
       });
       lastSlideType = "TAKEAWAY";
       continue;
@@ -431,7 +441,7 @@ export function resolvePresentationLayout(
         slideNumber: slides.length + 1,
         totalSlides: slides.length + 1,
       };
-      slides.push(cardsSlide);
+      pushSlide(cardsSlide);
       lastSlideType = "CARDS_GRID";
       continue;
     }
@@ -453,7 +463,7 @@ export function resolvePresentationLayout(
         slideNumber: slides.length + 1,
         totalSlides: slides.length + 1,
       };
-      slides.push(contentSlide);
+      pushSlide(contentSlide);
     });
     lastSlideType = "CONTENT";
   }

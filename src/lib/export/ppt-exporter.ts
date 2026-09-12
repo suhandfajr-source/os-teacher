@@ -8,7 +8,7 @@
 
 import { parseMarkdownForPpt } from "./ppt/ppt-parser";
 import { resolvePresentationLayout } from "./ppt/ppt-layout-resolver";
-import { renderPresentationPptx } from "./ppt/ppt-renderer";
+import { renderPresentationPptxVisual } from "./ppt-html/render-presentation";
 import { PresentationMetadata } from "./ppt/ppt-types";
 
 export interface ExportPptOptions {
@@ -55,8 +55,8 @@ export async function exportToPowerPoint(options: ExportPptOptions): Promise<voi
     // 2. Deterministic Layout Resolution & Overflow Handling
     const presentationModel = resolvePresentationLayout(parsedDoc, metadata, content);
 
-    // 3. Render and Trigger Download
-    await renderPresentationPptx(presentationModel);
+    // 3. Subject-adaptive visual render (HTML → PNG → PPTX with speaker notes)
+    await renderPresentationPptxVisual(presentationModel);
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw error;

@@ -6,6 +6,12 @@ import { exportToPowerPoint } from "../ppt-exporter";
 import { exportToExcel } from "../excel-exporter";
 import { exportAiDocument } from "../index";
 
+// Visual renderer (V3) requires browser DOM APIs; rasterization is mocked out
+// in this Node-side characterization suite.
+vi.mock("../ppt-html/html-to-image", () => ({
+  renderHtmlToPngDataUrl: vi.fn().mockResolvedValue("data:image/png;base64,mock"),
+}));
+
 vi.mock("jspdf", async (importOriginal) => {
   const actual = await importOriginal<{ default: { prototype: { save: () => void } }; jsPDF: { prototype: { save: () => void } } }>();
   if (actual.default?.prototype) actual.default.prototype.save = vi.fn();

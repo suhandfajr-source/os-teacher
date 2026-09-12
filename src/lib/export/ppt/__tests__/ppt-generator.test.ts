@@ -3,6 +3,12 @@ import { parseMarkdownForPpt } from "../ppt-parser";
 import { resolvePresentationLayout } from "../ppt-layout-resolver";
 import { renderPresentationPptx } from "../ppt-renderer";
 import { exportToPowerPoint } from "../../ppt-exporter";
+
+// Visual renderer (V3) requires browser DOM APIs; rasterization is mocked out
+// in this Node-side test environment.
+vi.mock("../../ppt-html/html-to-image", () => ({
+  renderHtmlToPngDataUrl: vi.fn().mockResolvedValue("data:image/png;base64,mock"),
+}));
 import {
   PresentationMetadata,
   PresentationModel,
@@ -24,8 +30,13 @@ interface MockSlideInstance {
   background: unknown;
   shapes: MockShapeCall[];
   texts: MockTextCall[];
+  images: Array<{ data?: string; path?: string; opts?: unknown }>;
+  notes: string[];
   addShape: ReturnType<typeof vi.fn>;
   addText: ReturnType<typeof vi.fn>;
+  addImage: ReturnType<typeof vi.fn>;
+  addNotes: ReturnType<typeof vi.fn>;
+  transition?: unknown;
 }
 
 // Mock PptxGenJS for isolated test environment
@@ -48,11 +59,19 @@ vi.mock("pptxgenjs", () => {
           background: null,
           shapes: [],
           texts: [],
+          images: [],
+          notes: [],
           addShape: vi.fn((type: string, opts: unknown) => {
             slide.shapes.push({ type, opts });
           }),
           addText: vi.fn((text: unknown, opts: unknown) => {
             slide.texts.push({ text, opts });
+          }),
+          addImage: vi.fn((opts: { data?: string; path?: string }) => {
+            slide.images.push(opts);
+          }),
+          addNotes: vi.fn((notes: string) => {
+            slide.notes.push(notes);
           }),
         };
         this.slides.push(slide);

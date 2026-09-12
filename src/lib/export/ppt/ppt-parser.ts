@@ -148,7 +148,7 @@ function classifySectionHeading(heading: string, explicitRole?: string): ParsedS
     if (normRole.includes("obj") || normRole.includes("tujuan")) return "OBJECTIVES";
     if (normRole.includes("split") || normRole.includes("banding")) return "SPLIT";
     if (normRole.includes("card") || normRole.includes("pilar")) return "CARDS";
-    if (normRole.includes("story") || normRole.includes("kisah")) return "STORY";
+    if (normRole.includes("story") || normRole.includes("kisah") || normRole.includes("concept") || normRole.includes("konsep")) return "STORY";
     if (normRole.includes("quiz") || normRole.includes("kuis")) return "QUIZ";
     if (normRole.includes("reflec") || normRole.includes("renung")) return "REFLECTION";
     if (normRole.includes("sum") || normRole.includes("rangkum") || normRole.includes("takeaway")) return "TAKEAWAY";
