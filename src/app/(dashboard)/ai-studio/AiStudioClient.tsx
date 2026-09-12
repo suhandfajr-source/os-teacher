@@ -16,6 +16,7 @@ import {
   saveAiDraftAction,
   archiveAiDraftAction,
   getAiDraftsAction,
+  generateSlideIllustrationAction,
 } from "@/modules/ai/ai.actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -316,6 +317,12 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
         subjectName: subjectToExport,
         schoolName: schoolToExport,
         className: classToExport,
+        // Key slides with [Visual: ...] prompts may get AI illustrations;
+        // graceful fallback to the themed panel when disabled/unavailable.
+        illustrationResolver: async (visualPrompt, subjectName) => {
+          const res = await generateSlideIllustrationAction({ visualPrompt, subjectName });
+          return res.success && res.data ? res.data.imageDataUrl || null : null;
+        },
       });
       toast.success(`Berhasil mengunduh dokumen .${format.toUpperCase()}!`);
     } catch (err: unknown) {

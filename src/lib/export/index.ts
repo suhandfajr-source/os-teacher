@@ -14,6 +14,8 @@ export interface UnifiedExportOptions {
   teacherName?: string;
   className?: string;
   dateStr?: string;
+  /** Optional AI illustration resolver (server action) for key PPT slides. */
+  illustrationResolver?: (visualPrompt: string, subjectName?: string) => Promise<string | null>;
 }
 
 /**
@@ -44,6 +46,7 @@ export async function exportAiDocument(options: UnifiedExportOptions): Promise<v
         teacherName,
         className,
         dateStr,
+        illustrationResolver: options.illustrationResolver,
       });
       break;
     }

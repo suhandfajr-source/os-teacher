@@ -8,7 +8,10 @@
 
 import { parseMarkdownForPpt } from "./ppt/ppt-parser";
 import { resolvePresentationLayout } from "./ppt/ppt-layout-resolver";
-import { renderPresentationPptxVisual } from "./ppt-html/render-presentation";
+import {
+  renderPresentationPptxVisual,
+  IllustrationResolver,
+} from "./ppt-html/render-presentation";
 import { PresentationMetadata } from "./ppt/ppt-types";
 
 export interface ExportPptOptions {
@@ -19,13 +22,15 @@ export interface ExportPptOptions {
   teacherName?: string;
   className?: string;
   dateStr?: string;
+  /** Optional AI illustration resolver (server action) for key slides. */
+  illustrationResolver?: IllustrationResolver;
 }
 
 /**
  * Converts structured AI output into clean PowerPoint (.pptx) presentation slides
  */
 export async function exportToPowerPoint(options: ExportPptOptions): Promise<void> {
-  const { title, content, schoolName, subjectName, teacherName, className, dateStr } = options;
+  const { title, content, schoolName, subjectName, teacherName, className, dateStr, illustrationResolver } = options;
 
   if (!title || !title.trim()) {
     throw new Error("Judul materi pembelajaran tidak boleh kosong.");
@@ -56,7 +61,7 @@ export async function exportToPowerPoint(options: ExportPptOptions): Promise<voi
     const presentationModel = resolvePresentationLayout(parsedDoc, metadata, content);
 
     // 3. Subject-adaptive visual render (HTML → PNG → PPTX with speaker notes)
-    await renderPresentationPptxVisual(presentationModel);
+    await renderPresentationPptxVisual(presentationModel, undefined, illustrationResolver);
   } catch (error: unknown) {
     if (error instanceof Error) {
       throw error;

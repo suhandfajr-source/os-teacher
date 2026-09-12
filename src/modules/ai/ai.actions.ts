@@ -348,3 +348,78 @@ export async function getTeacherTeachingContextsAction() {
     academicPeriod: `${ctx.academicPeriod.year} / ${ctx.academicPeriod.semester}`,
   }));
 }
+
+// ============================================================================
+// 4. SLIDE ILLUSTRATION (AI IMAGE GENERATION — OPTIONAL, GRACEFUL FALLBACK)
+// ============================================================================
+
+const slideIllustrationSchema = z.object({
+  visualPrompt: z.string().min(3).max(500),
+  subjectName: z.string().max(120).optional(),
+});
+
+/**
+ * Generates an educational illustration for a key presentation slide using the
+ * Gemini image model. Requires GEMINI_IMAGE_MODEL to be configured (paid tier);
+ * when unset or unavailable it returns an empty data URL so the export pipeline
+ * falls back to the themed illustration panel without failing.
+ */
+export async function generateSlideIllustrationAction(
+  rawInput: z.input<typeof slideIllustrationSchema>
+): Promise<{ success: boolean; data?: { imageDataUrl: string }; error?: string }> {
+  try {
+    const { visualPrompt, subjectName } = slideIllustrationSchema.parse(rawInput);
+    await verifyActiveSchoolMembership();
+
+    const model = process.env.GEMINI_IMAGE_MODEL?.trim();
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    if (!model || !apiKey) {
+      // Feature disabled — caller falls back to the themed illustration panel.
+      return { success: true, data: { imageDataUrl: "" } };
+    }
+
+    const { GoogleGenAI } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey });
+
+    const styledPrompt = [
+      "Buat satu ilustrasi edukatif untuk slide presentasi sekolah (rasio 1:1).",
+      subjectName ? `Konteks mata pelajaran: ${subjectName}.` : "",
+      `Subjek ilustrasi: ${visualPrompt}`,
+      "Gaya: ilustrasi flat modern yang bersih dan menarik untuk siswa, komposisi terpusat, warna harmonis.",
+      "PENTING: tanpa teks, tulisan, atau label apapun di dalam gambar.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const timeoutMs = 45000;
+    const generatePromise = ai.models.generateContent({
+      model,
+      contents: styledPrompt,
+      config: { responseModalities: ["IMAGE"] },
+    });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Image generation timeout")), timeoutMs)
+    );
+
+    const response = await Promise.race([generatePromise, timeoutPromise]);
+    const parts = response.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find((p) => p.inlineData?.data);
+
+    if (!imagePart?.inlineData?.data) {
+      return { success: true, data: { imageDataUrl: "" } };
+    }
+
+    const mimeType = imagePart.inlineData.mimeType || "image/png";
+    return {
+      success: true,
+      data: { imageDataUrl: `data:${mimeType};base64,${imagePart.inlineData.data}` },
+    };
+  } catch (error: unknown) {
+    // Any failure (quota, auth, timeout) must never break the export.
+    console.warn(
+      "[Slide Illustration] Image generation unavailable, using fallback panel:",
+      error instanceof Error ? error.message : error
+    );
+    return { success: true, data: { imageDataUrl: "" } };
+  }
+}

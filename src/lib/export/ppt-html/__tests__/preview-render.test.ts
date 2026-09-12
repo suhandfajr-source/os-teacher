@@ -63,6 +63,7 @@ function buildModel(subjectName: string): PresentationModel {
         { text: "**Sel darah merah** (eritrosit) — pengangkut oksigen berkat hemoglobin", subpoints: ["Bentuk bikonkaf memperluas permukaan", "Hidup sekitar 120 hari"] },
         { text: "**Sel darah putih & keping darah** — pertahanan tubuh dan pembekuan", subpoints: ["Leukosit: melawan infeksi", "Trombosit: menutup luka"] },
       ],
+      visualPrompt: "Diagram empat komponen darah: plasma, sel darah merah berbentuk cakram, sel darah putih berinti besar, dan keping darah kecil, dengan zoom-in pada hemoglobin",
       slideNumber: 4, totalSlides: 9,
     } as ContentSlide,
     {
@@ -87,6 +88,7 @@ function buildModel(subjectName: string): PresentationModel {
       coreMessage: "Satu sel darah merah menempuh perjalanan penuh mengelilingi tubuhmu hanya dalam **60 detik**.",
       supportingPoints: ["Berangkat dari jantung ke paru-paru mengambil oksigen", "Kembali ke jantung lalu diterjunkan ke seluruh tubuh", "Menyerahkan oksigen, mengambil CO2, dan kembali lagi"],
       categoryLabel: "📖 KISAH & HIKMAH",
+      visualPrompt: "Peta perjalanan sel darah merah melingkar dari jantung ke paru-paru lalu ke seluruh tubuh dengan panah alur",
       slideNumber: 7, totalSlides: 9,
     } as StoryConceptSlide,
     {
@@ -111,8 +113,15 @@ describe("Preview V3 slides", () => {
     for (const subject of ["IPA", "Matematika"]) {
       const theme = resolveSubjectTheme(subject);
       const model = buildModel(subject);
+      // 1x transparent px as fake illustration data URL for image-path preview
+      const fakeImage =
+        "data:image/svg+xml;charset=utf-8," +
+        encodeURIComponent(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#065f46"/><circle cx="200" cy="160" r="90" fill="#f87171"/><circle cx="200" cy="280" r="60" fill="#60a5fa"/><path d="M60 200 Q200 40 340 200" stroke="#fbbf24" stroke-width="14" fill="none"/></svg>'
+        );
       model.slides.forEach((slide, i) => {
-        const html = wrapHtmlForPreview(renderSlideToHtml(slide, theme, model.metadata));
+        const useFake = slide.type === "CONTENT" && subject === "IPA";
+        const html = wrapHtmlForPreview(renderSlideToHtml(slide, theme, model.metadata, useFake ? fakeImage : undefined));
         writeFileSync(path.join(outDir, `${subject.toLowerCase().replace(/\s/g, "")}-${String(i + 1).padStart(2, "0")}-${slide.type}.html`), html);
       });
     }

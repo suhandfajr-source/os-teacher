@@ -36,6 +36,8 @@ export interface BaseSlide {
   totalSlides: number;
   /** Teacher-facing speaker notes carried over from the AI draft. */
   speakerNotes?: string;
+  /** AI-suggested contextual illustration description ([Visual: ...] tag). */
+  visualPrompt?: string;
 }
 
 export interface CoverSlide extends BaseSlide {

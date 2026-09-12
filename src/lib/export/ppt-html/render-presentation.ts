@@ -6,15 +6,32 @@
  *           → PPTX with full-bleed slide images + real speaker notes.
  */
 
-import { PresentationModel } from "../ppt/ppt-types";
+import { PresentationModel, PresentationSlide } from "../ppt/ppt-types";
 import { resolveSubjectTheme } from "./theme";
 import { renderSlideToHtml } from "./slide-html";
 import { renderHtmlToPngDataUrl } from "./html-to-image";
 
+/**
+ * Resolves a slide's visual prompt into a PNG data URL (or empty string when
+ * image generation is disabled/unavailable). Wired from the client via a
+ * server action so this library stays environment-agnostic.
+ */
+export type IllustrationResolver = (
+  visualPrompt: string,
+  subjectName?: string
+) => Promise<string | null>;
+
+/** Only key slide types are worth an AI illustration (cost & latency control). */
+const KEY_VISUAL_SLIDE_TYPES = new Set<PresentationSlide["type"]>([
+  "CONTENT",
+  "STORY_CONCEPT",
+]);
+
 /** Renders the full presentation and triggers a .pptx download. */
 export async function renderPresentationPptxVisual(
   model: PresentationModel,
-  outputFilename?: string
+  outputFilename?: string,
+  illustrationResolver?: IllustrationResolver
 ): Promise<void> {
   const theme = resolveSubjectTheme(model.metadata.subjectName);
 
@@ -28,8 +45,30 @@ export async function renderPresentationPptxVisual(
   pres.company = model.metadata.schoolName || "Teacher OS";
   pres.title = model.metadata.title;
 
+  // Cache illustrations by prompt to avoid duplicate generations.
+  const illustrationCache = new Map<string, string>();
+
   for (const slide of model.slides) {
-    const slideHtml = renderSlideToHtml(slide, theme, model.metadata);
+    let visualImage: string | undefined;
+    if (
+      illustrationResolver &&
+      slide.visualPrompt &&
+      KEY_VISUAL_SLIDE_TYPES.has(slide.type)
+    ) {
+      const cacheKey = slide.visualPrompt;
+      let image = illustrationCache.get(cacheKey);
+      if (image === undefined) {
+        try {
+          image = (await illustrationResolver(slide.visualPrompt, model.metadata.subjectName)) ?? "";
+        } catch {
+          image = "";
+        }
+        illustrationCache.set(cacheKey, image);
+      }
+      visualImage = image || undefined;
+    }
+
+    const slideHtml = renderSlideToHtml(slide, theme, model.metadata, visualImage);
     const pngDataUrl = await renderHtmlToPngDataUrl(slideHtml);
 
     const s = pres.addSlide();

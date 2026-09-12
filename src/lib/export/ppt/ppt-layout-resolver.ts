@@ -193,11 +193,16 @@ export function resolvePresentationLayout(
   for (let sIdx = 0; sIdx < parsedDoc.sections.length; sIdx++) {
     const sec = parsedDoc.sections[sIdx];
 
-    // Carry speaker notes from the parsed section into every slide it produces.
+    // Carry speaker notes and visual suggestions from the parsed section into
+    // every slide it produces.
     const sectionNotes = sec.speakerNotes?.trim() || undefined;
+    const sectionVisual = sec.visualPrompt?.trim() || undefined;
     const pushSlide = (slide: PresentationSlide) => {
       if (sectionNotes) {
         slide.speakerNotes = sectionNotes;
+      }
+      if (sectionVisual) {
+        slide.visualPrompt = sectionVisual;
       }
       slides.push(slide);
     };

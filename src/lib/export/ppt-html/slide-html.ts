@@ -120,6 +120,24 @@ function baseStyle(theme: SubjectTheme): string {
     .kicker::before { content: ""; width: 34px; height: 4px; border-radius: 4px; background: #${theme.accent}; }
     .content-area { position: relative; z-index: 3; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
+    /* Visual side panel (only rendered when the slide has a visual prompt) */
+    .visual-panel {
+      width: 34%; flex-shrink: 0; border-radius: 22px; overflow: hidden;
+      background: linear-gradient(160deg, ${theme.accentSoft} 0%, rgba(255,255,255,0.05) 100%);
+      border: 1.5px solid rgba(255,255,255,0.18);
+      display: flex; flex-direction: column;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.24);
+    }
+    .visual-panel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .visual-fallback { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px 20px; text-align: center; }
+    .visual-icon {
+      width: 64px; height: 64px; border-radius: 20px; font-size: 32px;
+      background: rgba(255,255,255,0.10); border: 1.5px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .visual-label { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #${theme.accent}; }
+    .visual-desc { font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,0.78); }
+
     .hl { color: #${theme.accent}; }
   `;
 }
@@ -221,6 +239,22 @@ function cardStyle(theme: SubjectTheme): string {
 // Slide-type renderers
 // ----------------------------------------------------------------------------
 
+/**
+ * Builds the visual side panel: an AI-generated illustration when available,
+ * otherwise a themed placeholder presenting the AI's visual description.
+ */
+function visualPanel(slide: PresentationSlide, theme: SubjectTheme, visualImage?: string): string {
+  if (!slide.visualPrompt) return "";
+  const body = visualImage
+    ? `<img src="${escapeHtml(visualImage)}" alt="Ilustrasi materi"/>`
+    : `<div class="visual-fallback">
+        <div class="visual-icon">${escapeHtml(theme.badgeIcon)}</div>
+        <div class="visual-label">💡 Ilustrasi Materi</div>
+        <div class="visual-desc">${escapeHtml(slide.visualPrompt)}</div>
+      </div>`;
+  return `<div class="visual-panel">${body}</div>`;
+}
+
 function renderCover(slide: CoverSlide, theme: SubjectTheme, meta: PresentationMetadata): string {
   const subject = slide.subjectName?.trim() || meta.subjectName?.trim() || theme.label;
   const metaLine = [
@@ -319,8 +353,10 @@ function renderObjectives(slide: ObjectivesSlide, theme: SubjectTheme, meta: Pre
     ${footer(meta)}`;
 }
 
-function renderContent(slide: ContentSlide, theme: SubjectTheme, meta: PresentationMetadata): string {
-  const bullets = slide.items
+function renderContent(slide: ContentSlide, theme: SubjectTheme, meta: PresentationMetadata, visualImage?: string): string {
+  const hasVisual = !!slide.visualPrompt;
+  const itemsShown = hasVisual ? slide.items.slice(0, 4) : slide.items;
+  const bullets = itemsShown
     .map(
       (item) => `
       <div class="bullet">
@@ -350,6 +386,10 @@ function renderContent(slide: ContentSlide, theme: SubjectTheme, meta: Presentat
       .page-title { font-size: 40px; font-weight: 800; line-height: 1.18; }
       .part-chip { display: inline-block; margin-top: 10px; background: ${theme.accentSoft}; color: #${theme.accent}; font-size: 13px; font-weight: 800; letter-spacing: 1px; padding: 5px 14px; border-radius: 999px; }
       .bullets { display: flex; flex-direction: column; gap: 15px; margin-top: 6px; }
+      .content-row { display: flex; gap: 26px; flex: 1; min-height: 0; }
+      .content-row .bullets { flex: 1; min-width: 0; }
+      .content-row .bullet-text { font-size: 18.5px; }
+      .content-row .page-title { font-size: 34px; }
       .bullet { display: flex; gap: 16px; align-items: flex-start; }
       .bullet-dot { width: 12px; height: 12px; border-radius: 4px; background: #${theme.accent}; margin-top: 10px; flex-shrink: 0; transform: rotate(45deg); }
       .bullet-text { font-size: 21px; line-height: 1.5; color: rgba(255,255,255,0.95); font-weight: 500; }
@@ -367,7 +407,9 @@ function renderContent(slide: ContentSlide, theme: SubjectTheme, meta: Presentat
         ${partLabel ? `<span class="part-chip">${escapeHtml(partLabel)}</span>` : ""}
       </div>
       ${slide.paragraphText ? `<div class="para">${rich(slide.paragraphText)}</div>` : ""}
-      <div class="bullets">${bullets}</div>
+      ${hasVisual
+        ? `<div class="content-row"><div class="bullets">${bullets}</div>${visualPanel(slide, theme, visualImage)}</div>`
+        : `<div class="bullets">${bullets}</div>`}
     </div>
     ${footer(meta)}`;
 }
@@ -468,9 +510,10 @@ function renderSplit(slide: SplitColumnSlide, theme: SubjectTheme, meta: Present
     ${footer(meta)}`;
 }
 
-function renderStory(slide: StoryConceptSlide, theme: SubjectTheme, meta: PresentationMetadata): string {
+function renderStory(slide: StoryConceptSlide, theme: SubjectTheme, meta: PresentationMetadata, visualImage?: string): string {
+  const hasVisual = !!slide.visualPrompt;
   const points = slide.supportingPoints
-    .slice(0, 3)
+    .slice(0, hasVisual ? 2 : 3)
     .map(
       (p, i) => `
       <div class="story-point">
@@ -489,6 +532,9 @@ function renderStory(slide: StoryConceptSlide, theme: SubjectTheme, meta: Presen
         color: #${theme.inkOnCard}; font-size: 25px; font-weight: 700; line-height: 1.45;
       }
       .story-points { display: flex; gap: 20px; flex: 1; min-height: 0; }
+      .story-row { display: flex; gap: 22px; flex: 1; min-height: 0; }
+      .story-row .story-points { flex: 1.1; }
+      .story-row .visual-panel { width: 30%; }
       .story-point {
         flex: 1; background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16);
         border-radius: 18px; padding: 20px 22px; display: flex; gap: 14px; align-items: flex-start;
@@ -506,7 +552,9 @@ function renderStory(slide: StoryConceptSlide, theme: SubjectTheme, meta: Presen
         <h1 class="page-title">${rich(slide.title)}</h1>
       </div>
       <div class="story-core">${rich(slide.coreMessage)}</div>
-      <div class="story-points">${points}</div>
+      ${hasVisual
+        ? `<div class="story-row"><div class="story-points">${points}</div>${visualPanel(slide, theme, visualImage)}</div>`
+        : `<div class="story-points">${points}</div>`}
     </div>
     ${footer(meta)}`;
 }
@@ -602,7 +650,8 @@ function renderQuiz(slide: ReflectionOrQuizSlide, theme: SubjectTheme, meta: Pre
 export function renderSlideToHtml(
   slide: PresentationSlide,
   theme: SubjectTheme,
-  meta: PresentationMetadata
+  meta: PresentationMetadata,
+  visualImage?: string
 ): string {
   let inner: string;
   switch (slide.type) {
@@ -616,7 +665,7 @@ export function renderSlideToHtml(
       inner = renderObjectives(slide, theme, meta);
       break;
     case "CONTENT":
-      inner = renderContent(slide, theme, meta);
+      inner = renderContent(slide, theme, meta, visualImage);
       break;
     case "CARDS_GRID":
       inner = renderCards(slide, theme, meta);
@@ -625,7 +674,7 @@ export function renderSlideToHtml(
       inner = renderSplit(slide, theme, meta);
       break;
     case "STORY_CONCEPT":
-      inner = renderStory(slide, theme, meta);
+      inner = renderStory(slide, theme, meta, visualImage);
       break;
     case "TAKEAWAY":
       inner = renderTakeaway(slide, theme, meta);
