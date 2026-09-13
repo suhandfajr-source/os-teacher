@@ -122,6 +122,40 @@ export interface AttemptQuestionSnapshot {
   points: number;
 }
 
+export interface LegacyAttemptOrder {
+  questionIds: string[];
+  optionOrders: Record<string, number[]>;
+}
+
+/**
+ * Rebuilds a snapshot from a legacy attempt's stored order (question ids +
+ * option permutations) against the quiz's current questions. Used to display
+ * old attempts faithfully — what the student actually saw.
+ */
+export function reconstructLegacySnapshot(
+  order: LegacyAttemptOrder,
+  questions: Array<{ id: string; text: string; options: string[]; correctIndex: number | null; points: number }>
+): AttemptQuestionSnapshot[] {
+  const map = new Map(questions.map((q) => [q.id, q]));
+  const out: AttemptQuestionSnapshot[] = [];
+  for (const qid of order.questionIds) {
+    const q = map.get(qid);
+    if (!q) continue;
+    const perm = order.optionOrders[qid] ?? q.options.map((_, i) => i);
+    const options = perm.map((i) => q.options[i]).filter((o) => o !== undefined);
+    const correctIndex =
+      q.correctIndex === null ? null : perm.indexOf(q.correctIndex);
+    out.push({
+      id: q.id,
+      text: q.text,
+      options,
+      correctIndex,
+      points: Number(q.points) || 0,
+    });
+  }
+  return out;
+}
+
 /**
  * Builds the per-attempt question snapshot: display-ordered questions with
  * options (and their correct index) pre-shuffled per student. This is stored

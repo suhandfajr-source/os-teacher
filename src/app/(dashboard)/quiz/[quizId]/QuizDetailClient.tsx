@@ -625,7 +625,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       </div>
       {/* Answer sheet dialog */}
       <Dialog open={answerSheet.open} onOpenChange={(open) => setAnswerSheet((s) => ({ ...s, open }))}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl flex flex-col max-h-[85vh]">
           <DialogHeader>
             <DialogTitle>
               Lembar Jawaban — {answerSheet.data?.studentName ?? "…"}
@@ -636,7 +636,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto -mx-1 px-1">
               <div className="flex items-center gap-3 text-sm">
                 <Badge variant={answerSheet.data.score >= (quiz.standardScore ?? 0) ? "secondary" : "destructive"}>
                   Nilai {answerSheet.data.score}

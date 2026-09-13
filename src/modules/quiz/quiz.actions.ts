@@ -26,6 +26,7 @@ import {
   generateShareToken,
   isAttemptExpired,
   buildAttemptSnapshot,
+  reconstructLegacySnapshot,
   AttemptQuestionSnapshot,
 } from "./quiz.service";
 
@@ -510,6 +511,41 @@ export async function resetAllAttemptsAction(quizId: string): Promise<{
   }
 }
 
+type StoredAttemptOrder = { questions?: AttemptQuestionSnapshot[]; questionIds?: string[]; optionOrders?: Record<string, number[]> };
+
+/**
+ * Resolves the snapshot an attempt was taken against. Priority: stored
+ * snapshot > legacy reconstruction (questionIds + optionOrders) > live
+ * questions (last resort, only correct when options were never shuffled).
+ */
+async function resolveAttemptSnapshot(
+  attempt: { questionOrder: unknown },
+  quizId: string
+): Promise<AttemptQuestionSnapshot[]> {
+  const stored = attempt.questionOrder as StoredAttemptOrder | null;
+  if (stored?.questions?.length) return stored.questions;
+
+  const liveQuestions = await prisma.quizQuestion.findMany({
+    where: { quizId },
+    orderBy: { order: "asc" },
+  });
+  const live = liveQuestions.map((q) => ({
+    id: q.id,
+    text: q.text,
+    options: q.options as string[],
+    correctIndex: q.correctIndex,
+    points: Number(q.points),
+  }));
+
+  if (stored?.questionIds?.length && stored.optionOrders) {
+    return reconstructLegacySnapshot(
+      { questionIds: stored.questionIds, optionOrders: stored.optionOrders },
+      live
+    );
+  }
+  return live;
+}
+
 /**
  * Teacher: full answer sheet of one student's submitted attempt, from the
  * attempt's own snapshot (exactly what the student saw).
@@ -548,22 +584,7 @@ export async function getStudentAttemptDetailAction(quizId: string, studentId: s
       return { success: false, error: "Siswa ini belum menyelesaikan quiz" };
     }
 
-    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
-    const stored = attempt.questionOrder as unknown as StoredOrder | null;
-    const snapshot = stored?.questions?.length
-      ? stored.questions
-      : (
-          await prisma.quizQuestion.findMany({
-            where: { quizId },
-            orderBy: { order: "asc" },
-          })
-        ).map((q) => ({
-          id: q.id,
-          text: q.text,
-          options: q.options as string[],
-          correctIndex: q.correctIndex,
-          points: Number(q.points),
-        }));
+    const snapshot = await resolveAttemptSnapshot(attempt, quizId);
 
     const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
 
@@ -814,9 +835,7 @@ export async function getPublicAttemptResultAction(
       return { success: false, error: "Hasil belum tersedia" };
     }
 
-    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
-    const stored = attempt.questionOrder as unknown as StoredOrder | null;
-    const snapshot = stored?.questions?.length ? stored.questions : [];
+    const snapshot = await resolveAttemptSnapshot(attempt, quiz.id);
 
     const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
 
@@ -975,22 +994,7 @@ export async function getAttemptResultAction(
       return { success: false, error: "Hasil belum tersedia" };
     }
 
-    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
-    const stored = attempt.questionOrder as unknown as StoredOrder | null;
-    const snapshot = stored?.questions?.length
-      ? stored.questions
-      : (
-          await prisma.quizQuestion.findMany({
-            where: { quizId: quiz.id },
-            orderBy: { order: "asc" },
-          })
-        ).map((q) => ({
-          id: q.id,
-          text: q.text,
-          options: q.options as string[],
-          correctIndex: q.correctIndex,
-          points: Number(q.points),
-        }));
+    const snapshot = await resolveAttemptSnapshot(attempt, quiz.id);
 
     const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
     const perQuestion = snapshot.map((q) => {
