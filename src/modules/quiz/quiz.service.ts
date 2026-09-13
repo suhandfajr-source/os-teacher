@@ -107,3 +107,50 @@ export function isAttemptExpired(startedAt: Date, durationMinutes?: number | nul
   // 60s grace for network latency on submit.
   return Date.now() > endsAt.getTime() + 60_000;
 }
+
+// ----------------------------------------------------------------------------
+// Attempt question snapshot
+// ----------------------------------------------------------------------------
+
+export interface AttemptQuestionSnapshot {
+  id: string;
+  text: string;
+  /** Options already in the student's display order. */
+  options: string[];
+  /** Correct index aligned to the displayed options order. */
+  correctIndex: number | null;
+  points: number;
+}
+
+/**
+ * Builds the per-attempt question snapshot: display-ordered questions with
+ * options (and their correct index) pre-shuffled per student. This is stored
+ * on the attempt so later teacher edits never corrupt past work, and resets
+ * naturally pick up the latest questions.
+ */
+export function buildAttemptSnapshot(
+  questions: Array<{ id: string; text: string; options: string[]; correctIndex: number | null; points: number }>,
+  shuffleQuestions: boolean,
+  shuffleOpts: boolean
+): AttemptQuestionSnapshot[] {
+  const ordered = shuffleQuestions ? shuffleArray(questions) : [...questions];
+  return ordered.map((q) => {
+    if (shuffleOpts && q.correctIndex !== null) {
+      const res = shuffleOptions(q.options, q.correctIndex);
+      return {
+        id: q.id,
+        text: q.text,
+        options: res.options,
+        correctIndex: res.correctIndex,
+        points: Number(q.points) || 0,
+      };
+    }
+    return {
+      id: q.id,
+      text: q.text,
+      options: [...q.options],
+      correctIndex: q.correctIndex,
+      points: Number(q.points) || 0,
+    };
+  });
+}

@@ -8,10 +8,12 @@
  */
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
 import {
   createQuizSchema,
+  quizQuestionSchema,
   quizSettingsSchema,
   submitAttemptSchema,
   PublicQuizView,
@@ -19,11 +21,12 @@ import {
   AttemptResultView,
 } from "./quiz.types";
 import {
-  shuffleArray,
   gradeAttempt,
   normalizeScore,
   generateShareToken,
   isAttemptExpired,
+  buildAttemptSnapshot,
+  AttemptQuestionSnapshot,
 } from "./quiz.service";
 
 function formatActionError(error: unknown, fallback: string): string {
@@ -392,6 +395,97 @@ export async function getQuizDetailAction(quizId: string) {
   }
 }
 
+/**
+ * Replaces the quiz's question set. Safe against past attempts because each
+ * attempt carries its own question snapshot.
+ */
+export async function updateQuizQuestionsAction(
+  quizId: string,
+  questions: Array<{
+    text: string;
+    options: string[];
+    correctIndex: number;
+    points: number;
+    explanation?: string;
+  }>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return { success: false, error: "Quiz minimal memiliki 1 soal" };
+    }
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { teachingContextId: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+    await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    const validated = questions.map((q) => quizQuestionSchema.parse(q));
+    if (validated.some((q) => q.correctIndex >= q.options.length)) {
+      return { success: false, error: "Ada soal dengan kunci jawaban di luar daftar opsi" };
+    }
+
+    await prisma.$transaction([
+      prisma.quizQuestion.deleteMany({ where: { quizId } }),
+      prisma.quizQuestion.createMany({
+        data: validated.map((q, idx) => ({
+          quizId,
+          order: idx + 1,
+          type: "MULTIPLE_CHOICE" as const,
+          text: q.text,
+          options: q.options,
+          correctIndex: q.correctIndex,
+          points: q.points,
+          explanation: q.explanation,
+        })),
+      }),
+    ]);
+
+    return { success: true };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal menyimpan soal") };
+  }
+}
+
+/**
+ * Gives every student a fresh attempt with the latest questions (used after
+ * the teacher edits questions of an already-worked quiz). Old answers and
+ * scores are cleared.
+ */
+export async function resetAllAttemptsAction(quizId: string): Promise<{
+  success: boolean;
+  data?: { reset: number };
+  error?: string;
+}> {
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { teachingContextId: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+    await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    const result = await prisma.$transaction([
+      prisma.quizAnswer.deleteMany({ where: { attempt: { quizId } } }),
+      prisma.quizAttempt.updateMany({
+        where: { quizId },
+        data: {
+          status: "IN_PROGRESS",
+          submittedAt: null,
+          score: null,
+          isRemedial: false,
+          questionOrder: {},
+          startedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return { success: true, data: { reset: result[1].count } };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal membuka ulang quiz") };
+  }
+}
+
 // ============================================================================
 // PUBLIC STUDENT ACTIONS (token-based, no login)
 // ============================================================================
@@ -517,48 +611,41 @@ export async function startQuizAttemptAction(
       });
     }
 
-    const questions = await prisma.quizQuestion.findMany({
-      where: { quizId: quiz.id },
-      orderBy: { order: "asc" },
-    });
+    // Snapshot: prefer the stored per-attempt copy (stable across teacher
+    // edits); rebuild when absent or in the legacy format.
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[]; questionIds?: string[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
 
-    // Persist question order on first start; reuse on resume.
-    type Order = { questionIds: string[]; optionOrders: Record<string, number[]> };
-    let order = attempt.questionOrder as unknown as Order | null;
-    if (!order?.questionIds?.length) {
-      const orderedQuestions = quiz.shuffleQuestions ? shuffleArray(questions) : questions;
-      order = {
-        questionIds: orderedQuestions.map((q) => q.id),
-        optionOrders: quiz.shuffleOptions
-          ? Object.fromEntries(
-              orderedQuestions.map((q) => [
-                q.id,
-                shuffleArray((q.options as string[]).map((_, i) => i)),
-              ])
-            )
-          : Object.fromEntries(orderedQuestions.map((q) => [q.id, (q.options as string[]).map((_, i) => i)])),
-      };
+    if (!stored?.questions?.length) {
+      const liveQuestions = await prisma.quizQuestion.findMany({
+        where: { quizId: quiz.id },
+        orderBy: { order: "asc" },
+      });
+      const snapshot = buildAttemptSnapshot(
+        liveQuestions.map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options as string[],
+          correctIndex: q.correctIndex,
+          points: Number(q.points),
+        })),
+        quiz.shuffleQuestions,
+        quiz.shuffleOptions
+      );
       await prisma.quizAttempt.update({
         where: { id: attempt.id },
-        data: { questionOrder: order },
+        data: { questionOrder: { questions: snapshot } as unknown as Prisma.InputJsonValue },
       });
+      stored!.questions = snapshot;
     }
 
-    const questionMap = new Map(questions.map((q) => [q.id, q]));
-    const view: StudentQuizQuestionView[] = order.questionIds
-      .map((id) => questionMap.get(id))
-      .filter((q): q is (typeof questions)[number] => !!q)
-      .map((q) => {
-        const optionOrder = order!.optionOrders[q.id] ?? [];
-        const opts = q.options as string[];
-        return {
-          id: q.id,
-          order: q.order,
-          text: q.text,
-          options: optionOrder.map((i) => opts[i]).filter(Boolean),
-          points: Number(q.points),
-        };
-      });
+    const view: StudentQuizQuestionView[] = stored!.questions!.map((q, idx) => ({
+      id: q.id,
+      order: idx + 1,
+      text: q.text,
+      options: q.options,
+      points: q.points,
+    }));
 
     return {
       success: true,
@@ -598,20 +685,45 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
       return { success: false, error: "Waktu pengerjaan sudah habis. Hubungi gurumu." };
     }
 
-    const questions = await prisma.quizQuestion.findMany({ where: { quizId: quiz.id } });
+    // Grade against the attempt's snapshot (stable even if the teacher edits
+    // questions afterwards); fall back to live questions for legacy attempts.
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    const snapshot = stored?.questions?.length
+      ? stored.questions
+      : (
+          await prisma.quizQuestion.findMany({ where: { quizId: quiz.id } })
+        ).map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options as string[],
+          correctIndex: q.correctIndex,
+          points: Number(q.points),
+        }));
+
     const { score, totalPoints, perQuestion } = gradeAttempt(
-      questions.map((q) => ({
+      snapshot.map((q) => ({
         id: q.id,
         correctIndex: q.correctIndex,
-        points: Number(q.points),
+        points: q.points,
       })),
       parsed.answers
     );
 
     const normalized = normalizeScore(score, totalPoints);
 
+    const liveQuestionIds = new Set(
+      (
+        await prisma.quizQuestion.findMany({
+          where: { quizId: quiz.id },
+          select: { id: true },
+        })
+      ).map((q) => q.id)
+    );
+    const gradableAnswers = perQuestion.filter((pq) => liveQuestionIds.has(pq.questionId));
+
     await prisma.$transaction([
-      ...perQuestion.map((pq) =>
+      ...gradableAnswers.map((pq) =>
         prisma.quizAnswer.upsert({
           where: { attemptId_questionId: { attemptId: attempt.id, questionId: pq.questionId } },
           create: {
@@ -637,7 +749,7 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
     ]);
 
     const standard = quiz.standardScore ? Number(quiz.standardScore) : null;
-    const questionMap = new Map(questions.map((q) => [q.id, q]));
+    const snapshotMap = new Map(snapshot.map((q) => [q.id, q]));
 
     return {
       success: true,
@@ -648,7 +760,7 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
         isRemedial: attempt.isRemedial,
         submittedAt: new Date().toISOString(),
         perQuestion: perQuestion.map((pq) => ({
-          questionText: questionMap.get(pq.questionId)?.text ?? "",
+          questionText: snapshotMap.get(pq.questionId)?.text ?? "",
           selectedIndex: pq.selectedIndex,
           isCorrect: pq.isCorrect,
           pointsEarned: pq.pointsEarned,
@@ -674,22 +786,39 @@ export async function getAttemptResultAction(
 
     const attempt = await prisma.quizAttempt.findUnique({
       where: { quizId_studentId: { quizId: quiz.id, studentId } },
-      include: { answers: true, quiz: { include: { questions: true } } },
+      include: { answers: true },
     });
     if (!attempt || attempt.status !== "SUBMITTED") {
       return { success: false, error: "Hasil belum tersedia" };
     }
 
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    const snapshot = stored?.questions?.length
+      ? stored.questions
+      : (
+          await prisma.quizQuestion.findMany({
+            where: { quizId: quiz.id },
+            orderBy: { order: "asc" },
+          })
+        ).map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options as string[],
+          correctIndex: q.correctIndex,
+          points: Number(q.points),
+        }));
+
     const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
-    const perQuestion = attempt.quiz.questions.map((q) => {
+    const perQuestion = snapshot.map((q) => {
       const selected = answerMap.get(q.id) ?? null;
       const isCorrect = q.correctIndex !== null && selected === q.correctIndex;
       return {
         questionText: q.text,
         selectedIndex: selected,
         isCorrect,
-        pointsEarned: isCorrect ? Number(q.points) : 0,
-        pointsMax: Number(q.points),
+        pointsEarned: isCorrect ? q.points : 0,
+        pointsMax: q.points,
       };
     });
 

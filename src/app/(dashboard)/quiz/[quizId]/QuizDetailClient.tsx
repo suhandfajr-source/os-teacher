@@ -25,11 +25,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  QuestionListEditor,
+  EditableQuestion,
+} from "@/components/quiz/QuestionListEditor";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion } from "lucide-react";
+import {
   getQuizDetailAction,
   setQuizStatusAction,
   openRemedialAttemptAction,
   publishScoresToAssessmentAction,
   deleteQuizAction,
+  updateQuizQuestionsAction,
+  resetAllAttemptsAction,
 } from "@/modules/quiz/quiz.actions";
 
 interface QuizDetail {
@@ -46,7 +53,14 @@ interface QuizDetail {
     deadline?: string | null;
   };
   contextLabel: string;
-  questions: Array<{ id: string; order: number; text: string; correctIndex: number | null }>;
+  questions: Array<{
+    id: string;
+    order: number;
+    text: string;
+    options: string[];
+    correctIndex: number | null;
+    points: number;
+  }>;
   roster: Array<{
     studentId: string;
     fullName: string;
@@ -69,6 +83,9 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [isEditingQuestions, setIsEditingQuestions] = useState(false);
+  const [editQuestions, setEditQuestions] = useState<EditableQuestion[]>([]);
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false);
 
   const load = useCallback(async () => {
     const res = await getQuizDetailAction(quizId);
@@ -234,6 +251,183 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             >
               <XCircle className="h-4 w-4 mr-1" /> Tutup Quiz
             </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Questions: view & edit */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileQuestion className="h-4 w-4" /> Soal ({questions.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isEditingQuestions ? (
+            <>
+              {submitted.length > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <strong>{submitted.length} siswa sudah mengerjakan.</strong> Setelah menyimpan,
+                  kamu akan ditanya apakah mereka boleh mengulang dengan soal terbaru. Nilai lama
+                  yang sudah terkumpul tidak berubah kecuali kamu izinkan ulang.
+                </div>
+              )}
+              <QuestionListEditor questions={editQuestions} onChange={setEditQuestions} />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={isSavingQuestions}
+                onClick={() =>
+                  setEditQuestions((qs) => [
+                    ...qs,
+                    {
+                      id: `edit-${Date.now()}`,
+                      text: "",
+                      options: ["", "", "", ""],
+                      correctIndex: 0,
+                      points: 1,
+                    },
+                  ])
+                }
+              >
+                <Plus className="h-4 w-4" /> Tambah Soal
+              </Button>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="ghost"
+                  disabled={isSavingQuestions}
+                  onClick={() => {
+                    setIsEditingQuestions(false);
+                    setEditQuestions([]);
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" /> Batal
+                </Button>
+                <Button
+                  disabled={isSavingQuestions || editQuestions.length === 0}
+                  onClick={async () => {
+                    if (
+                      editQuestions.some(
+                        (q) => !q.text.trim() || q.options.some((o) => !o.trim())
+                      )
+                    ) {
+                      toast.error("Masih ada teks soal atau opsi yang kosong");
+                      return;
+                    }
+                    setIsSavingQuestions(true);
+                    try {
+                      const res = await updateQuizQuestionsAction(
+                        quiz.id,
+                        editQuestions.map((q) => ({
+                          text: q.text.trim(),
+                          options: q.options,
+                          correctIndex: q.correctIndex,
+                          points: q.points,
+                          explanation: q.explanation,
+                        }))
+                      );
+                      if (!res.success) {
+                        toast.error(res.error ?? "Gagal menyimpan soal");
+                        return;
+                      }
+                      if (quiz.status === "PUBLISHED" && submitted.length > 0) {
+                        const allowRetake = confirm(
+                          "Soal tersimpan.\n\nIzinkan " +
+                            submitted.length +
+                            " siswa yang sudah mengerjakan untuk mengulang dengan soal terbaru?\n\n(Oke = ya, nilai & jawaban lama mereka dikosongkan agar diukur ulang)"
+                        );
+                        if (allowRetake) {
+                          const resetRes = await resetAllAttemptsAction(quiz.id);
+                          if (resetRes.success && resetRes.data) {
+                            toast.success(
+                              "Soal tersimpan - " +
+                                resetRes.data.reset +
+                                " siswa diberi kesempatan mengulang"
+                            );
+                          }
+                        } else {
+                          toast.success("Soal tersimpan - berlaku untuk pengerjaan berikutnya");
+                        }
+                      } else {
+                        toast.success("Soal tersimpan");
+                      }
+                      setIsEditingQuestions(false);
+                      setEditQuestions([]);
+                      await load();
+                    } finally {
+                      setIsSavingQuestions(false);
+                    }
+                  }}
+                  className="gap-1"
+                >
+                  <CheckCircle2 className="h-4 w-4" /> Simpan Soal
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="divide-y">
+                {questions.map((q) => (
+                  <div key={q.id} className="py-3">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0">
+                        {q.order}
+                      </Badge>
+                      <p className="text-sm font-medium flex-1">{q.text}</p>
+                      <Badge variant="secondary" className="shrink-0">
+                        {q.points} poin
+                      </Badge>
+                    </div>
+                    <div className="mt-2 grid sm:grid-cols-2 gap-1.5 pl-8">
+                      {q.options.map((opt, oIdx) => (
+                        <div
+                          key={oIdx}
+                          className={
+                            "text-xs rounded-md px-2 py-1.5 flex items-center gap-1.5 " +
+                            (q.correctIndex === oIdx
+                              ? "bg-emerald-50 text-emerald-800 font-medium"
+                              : "text-muted-foreground")
+                          }
+                        >
+                          <span className="font-semibold">
+                            {String.fromCharCode(65 + oIdx)}.
+                          </span>
+                          {opt}
+                          {q.correctIndex === oIdx && (
+                            <CheckCircle2 className="h-3.5 w-3.5 ml-auto shrink-0" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {questions.length === 0 && (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Belum ada soal.</p>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => {
+                    setEditQuestions(
+                      questions.map((q) => ({
+                        id: q.id,
+                        text: q.text,
+                        options: q.options,
+                        correctIndex: q.correctIndex ?? 0,
+                        points: q.points,
+                      }))
+                    );
+                    setIsEditingQuestions(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit Soal
+                </Button>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

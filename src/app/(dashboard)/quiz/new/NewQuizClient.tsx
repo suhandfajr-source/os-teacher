@@ -24,11 +24,14 @@ import {
   ClipboardPaste,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  QuestionListEditor,
+  EditableQuestion as SharedEditableQuestion,
+} from "@/components/quiz/QuestionListEditor";
 import { createQuizAction } from "@/modules/quiz/quiz.actions";
 import {
   convertDocumentToQuizAction,
   generateQuizQuestionsAction,
-  ExtractedQuestion,
 } from "@/modules/quiz/quiz-convert.action";
 import { getTeacherTeachingContextsAction } from "@/modules/ai/ai.actions";
 
@@ -41,9 +44,7 @@ interface ContextOption {
   academicPeriod?: string;
 }
 
-interface EditableQuestion extends ExtractedQuestion {
-  id: string;
-}
+type EditableQuestion = SharedEditableQuestion;
 
 export function NewQuizClient() {
   const router = useRouter();
@@ -156,10 +157,6 @@ export function NewQuizClient() {
     } finally {
       setIsConverting(false);
     }
-  };
-
-  const updateQuestion = (id: string, patch: Partial<EditableQuestion>) => {
-    setQuestions((qs) => qs.map((q) => (q.id === id ? { ...q, ...patch } : q)));
   };
 
   const handleSave = async (andPublish: boolean) => {
@@ -346,66 +343,10 @@ export function NewQuizClient() {
           )}
 
           {/* Editable questions */}
-          <div className="space-y-4">
-            {questions.map((q, qIdx) => (
-              <div key={q.id} className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <Badge variant="outline" className="mt-1 shrink-0">
-                    Soal {qIdx + 1}
-                  </Badge>
-                  <Textarea
-                    value={q.text}
-                    onChange={(e) => updateQuestion(q.id, { text: e.target.value })}
-                    className="min-h-16 text-sm"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuestions((qs) => qs.filter((x) => x.id !== q.id))}
-                    className="text-muted-foreground hover:text-destructive shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-2">
-                  {q.options.map((opt, oIdx) => (
-                    <div key={oIdx} className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuestion(q.id, { correctIndex: oIdx })}
-                        className={`shrink-0 rounded-full p-0.5 transition-colors ${
-                          q.correctIndex === oIdx ? "text-emerald-600" : "text-muted-foreground/40"
-                        }`}
-                        title="Tandai sebagai jawaban benar"
-                      >
-                        <CheckCircle2 className="h-5 w-5" />
-                      </button>
-                      <Input
-                        value={opt}
-                        onChange={(e) => {
-                          const options = [...q.options];
-                          options[oIdx] = e.target.value;
-                          updateQuestion(q.id, { options });
-                        }}
-                        className={`text-sm h-9 ${
-                          q.correctIndex === oIdx ? "border-emerald-500/60" : ""
-                        }`}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Poin:</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={q.points}
-                    onChange={(e) => updateQuestion(q.id, { points: Number(e.target.value) || 1 })}
-                    className="w-20 h-8 text-xs"
-                  />
-                </div>
-              </div>
-            ))}
+          {questions.length > 0 && (
+            <QuestionListEditor questions={questions} onChange={setQuestions} />
+          )}
+          <div>
             <Button
               variant="outline"
               size="sm"
