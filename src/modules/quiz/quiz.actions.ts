@@ -49,6 +49,19 @@ export async function createQuizAction(input: unknown): Promise<{
     const parsed = createQuizSchema.parse(input);
     await verifyTeachingContextAccess(parsed.teachingContextId);
 
+    // Sanitize: never persist blank/whitespace options or question text.
+    const sanitizedQuestions = parsed.questions
+      .map((q) => ({
+        ...q,
+        text: q.text.trim(),
+        options: q.options.map((o) => o.trim()).filter((o) => o.length > 0),
+      }))
+      .filter((q) => q.text.length > 0 && q.options.length >= 2);
+
+    if (sanitizedQuestions.length === 0) {
+      return { success: false, error: "Tidak ada soal yang valid (teks & minimal 2 opsi harus terisi)" };
+    }
+
     const quiz = await prisma.quiz.create({
       data: {
         teachingContextId: parsed.teachingContextId,
@@ -61,7 +74,7 @@ export async function createQuizAction(input: unknown): Promise<{
         deadline: parsed.deadline ? new Date(parsed.deadline) : undefined,
         shareToken: generateShareToken(),
         questions: {
-          create: parsed.questions.map((q, idx) => ({
+          create: sanitizedQuestions.map((q, idx) => ({
             order: idx + 1,
             type: "MULTIPLE_CHOICE" as const,
             text: q.text,
@@ -420,7 +433,18 @@ export async function updateQuizQuestionsAction(
     if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
     await verifyTeachingContextAccess(quiz.teachingContextId);
 
-    const validated = questions.map((q) => quizQuestionSchema.parse(q));
+    const validated = questions
+      .map((q) =>
+        quizQuestionSchema.parse({
+          ...q,
+          text: q.text.trim(),
+          options: q.options.map((o) => o.trim()).filter((o) => o.length > 0),
+        })
+      )
+      .filter((q) => q.text.length > 0 && q.options.length >= 2);
+    if (validated.length === 0) {
+      return { success: false, error: "Tidak ada soal yang valid (teks & minimal 2 opsi harus terisi)" };
+    }
     if (validated.some((q) => q.correctIndex >= q.options.length)) {
       return { success: false, error: "Ada soal dengan kunci jawaban di luar daftar opsi" };
     }
@@ -686,20 +710,20 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
     }
 
     // Grade against the attempt's snapshot (stable even if the teacher edits
-    // questions afterwards); fall back to live questions for legacy attempts.
+    // questions afterwards). A missing snapshot means the attempt was reset by
+    // the teacher while this page was still open — grading against live
+    // questions in master order would repeat the shuffle-mismatch bug, so we
+    // ask the student to restart instead.
     type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
     const stored = attempt.questionOrder as unknown as StoredOrder | null;
-    const snapshot = stored?.questions?.length
-      ? stored.questions
-      : (
-          await prisma.quizQuestion.findMany({ where: { quizId: quiz.id } })
-        ).map((q) => ({
-          id: q.id,
-          text: q.text,
-          options: q.options as string[],
-          correctIndex: q.correctIndex,
-          points: Number(q.points),
-        }));
+    if (!stored?.questions?.length) {
+      return {
+        success: false,
+        error:
+          "Quiz diperbarui oleh guru saat kamu sedang mengerjakan. Muat ulang halaman dan mulai dari awal — jawabanmu sebelumnya tidak dapat dikoreksi dengan adil.",
+      };
+    }
+    const snapshot = stored.questions;
 
     const { score, totalPoints, perQuestion } = gradeAttempt(
       snapshot.map((q) => ({
