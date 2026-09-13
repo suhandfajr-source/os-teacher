@@ -1,12 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
-import { Home, Calendar, Users, UserCircle, Settings } from 'lucide-react';
+import { Home, Calendar, Users, UserCircle, FileQuestion, Settings } from 'lucide-react';
 
 const mobileNavItems = [
   { href: '/', label: 'Beranda', icon: Home },
   { href: '/hari-ini', label: 'Hari Ini', icon: Calendar },
   { href: '/kelas', label: 'Kelas', icon: Users },
   { href: '/siswa', label: 'Siswa', icon: UserCircle },
+  { href: '/quiz', label: 'Quiz', icon: FileQuestion },
   { href: '/pengaturan/setup', label: 'Pengaturan', icon: Settings },
 ];
 

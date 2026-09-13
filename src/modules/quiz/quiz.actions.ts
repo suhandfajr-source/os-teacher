@@ -537,6 +537,119 @@ export async function updateQuizQuestionsAction(
 }
 
 /**
+ * Teacher: per-question analytics across all submitted attempts — correct
+ * rate per question and answer distribution (aggregated by option text, so
+ * per-student option shuffling doesn't skew the tally).
+ */
+export async function getQuizAnalyticsAction(quizId: string): Promise<{
+  success: boolean;
+  data?: {
+    totalSubmitted: number;
+    questions: Array<{
+      id: string;
+      order: number;
+      text: string;
+      attemptedCount: number;
+      correctCount: number;
+      correctRate: number;
+      optionDistribution: Array<{ text: string; count: number; isCorrect: boolean }>;
+      unansweredCount: number;
+    }>;
+  };
+  error?: string;
+}> {
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { teachingContextId: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+    await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    const questions = await prisma.quizQuestion.findMany({
+      where: { quizId },
+      orderBy: { order: "asc" },
+    });
+    const attempts = await prisma.quizAttempt.findMany({
+      where: { quizId, status: "SUBMITTED" },
+      include: { answers: true },
+    });
+
+    type Tally = {
+      attemptedCount: number;
+      correctCount: number;
+      unansweredCount: number;
+      optionCounts: Map<string, number>;
+    };
+    const tallies = new Map<string, Tally>();
+    for (const q of questions) {
+      tallies.set(q.id, {
+        attemptedCount: 0,
+        correctCount: 0,
+        unansweredCount: 0,
+        optionCounts: new Map(),
+      });
+    }
+
+    for (const att of attempts) {
+      type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+      const stored = att.questionOrder as unknown as StoredOrder | null;
+      if (!stored?.questions?.length) continue; // legacy attempts are regraded via reset
+
+      const answerMap = new Map(att.answers.map((a) => [a.questionId, a.selectedIndex]));
+
+      for (const snapQ of stored.questions) {
+        const tally = tallies.get(snapQ.id);
+        if (!tally) continue; // question deleted by teacher after this attempt
+        const sel = answerMap.has(snapQ.id) ? answerMap.get(snapQ.id)! : null;
+
+        if (sel === null) {
+          tally.unansweredCount++;
+          continue;
+        }
+        tally.attemptedCount++;
+        const isCorrect = snapQ.correctIndex !== null && sel === snapQ.correctIndex;
+        if (isCorrect) tally.correctCount++;
+
+        const selectedText = snapQ.options[sel] ?? "(opsi tidak dikenal)";
+        tally.optionCounts.set(selectedText, (tally.optionCounts.get(selectedText) ?? 0) + 1);
+      }
+    }
+
+    const totalSubmitted = attempts.length;
+    return {
+      success: true,
+      data: {
+        totalSubmitted,
+        questions: questions.map((q) => {
+          const tally = tallies.get(q.id)!;
+          const rate =
+            tally.attemptedCount > 0
+              ? Math.round((tally.correctCount / tally.attemptedCount) * 100)
+              : 0;
+          return {
+            id: q.id,
+            order: q.order,
+            text: q.text,
+            attemptedCount: tally.attemptedCount,
+            correctCount: tally.correctCount,
+            correctRate: rate,
+            unansweredCount: tally.unansweredCount,
+            optionDistribution: (q.options as string[]).map((text) => ({
+              text,
+              count: tally.optionCounts.get(text) ?? 0,
+              isCorrect: q.correctIndex !== null && (q.options as string[])[q.correctIndex] === text,
+            })),
+          };
+        }),
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal memuat analitik") };
+  }
+}
+
+/**
  * Gives every student a fresh attempt with the latest questions (used after
  * the teacher edits questions of an already-worked quiz). Old answers and
  * scores are cleared.

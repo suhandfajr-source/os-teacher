@@ -29,7 +29,8 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3 } from "lucide-react";
+import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getStudentAttemptDetailAction } from "@/modules/quiz/quiz.actions";
 import {
@@ -106,6 +107,23 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } | null;
   }>({ open: false, loading: false, data: null });
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [analytics, setAnalytics] = useState<{
+    open: boolean;
+    loading: boolean;
+    data: {
+      totalSubmitted: number;
+      questions: Array<{
+        id: string;
+        order: number;
+        text: string;
+        attemptedCount: number;
+        correctCount: number;
+        correctRate: number;
+        optionDistribution: Array<{ text: string; count: number; isCorrect: boolean }>;
+        unansweredCount: number;
+      }>;
+    } | null;
+  }>({ open: false, loading: false, data: null });
   const [isEditingQuestions, setIsEditingQuestions] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [editQuestions, setEditQuestions] = useState<EditableQuestion[]>([]);
@@ -139,6 +157,17 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } else {
       setAnswerSheet({ open: false, loading: false, data: null });
       toast.error(res.error ?? "Gagal memuat jawaban");
+    }
+  };
+
+  const handleOpenAnalytics = async () => {
+    setAnalytics({ open: true, loading: true, data: null });
+    const res = await getQuizAnalyticsAction(quizId);
+    if (res.success && res.data) {
+      setAnalytics({ open: true, loading: false, data: res.data });
+    } else {
+      setAnalytics({ open: false, loading: false, data: null });
+      toast.error(res.error ?? "Gagal memuat analitik");
     }
   };
 
@@ -600,6 +629,28 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         </CardContent>
       </Card>
 
+      {/* Question analytics */}
+      {submitted.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" /> Analitik Soal
+              </CardTitle>
+              <Button variant="outline" size="sm" className="gap-1" onClick={handleOpenAnalytics}>
+                <BarChart3 className="h-3.5 w-3.5" /> Lihat Analitik
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {submitted.length} nilai terkumpul. Lihat soal mana yang paling banyak dijawab salah
+              sebagai bahan remedial & pengajaran ulang.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Gradebook publishing */}
       <Card>
         <CardHeader>
@@ -669,6 +720,107 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           Hapus Quiz
         </Button>
       </div>
+      {/* Analytics dialog */}
+      <Dialog open={analytics.open} onOpenChange={(open) => setAnalytics((s) => ({ ...s, open }))}>
+        <DialogContent className="max-w-2xl flex flex-col" style={{ maxHeight: "85vh" }}>
+          <DialogHeader>
+            <DialogTitle>Analitik Per Soal</DialogTitle>
+          </DialogHeader>
+          {analytics.loading || !analytics.data ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0" style={{ overflowY: "auto", minHeight: 0 }}>
+              <p className="text-xs text-muted-foreground">
+                Berdasarkan {analytics.data.totalSubmitted} jawaban terkumpul. Soal dengan tingkat
+                keberhasilan rendah (merah) adalah kandidat utama pengajaran ulang.
+              </p>
+              <div className="space-y-3">
+                {analytics.data.questions.map((q) => (
+                  <div key={q.id} className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0">
+                        {q.order}
+                      </Badge>
+                      <p className="text-sm font-medium flex-1 line-clamp-2">{q.text}</p>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "shrink-0",
+                          q.correctRate >= 75 && "bg-emerald-100 text-emerald-800",
+                          q.correctRate >= 50 && q.correctRate < 75 && "bg-amber-100 text-amber-800",
+                          q.correctRate < 50 && "bg-rose-100 text-rose-800"
+                        )}
+                      >
+                        {q.correctRate}% benar
+                      </Badge>
+                    </div>
+                    <div className="pl-8">
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full transition-all",
+                            q.correctRate >= 75
+                              ? "bg-emerald-500"
+                              : q.correctRate >= 50
+                              ? "bg-amber-500"
+                              : "bg-rose-500"
+                          )}
+                          style={{ width: `${q.correctRate}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
+                        <span>
+                          {q.correctCount}/{q.attemptedCount} benar
+                          {q.unansweredCount > 0 ? ` · ${q.unansweredCount} tidak dijawab` : ""}
+                        </span>
+                      </div>
+                      {/* option distribution */}
+                      <div className="mt-2 space-y-1">
+                        {q.optionDistribution
+                          .slice()
+                          .sort((a, b) => b.count - a.count)
+                          .map((opt) => (
+                            <div key={opt.text} className="flex items-center gap-2 text-[11px]">
+                              <span
+                                className={cn(
+                                  "w-40 truncate",
+                                  opt.isCorrect ? "text-emerald-700 font-medium" : "text-muted-foreground"
+                                )}
+                                title={opt.text}
+                              >
+                                {opt.isCorrect ? "✓ " : ""}
+                                {opt.text}
+                              </span>
+                              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className={cn(
+                                    "h-full",
+                                    opt.isCorrect ? "bg-emerald-400" : "bg-slate-400"
+                                  )}
+                                  style={{
+                                    width: `${
+                                      q.attemptedCount > 0
+                                        ? Math.round((opt.count / q.attemptedCount) * 100)
+                                        : 0
+                                    }%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="tabular-nums w-6 text-right">{opt.count}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* PIN list dialog */}
       <Dialog open={pinDialogOpen} onOpenChange={setPinDialogOpen}>
         <DialogContent className="max-w-md flex flex-col max-h-[85vh]">
