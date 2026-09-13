@@ -105,6 +105,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } | null;
   }>({ open: false, loading: false, data: null });
   const [isEditingQuestions, setIsEditingQuestions] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(false);
   const [editQuestions, setEditQuestions] = useState<EditableQuestion[]>([]);
   const [isSavingQuestions, setIsSavingQuestions] = useState(false);
 
@@ -332,6 +333,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   onClick={() => {
                     setIsEditingQuestions(false);
                     setEditQuestions([]);
+                    setShowQuestions(false);
                   }}
                 >
                   <X className="h-4 w-4 mr-1" /> Batal
@@ -386,6 +388,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       }
                       setIsEditingQuestions(false);
                       setEditQuestions([]);
+                      setShowQuestions(false);
                       await load();
                     } finally {
                       setIsSavingQuestions(false);
@@ -399,7 +402,17 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             </>
           ) : (
             <>
-              <div className="divide-y">
+              {!showQuestions && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Soal disembunyikan agar tidak terlihat sekilas saat membagikan layar.
+                  </p>
+                  <Button variant="outline" size="sm" className="gap-1 shrink-0" onClick={() => setShowQuestions(true)}>
+                    <Eye className="h-3.5 w-3.5" /> Lihat Soal
+                  </Button>
+                </div>
+              )}
+              <div className={cn("divide-y", !showQuestions && "hidden")}>
                 {questions.map((q) => (
                   <div key={q.id} className="py-3">
                     <div className="flex items-start gap-2">
@@ -438,7 +451,20 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <p className="text-sm text-muted-foreground py-4 text-center">Belum ada soal.</p>
                 )}
               </div>
-              <div className="flex justify-end">
+              {showQuestions && questions.length > 0 && (
+                <p className="text-xs text-muted-foreground -mt-2">
+                  Menampilkan {questions.length} soal beserta kunci jawabannya. Sembunyikan kembali bila perlu.
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setShowQuestions(false)}
+                >
+                  Sembunyikan
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
