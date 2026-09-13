@@ -30,6 +30,7 @@ import {
   getPublicQuizAction,
   startQuizAttemptAction,
   submitQuizAttemptAction,
+  getPublicAttemptResultAction,
 } from "@/modules/quiz/quiz.actions";
 import { PublicQuizView, StudentQuizQuestionView, AttemptResultView } from "@/modules/quiz/quiz.types";
 
@@ -75,6 +76,30 @@ export function QuizStudentClient({ token }: { token: string }) {
       setQuestions(res.data.questions);
       setStartedAt(new Date(res.data.startedAt).getTime());
       setStage("WORKING");
+    } else if (res.alreadySubmitted) {
+      // Let the student review their own result (score + correct/wrong marks,
+      // without the answer key).
+      const resRes = await getPublicAttemptResultAction(token, sid);
+      if (resRes.success && resRes.data) {
+        setResult({
+          score: resRes.data.score,
+          totalPoints: 100,
+          passed: resRes.data.passed,
+          isRemedial: resRes.data.isRemedial,
+          submittedAt: resRes.data.submittedAt,
+          perQuestion: resRes.data.perQuestion.map((pq) => ({
+            questionText: pq.questionText,
+            selectedIndex: null,
+            isCorrect: pq.isCorrect,
+            pointsEarned: pq.pointsEarned,
+            pointsMax: pq.pointsMax,
+          })),
+        });
+        setStage("RESULT");
+      } else {
+        setError(res.error ?? "Kamu sudah mengerjakan quiz ini");
+        setStage("IDENTIFY");
+      }
     } else {
       setError(res.error ?? "Gagal memulai quiz");
       setStage("IDENTIFY");
@@ -222,6 +247,12 @@ export function QuizStudentClient({ token }: { token: string }) {
             Kunci jawaban dan pembahasan akan dibahas guru di kelas. Coba hitung ulang soal yang
             kamu anggap sulit!
           </p>
+          {result.submittedAt && (
+            <p className="text-muted-foreground text-[11px]">
+              Dikumpulkan {new Date(result.submittedAt).toLocaleString("id-ID")}
+              {result.isRemedial ? " · Remedial" : ""}
+            </p>
+          )}
         </div>
       </Shell>
     );

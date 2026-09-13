@@ -24,11 +24,14 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getStudentAttemptDetailAction } from "@/modules/quiz/quiz.actions";
 import {
   getQuizDetailAction,
   setQuizStatusAction,
@@ -83,6 +86,24 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [answerSheet, setAnswerSheet] = useState<{
+    open: boolean;
+    loading: boolean;
+    data: {
+      studentName: string;
+      score: number;
+      submittedAt: string;
+      isRemedial: boolean;
+      perQuestion: Array<{
+        questionText: string;
+        options: string[];
+        selectedIndex: number | null;
+        correctIndex: number | null;
+        pointsEarned: number;
+        pointsMax: number;
+      }>;
+    } | null;
+  }>({ open: false, loading: false, data: null });
   const [isEditingQuestions, setIsEditingQuestions] = useState(false);
   const [editQuestions, setEditQuestions] = useState<EditableQuestion[]>([]);
   const [isSavingQuestions, setIsSavingQuestions] = useState(false);
@@ -106,6 +127,17 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     () => (detail && origin ? `${origin}/q/${detail.quiz.shareToken}` : ""),
     [detail, origin]
   );
+
+  const handleViewAnswers = async (studentId: string) => {
+    setAnswerSheet({ open: true, loading: true, data: null });
+    const res = await getStudentAttemptDetailAction(quizId, studentId);
+    if (res.success && res.data) {
+      setAnswerSheet({ open: true, loading: false, data: res.data });
+    } else {
+      setAnswerSheet({ open: false, loading: false, data: null });
+      toast.error(res.error ?? "Gagal memuat jawaban");
+    }
+  };
 
   const run = async (fn: () => Promise<{ success: boolean; error?: string }>, successMsg: string) => {
     setBusy(true);
@@ -482,6 +514,17 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         {r.score}
                       </Badge>
                     )}
+                    {r.attemptStatus === "SUBMITTED" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1 h-8"
+                        onClick={() => handleViewAnswers(r.studentId)}
+                        title="Lihat lembar jawaban siswa"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Jawaban
+                      </Button>
+                    )}
                     {needsRemedial && (
                       <Button
                         size="sm"
@@ -580,6 +623,82 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           Hapus Quiz
         </Button>
       </div>
+      {/* Answer sheet dialog */}
+      <Dialog open={answerSheet.open} onOpenChange={(open) => setAnswerSheet((s) => ({ ...s, open }))}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Lembar Jawaban — {answerSheet.data?.studentName ?? "…"}
+            </DialogTitle>
+          </DialogHeader>
+          {answerSheet.loading || !answerSheet.data ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-sm">
+                <Badge variant={answerSheet.data.score >= (quiz.standardScore ?? 0) ? "secondary" : "destructive"}>
+                  Nilai {answerSheet.data.score}
+                </Badge>
+                <span className="text-muted-foreground text-xs">
+                  Selesai {new Date(answerSheet.data.submittedAt).toLocaleString("id-ID")}
+                  {answerSheet.data.isRemedial ? " · Remedial" : ""}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {answerSheet.data.perQuestion.map((pq, idx) => (
+                  <div key={idx} className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0">
+                        {idx + 1}
+                      </Badge>
+                      <p className="text-sm font-medium flex-1">{pq.questionText}</p>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          pq.correctIndex !== null &&
+                          pq.selectedIndex !== null &&
+                          pq.selectedIndex === pq.correctIndex
+                            ? "bg-emerald-100 text-emerald-800 shrink-0"
+                            : "bg-rose-100 text-rose-800 shrink-0"
+                        }
+                      >
+                        {pq.pointsEarned}/{pq.pointsMax}
+                      </Badge>
+                    </div>
+                    <div className="pl-8 space-y-1">
+                      {pq.options.map((opt, oIdx) => {
+                        const isSelected = pq.selectedIndex === oIdx;
+                        const isCorrect = pq.correctIndex === oIdx;
+                        return (
+                          <div
+                            key={oIdx}
+                            className={cn(
+                              "text-xs rounded-md px-2 py-1.5 flex items-center gap-2",
+                              isCorrect && "bg-emerald-50 text-emerald-800",
+                              isSelected && !isCorrect && "bg-rose-50 text-rose-800",
+                              !isSelected && !isCorrect && "text-muted-foreground"
+                            )}
+                          >
+                            <span className="font-semibold">{String.fromCharCode(65 + oIdx)}.</span>
+                            <span className="flex-1">{opt}</span>
+                            {isCorrect && <span className="text-[10px] font-bold">KUNCI</span>}
+                            {isSelected && <span className="text-[10px] font-bold">JAWABAN SISWA</span>}
+                          </div>
+                        );
+                      })}
+                      {pq.selectedIndex === null && (
+                        <p className="text-xs text-muted-foreground italic">Tidak dijawab</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

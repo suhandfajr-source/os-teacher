@@ -510,6 +510,89 @@ export async function resetAllAttemptsAction(quizId: string): Promise<{
   }
 }
 
+/**
+ * Teacher: full answer sheet of one student's submitted attempt, from the
+ * attempt's own snapshot (exactly what the student saw).
+ */
+export async function getStudentAttemptDetailAction(quizId: string, studentId: string): Promise<{
+  success: boolean;
+  data?: {
+    studentName: string;
+    score: number;
+    submittedAt: string;
+    isRemedial: boolean;
+    perQuestion: Array<{
+      questionText: string;
+      options: string[];
+      selectedIndex: number | null;
+      correctIndex: number | null;
+      pointsEarned: number;
+      pointsMax: number;
+    }>;
+  };
+  error?: string;
+}> {
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { teachingContextId: true, standardScore: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+    await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { quizId_studentId: { quizId, studentId } },
+      include: { answers: true, student: { select: { fullName: true } } },
+    });
+    if (!attempt || attempt.status !== "SUBMITTED") {
+      return { success: false, error: "Siswa ini belum menyelesaikan quiz" };
+    }
+
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    const snapshot = stored?.questions?.length
+      ? stored.questions
+      : (
+          await prisma.quizQuestion.findMany({
+            where: { quizId },
+            orderBy: { order: "asc" },
+          })
+        ).map((q) => ({
+          id: q.id,
+          text: q.text,
+          options: q.options as string[],
+          correctIndex: q.correctIndex,
+          points: Number(q.points),
+        }));
+
+    const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
+
+    return {
+      success: true,
+      data: {
+        studentName: attempt.student.fullName,
+        score: attempt.score ? Number(attempt.score) : 0,
+        submittedAt: attempt.submittedAt?.toISOString() ?? "",
+        isRemedial: attempt.isRemedial,
+        perQuestion: snapshot.map((q) => {
+          const sel = answerMap.has(q.id) ? answerMap.get(q.id)! : null;
+          const isCorrect = q.correctIndex !== null && sel === q.correctIndex;
+          return {
+            questionText: q.text,
+            options: q.options,
+            selectedIndex: sel,
+            correctIndex: q.correctIndex,
+            pointsEarned: isCorrect ? q.points : 0,
+            pointsMax: q.points,
+          };
+        }),
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal memuat jawaban siswa") };
+  }
+}
+
 // ============================================================================
 // PUBLIC STUDENT ACTIONS (token-based, no login)
 // ============================================================================
@@ -585,6 +668,7 @@ export async function startQuizAttemptAction(
   studentId: string
 ): Promise<{
   success: boolean;
+  alreadySubmitted?: boolean;
   data?: {
     quizTitle: string;
     durationMinutes?: number;
@@ -624,7 +708,11 @@ export async function startQuizAttemptAction(
     });
 
     if (existing?.status === "SUBMITTED") {
-      return { success: false, error: "Kamu sudah mengerjakan quiz ini. Hubungi guru untuk remedial." };
+      return {
+        success: false,
+        alreadySubmitted: true,
+        error: "Kamu sudah mengerjakan quiz ini. Hubungi guru untuk remedial.",
+      };
     }
 
     let attempt = existing;
@@ -683,6 +771,77 @@ export async function startQuizAttemptAction(
     };
   } catch (error: unknown) {
     return { success: false, error: formatActionError(error, "Gagal memulai quiz") };
+  }
+}
+
+/**
+ * Public: lets a student who already submitted review their own result.
+ * Shows correctness marks but never reveals the correct answer key
+ * (per PRD: dibahas guru di kelas).
+ */
+export async function getPublicAttemptResultAction(
+  token: string,
+  studentId: string
+): Promise<{
+  success: boolean;
+  data?: {
+    score: number;
+    passed: boolean;
+    isRemedial: boolean;
+    submittedAt: string;
+    perQuestion: Array<{
+      questionText: string;
+      selectedOptionText: string | null;
+      isCorrect: boolean | null;
+      pointsEarned: number;
+      pointsMax: number;
+    }>;
+  };
+  error?: string;
+}> {
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { shareToken: token },
+      select: { id: true, standardScore: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { quizId_studentId: { quizId: quiz.id, studentId } },
+      include: { answers: true },
+    });
+    if (!attempt || attempt.status !== "SUBMITTED") {
+      return { success: false, error: "Hasil belum tersedia" };
+    }
+
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    const snapshot = stored?.questions?.length ? stored.questions : [];
+
+    const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
+
+    return {
+      success: true,
+      data: {
+        score: attempt.score ? Number(attempt.score) : 0,
+        passed: quiz.standardScore === null ? true : (attempt.score ? Number(attempt.score) : 0) >= Number(quiz.standardScore),
+        isRemedial: attempt.isRemedial,
+        submittedAt: attempt.submittedAt?.toISOString() ?? "",
+        perQuestion: snapshot.map((q) => {
+          const sel = answerMap.has(q.id) ? answerMap.get(q.id)! : null;
+          const isCorrect = q.correctIndex !== null && sel === q.correctIndex;
+          return {
+            questionText: q.text,
+            selectedOptionText: sel !== null ? (q.options[sel] ?? null) : null,
+            isCorrect: q.correctIndex === null ? null : isCorrect,
+            pointsEarned: isCorrect ? q.points : 0,
+            pointsMax: q.points,
+          };
+        }),
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal memuat hasil") };
   }
 }
 

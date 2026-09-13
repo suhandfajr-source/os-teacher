@@ -16,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Sparkles,
   Plus,
-  Trash2,
   CheckCircle2,
   Loader2,
   ArrowLeft,
