@@ -272,6 +272,7 @@ model Student {
   parentRelations   ParentStudentRelation[]
   parentInvitations ParentInvitation[]
   quizAttempts      QuizAttempt[]
+  quizAccesses      QuizStudentAccess[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -884,8 +885,9 @@ model Quiz {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
-  questions QuizQuestion[]
-  attempts  QuizAttempt[]
+  questions       QuizQuestion[]
+  attempts        QuizAttempt[]
+  studentAccesses QuizStudentAccess[]
 
   @@index([teachingContextId, status])
   @@index([status, deadline])
@@ -949,4 +951,19 @@ model QuizAnswer {
   @@unique([attemptId, questionId])
   @@index([attemptId])
   @@map("quiz_answer")
+}
+
+model QuizStudentAccess {
+  id        String   @id @default(cuid())
+  quizId    String
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  pin       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([quizId, studentId])
+  @@index([studentId])
+  @@map("quiz_student_access")
 }

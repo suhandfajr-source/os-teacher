@@ -27,6 +27,8 @@ import {
   isAttemptExpired,
   buildAttemptSnapshot,
   reconstructLegacySnapshot,
+  generateUniquePins,
+  normalizePin,
   AttemptQuestionSnapshot,
 } from "./quiz.service";
 
@@ -127,6 +129,53 @@ export async function updateQuizSettingsAction(input: unknown): Promise<{
   }
 }
 
+/**
+ * Ensures every roster student of the quiz's class (same academic period)
+ * has a PIN. Lazy: called when publishing and when students open the link.
+ */
+async function ensureQuizStudentAccesses(quizId: string): Promise<void> {
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: quizId },
+    select: {
+      teachingContext: {
+        select: {
+          academicPeriodId: true,
+          class: {
+            select: {
+              classStudents: {
+                select: {
+                  studentId: true,
+                  academicPeriodId: true,
+                  student: { select: { status: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!quiz) return;
+
+  const rosterIds = quiz.teachingContext.class.classStudents
+    .filter((cs) => cs.academicPeriodId === quiz.teachingContext.academicPeriodId)
+    .filter((cs) => cs.student.status === "ACTIVE")
+    .map((cs) => cs.studentId);
+
+  const existing = await prisma.quizStudentAccess.findMany({
+    where: { quizId, studentId: { in: rosterIds } },
+    select: { studentId: true, pin: true },
+  });
+  const existingMap = new Map(existing.map((e) => [e.studentId, e.pin]));
+  const missing = rosterIds.filter((id) => !existingMap.has(id));
+  if (missing.length === 0) return;
+
+  const pins = generateUniquePins(missing.length, new Set(existing.map((e) => e.pin)));
+  await prisma.quizStudentAccess.createMany({
+    data: missing.map((studentId, i) => ({ quizId, studentId, pin: pins[i] })),
+  });
+}
+
 export async function setQuizStatusAction(quizId: string, status: "PUBLISHED" | "CLOSED" | "DRAFT") {
   try {
     const quiz = await prisma.quiz.findUnique({
@@ -136,6 +185,11 @@ export async function setQuizStatusAction(quizId: string, status: "PUBLISHED" | 
     if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
 
     await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    if (status === "PUBLISHED") {
+      await ensureQuizStudentAccesses(quizId);
+    }
+
     await prisma.quiz.update({ where: { id: quizId }, data: { status } });
     return { success: true };
   } catch (error: unknown) {
@@ -342,6 +396,7 @@ export async function getQuizDetailAction(quizId: string) {
           include: { student: { select: { id: true, fullName: true } } },
           orderBy: { startedAt: "desc" },
         },
+        studentAccesses: { select: { studentId: true, pin: true } },
       },
     });
     if (!quiz) return { success: false as const, error: "Quiz tidak ditemukan" };
@@ -349,6 +404,14 @@ export async function getQuizDetailAction(quizId: string) {
     await verifyTeachingContextAccess(quiz.teachingContextId);
 
     const attemptedMap = new Map(quiz.attempts.map((a) => [a.studentId, a]));
+    const pinMap = new Map(quiz.studentAccesses.map((a) => [a.studentId, a.pin]));
+    // Teacher adds students / reopens after publish → ensure PINs exist.
+    await ensureQuizStudentAccesses(quiz.id);
+    const refreshedAccesses = await prisma.quizStudentAccess.findMany({
+      where: { quizId: quiz.id },
+      select: { studentId: true, pin: true },
+    });
+    for (const a of refreshedAccesses) pinMap.set(a.studentId, a.pin);
     const roster = quiz.teachingContext.class.classStudents
       .filter((cs) => cs.academicPeriodId === quiz.teachingContext.academicPeriodId)
       .map((cs) => {
@@ -356,6 +419,7 @@ export async function getQuizDetailAction(quizId: string) {
       return {
         studentId: cs.student.id,
         fullName: cs.student.fullName,
+        pin: pinMap.get(cs.student.id) ?? null,
         attemptStatus: attempt?.status ?? "NOT_STARTED",
         score: attempt?.score ? Number(attempt.score) : null,
         isRemedial: attempt?.isRemedial ?? false,
@@ -652,6 +716,11 @@ export async function getPublicQuizAction(token: string): Promise<{
 
     const isDeadlinePassed = !!quiz.deadline && quiz.deadline.getTime() < Date.now();
 
+    // Lazy-ensure PINs exist so students are always verifiable.
+    if (quiz.status === "PUBLISHED") {
+      await ensureQuizStudentAccesses(quiz.id);
+    }
+
     // Only students enrolled in the same academic period as the quiz context.
     const rosterStudents = quiz.teachingContext.class.classStudents
       .filter(
@@ -672,6 +741,7 @@ export async function getPublicQuizAction(token: string): Promise<{
         standardScore: quiz.standardScore ? Number(quiz.standardScore) : undefined,
         questionCount: quiz._count.questions,
         totalPoints: 0,
+        pinRequired: true,
         roster: rosterStudents,
       },
     };
@@ -686,17 +756,19 @@ export async function getPublicQuizAction(token: string): Promise<{
  */
 export async function startQuizAttemptAction(
   token: string,
-  studentId: string
+  studentId: string,
+  pin?: string
 ): Promise<{
   success: boolean;
-  alreadySubmitted?: boolean;
   data?: {
     quizTitle: string;
-    durationMinutes?: number;
+    durationMinutes: number | undefined;
     startedAt: string;
     isRemedial: boolean;
     questions: StudentQuizQuestionView[];
   };
+  alreadySubmitted?: boolean;
+  wrongPin?: boolean;
   error?: string;
 }> {
   try {
@@ -720,6 +792,20 @@ export async function startQuizAttemptAction(
         cs.student.id === studentId
     );
     if (!isOnRoster) return { success: false, error: "Nama siswa tidak terdaftar di kelas ini" };
+
+    // PIN verification — prevents impersonating a classmate.
+    const access = await prisma.quizStudentAccess.findUnique({
+      where: { quizId_studentId: { quizId: quiz.id, studentId } },
+      select: { pin: true },
+    });
+    if (!access) {
+      // Rare race: link opened before PINs were ensured.
+      await ensureQuizStudentAccesses(quiz.id);
+      return { success: false, error: "Sesi verifikasi diperbarui. Silakan coba lagi." };
+    }
+    if (normalizePin(pin ?? "") !== normalizePin(access.pin)) {
+      return { success: false, wrongPin: true, error: "PIN salah. Periksa kembali PIN dari gurumu." };
+    }
 
     const existing = await prisma.quizAttempt.findUnique({
       where: { quizId_studentId: { quizId: quiz.id, studentId } },

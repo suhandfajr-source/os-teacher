@@ -79,6 +79,7 @@ export interface PublicQuizView {
   questionCount: number;
   totalPoints: number;
   roster: Array<{ id: string; fullName: string }>;
+  pinRequired: boolean;
 }
 
 export interface AttemptResultView {

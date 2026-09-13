@@ -188,3 +188,33 @@ export function buildAttemptSnapshot(
     };
   });
 }
+
+/**
+ * Generates `count` unique 4-digit numeric PINs, none colliding with
+ * `existingPins`.
+ */
+export function generateUniquePins(
+  count: number,
+  existingPins: Set<string> = new Set()
+): string[] {
+  const pins: string[] = [];
+  const taken = new Set(existingPins);
+  let guard = 0;
+  while (pins.length < count && guard < 10_000) {
+    guard++;
+    const pin = String(Math.floor(Math.random() * 10_000)).padStart(4, "0");
+    if (taken.has(pin)) continue;
+    taken.add(pin);
+    pins.push(pin);
+  }
+  if (pins.length < count) {
+    throw new Error("Tidak dapat membuat PIN unik (kuota 4-digit terlampaui)");
+  }
+  return pins;
+}
+
+/** Normalizes PIN input: digits only, so "007" and "7" both work. */
+export function normalizePin(pin: string): string {
+  const digits = String(pin ?? "").replace(/\D/g, "");
+  return digits.length === 0 ? "" : String(Number(digits));
+}

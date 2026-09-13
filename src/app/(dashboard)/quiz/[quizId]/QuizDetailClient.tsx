@@ -29,7 +29,7 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getStudentAttemptDetailAction } from "@/modules/quiz/quiz.actions";
 import {
@@ -67,6 +67,7 @@ interface QuizDetail {
   roster: Array<{
     studentId: string;
     fullName: string;
+    pin?: string | null;
     attemptStatus: string;
     score: number | null;
     isRemedial: boolean;
@@ -104,6 +105,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       }>;
     } | null;
   }>({ open: false, loading: false, data: null });
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [isEditingQuestions, setIsEditingQuestions] = useState(false);
   const [showQuestions, setShowQuestions] = useState(false);
   const [editQuestions, setEditQuestions] = useState<EditableQuestion[]>([]);
@@ -493,14 +495,25 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       {/* Roster monitoring */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" /> Siswa ({roster.length})
-            {quiz.standardScore != null && belowStandard.length > 0 && (
-              <Badge variant="destructive" className="ml-1">
-                {belowStandard.length} di bawah KKM
-              </Badge>
-            )}
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" /> Siswa ({roster.length})
+              {quiz.standardScore != null && belowStandard.length > 0 && (
+                <Badge variant="destructive" className="ml-1">
+                  {belowStandard.length} di bawah KKM
+                </Badge>
+              )}
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() => setPinDialogOpen(true)}
+              title="Lihat & salin PIN tiap siswa untuk dibagikan"
+            >
+              <KeyRound className="h-3.5 w-3.5" /> Daftar PIN
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="divide-y">
@@ -520,7 +533,14 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <Circle className="h-5 w-5 text-muted-foreground/40 shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{r.fullName}</p>
+                      <p className="text-sm font-medium truncate">
+                        {r.fullName}
+                        {r.pin && (
+                          <Badge variant="outline" className="ml-2 font-mono text-[10px]">
+                            PIN {r.pin}
+                          </Badge>
+                        )}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {r.attemptStatus === "NOT_STARTED"
                           ? "Belum mengerjakan"
@@ -649,6 +669,44 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           Hapus Quiz
         </Button>
       </div>
+      {/* PIN list dialog */}
+      <Dialog open={pinDialogOpen} onOpenChange={setPinDialogOpen}>
+        <DialogContent className="max-w-md flex flex-col max-h-[85vh]">
+          <DialogHeader>
+            <DialogTitle>Daftar Nama & PIN Siswa</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto" style={{ overflowY: "auto", minHeight: 0 }}>
+            <p className="text-xs text-muted-foreground mb-3">
+              Bagikan PIN ini bersama link quiz. Siswa memilih namanya lalu memasukkan PIN — tanpa
+              PIN, siswa lain tidak bisa mengerjakan atas nama mereka.
+            </p>
+            <div className="rounded-lg border divide-y">
+              {roster.map((r) => (
+                <div key={r.studentId} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <span className="truncate">{r.fullName}</span>
+                  <span className="font-mono font-bold tracking-widest">{r.pin ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-3 gap-1"
+              onClick={async () => {
+                const text = [
+                  `PIN Quiz: ${quiz.title}`,
+                  "",
+                  ...roster.map((r) => `${r.fullName} — PIN ${r.pin ?? "-"}`),
+                ].join("\n");
+                await navigator.clipboard.writeText(text);
+                toast.success("Daftar PIN disalin! Tempel di grup WhatsApp kelas.");
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" /> Salin Daftar PIN
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Answer sheet dialog */}
       <Dialog open={answerSheet.open} onOpenChange={(open) => setAnswerSheet((s) => ({ ...s, open }))}>
         <DialogContent className="max-w-2xl flex flex-col" style={{ maxHeight: "85vh" }}>

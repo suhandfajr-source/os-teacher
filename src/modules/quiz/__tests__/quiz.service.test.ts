@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   shuffleArray,
+  generateUniquePins,
+  normalizePin,
   shuffleOptions,
   gradeAttempt,
   normalizeScore,
@@ -85,5 +87,27 @@ describe("quiz.service", () => {
       const started = new Date(Date.now() - 10 * 60_000);
       expect(isAttemptExpired(started, 30)).toBe(false);
     });
+  });
+});
+
+describe("PIN helpers", () => {
+  it("generateUniquePins: jumlah & panjang benar, tidak ada duplikat", () => {
+    const pins = generateUniquePins(50);
+    expect(pins).toHaveLength(50);
+    expect(new Set(pins).size).toBe(50);
+    for (const pin of pins) expect(pin).toMatch(/^\d{4}$/);
+  });
+
+  it("generateUniquePins: tidak menabrak PIN yang sudah ada", () => {
+    const existing = new Set(["0000", "0001", "0002"]);
+    const pins = generateUniquePins(10, existing);
+    for (const pin of pins) expect(existing.has(pin)).toBe(false);
+  });
+
+  it("normalizePin: memaafkan leading zero & karakter non-digit", () => {
+    expect(normalizePin("007")).toBe("7");
+    expect(normalizePin(" 7 ")).toBe("7");
+    expect(normalizePin("PIN 1234")).toBe("1234");
+    expect(normalizePin("abc")).toBe("");
   });
 });

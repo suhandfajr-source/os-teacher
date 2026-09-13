@@ -34,7 +34,7 @@ import {
 } from "@/modules/quiz/quiz.actions";
 import { PublicQuizView, StudentQuizQuestionView, AttemptResultView } from "@/modules/quiz/quiz.types";
 
-type Stage = "IDENTIFY" | "LOADING_QUIZ" | "WORKING" | "RESULT";
+type Stage = "IDENTIFY" | "PIN" | "LOADING_QUIZ" | "WORKING" | "RESULT";
 
 export function QuizStudentClient({ token }: { token: string }) {
   const [stage, setStage] = useState<Stage>("IDENTIFY");
@@ -42,6 +42,9 @@ export function QuizStudentClient({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const [studentId, setStudentId] = useState<string>("");
+  const [studentName, setStudentName] = useState<string>("");
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState("");
 
   const [questions, setQuestions] = useState<StudentQuizQuestionView[]>([]);
@@ -68,10 +71,17 @@ export function QuizStudentClient({ token }: { token: string }) {
     r.fullName.toLowerCase().includes(nameFilter.toLowerCase())
   );
 
-  const handleStart = async (sid: string) => {
+  const handleStart = async (sid: string, name: string) => {
     setStudentId(sid);
+    setStudentName(name);
+    setPinInput("");
+    setPinError(null);
+    setStage("PIN");
+  };
+
+  const handlePinSubmit = async () => {
     setStage("LOADING_QUIZ");
-    const res = await startQuizAttemptAction(token, sid);
+    const res = await startQuizAttemptAction(token, studentId, pinInput);
     if (res.success && res.data) {
       setQuestions(res.data.questions);
       setStartedAt(new Date(res.data.startedAt).getTime());
@@ -79,7 +89,7 @@ export function QuizStudentClient({ token }: { token: string }) {
     } else if (res.alreadySubmitted) {
       // Let the student review their own result (score + correct/wrong marks,
       // without the answer key).
-      const resRes = await getPublicAttemptResultAction(token, sid);
+      const resRes = await getPublicAttemptResultAction(token, studentId);
       if (resRes.success && resRes.data) {
         setResult({
           score: resRes.data.score,
@@ -100,6 +110,9 @@ export function QuizStudentClient({ token }: { token: string }) {
         setError(res.error ?? "Kamu sudah mengerjakan quiz ini");
         setStage("IDENTIFY");
       }
+    } else if (res.wrongPin) {
+      setPinError(res.error ?? "PIN salah");
+      setStage("PIN");
     } else {
       setError(res.error ?? "Gagal memulai quiz");
       setStage("IDENTIFY");
@@ -292,7 +305,7 @@ export function QuizStudentClient({ token }: { token: string }) {
                 filteredRoster.map((r) => (
                   <button
                     key={r.id}
-                    onClick={() => handleStart(r.id)}
+                    onClick={() => handleStart(r.id, r.fullName)}
                     className="w-full text-left px-4 py-3 text-sm hover:bg-muted transition-colors flex items-center justify-between"
                   >
                     {r.fullName}
@@ -306,6 +319,57 @@ export function QuizStudentClient({ token }: { token: string }) {
             Pastikan memilih nama yang benar — kesalahan memilih nama akan tercatat sebagai nilai
             temanmu.
           </p>
+        </div>
+      </Shell>
+    );
+  }
+
+  // ---------- PIN ----------
+  if (stage === "PIN") {
+    return (
+      <Shell title={quiz.title} description={quiz.description}>
+        <div className="space-y-5">
+          <div className="text-center space-y-1">
+            <p className="text-sm text-muted-foreground">
+              Mengerjakan sebagai <span className="font-semibold text-foreground">{studentName}</span>
+            </p>
+            <p className="text-2xl font-bold tracking-tight">Masukkan PIN</p>
+            <p className="text-xs text-muted-foreground">
+              PIN 4 digit diberikan gurumu bersama link quiz ini.
+            </p>
+          </div>
+          <div>
+            <Input
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4));
+                setPinError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && pinInput.length === 4) void handlePinSubmit();
+              }}
+              inputMode="numeric"
+              autoFocus
+              placeholder="••••"
+              className={cn(
+                "text-center text-3xl font-bold tracking-[0.5em] h-14",
+                pinError && "border-destructive"
+              )}
+            />
+            {pinError && <p className="text-xs text-destructive mt-2 text-center">{pinError}</p>}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setStage("IDENTIFY")}>
+              Kembali
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={pinInput.length !== 4}
+              onClick={() => void handlePinSubmit()}
+            >
+              Mulai Quiz
+            </Button>
+          </div>
         </div>
       </Shell>
     );
