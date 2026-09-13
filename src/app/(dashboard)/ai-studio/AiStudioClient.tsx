@@ -19,6 +19,7 @@ import {
   generateSlideIllustrationAction,
 } from "@/modules/ai/ai.actions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ import {
   Lock,
   FileSpreadsheet,
   Presentation,
+  ArrowRight,
   LayoutTemplate,
   HelpCircle,
   GraduationCap,
@@ -1264,7 +1266,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base">1. Pilih Alur Kebutuhan Guru</CardTitle>
                       <Badge variant="outline" className="text-xs font-normal">
-                        6 Alur Spesifik
+                        6 Alur + Quiz Online
                       </Badge>
                     </div>
                     <CardDescription className="text-xs">
@@ -1317,6 +1319,33 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           </div>
                         );
                       })}
+
+                      {/* Quiz Online shortcut card — direct to the quiz builder */}
+                      <Link
+                        href="/quiz/new"
+                        className="cursor-pointer rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 transition-all hover:border-emerald-400 hover:bg-emerald-50 flex flex-col justify-between"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="p-2 rounded-lg bg-background border shadow-xs">
+                              <FileQuestion className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-emerald-600 text-white">
+                              Interaktif
+                            </Badge>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-foreground">Quiz Online</h3>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                              AI generate soal langsung jadi quiz — siswa kerjakan lewat link tanpa login, nilai otomatis.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-emerald-100 flex items-center justify-between text-[11px] text-emerald-700">
+                          <span>Nilai <strong className="font-semibold">terkoreksi otomatis</strong></span>
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </div>
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>

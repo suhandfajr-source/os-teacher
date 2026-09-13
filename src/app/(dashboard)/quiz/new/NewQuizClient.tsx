@@ -345,15 +345,6 @@ export function NewQuizClient() {
             </div>
           )}
 
-          <Button onClick={handleConvert} disabled={isConverting} className="gap-2">
-            {isConverting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 text-amber-500" />
-            )}
-            Konversi dengan AI
-          </Button>
-
           {/* Editable questions */}
           <div className="space-y-4">
             {questions.map((q, qIdx) => (
