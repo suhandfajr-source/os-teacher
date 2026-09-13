@@ -21,15 +21,24 @@ import {
   Loader2,
   ArrowLeft,
   Share2,
+  ClipboardPaste,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createQuizAction } from "@/modules/quiz/quiz.actions";
-import { convertDocumentToQuizAction, ExtractedQuestion } from "@/modules/quiz/quiz-convert.action";
+import {
+  convertDocumentToQuizAction,
+  generateQuizQuestionsAction,
+  ExtractedQuestion,
+} from "@/modules/quiz/quiz-convert.action";
 import { getTeacherTeachingContextsAction } from "@/modules/ai/ai.actions";
 
 interface ContextOption {
   id: string;
   label: string;
+  subjectName?: string;
+  className?: string;
+  gradeLevel?: string | null;
+  academicPeriod?: string;
 }
 
 interface EditableQuestion extends ExtractedQuestion {
@@ -50,6 +59,9 @@ export function NewQuizClient() {
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
   const [shuffleOptions, setShuffleOptions] = useState(true);
 
+  const [sourceMode, setSourceMode] = useState<"GENERATE" | "DOCUMENT">("GENERATE");
+  const [topic, setTopic] = useState("");
+  const [questionCount, setQuestionCount] = useState("10");
   const [documentText, setDocumentText] = useState("");
   const [questions, setQuestions] = useState<EditableQuestion[]>([]);
   const [isConverting, setIsConverting] = useState(false);
@@ -109,6 +121,38 @@ export function NewQuizClient() {
       }
     } catch {
       toast.error("Terjadi kesalahan saat konversi");
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!contextId) {
+      toast.error("Pilih kelas & mata pelajaran terlebih dahulu");
+      return;
+    }
+    if (topic.trim().length < 3) {
+      toast.error("Tulis topik/bahan quiz terlebih dahulu");
+      return;
+    }
+    setIsConverting(true);
+    try {
+      const ctx = contexts.find((c) => c.id === contextId);
+      const res = await generateQuizQuestionsAction({
+        topic: topic.trim(),
+        count: Number(questionCount) || 10,
+        subjectName: ctx?.subjectName,
+        gradeLevel: ctx?.gradeLevel,
+      });
+      if (res.success && res.data) {
+        setQuestions(res.data.questions.map((q, i) => ({ ...q, id: `q${Date.now()}-${i}` })));
+        if (!title.trim()) setTitle(`Quiz ${topic.trim()}`);
+        toast.success(`${res.data.questions.length} soal berhasil dibuat AI`);
+      } else {
+        toast.error(res.error ?? "Generate gagal");
+      }
+    } catch {
+      toast.error("Terjadi kesalahan saat generate");
     } finally {
       setIsConverting(false);
     }
@@ -216,16 +260,91 @@ export function NewQuizClient() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="doc">Dokumen soal (dari AI Studio atau tempel manual)</Label>
-            <Textarea
-              id="doc"
-              value={documentText}
-              onChange={(e) => setDocumentText(e.target.value)}
-              placeholder="Tempel dokumen soal pilihan ganda beserta kunci jawabannya di sini…"
-              className="min-h-40 font-mono text-xs"
-            />
+          {/* Source mode tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSourceMode("GENERATE")}
+              className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                sourceMode === "GENERATE"
+                  ? "border-primary bg-primary/5"
+                  : "text-muted-foreground hover:border-primary/40"
+              }`}
+            >
+              <Sparkles className="h-4 w-4 text-amber-500" /> Generate AI dari Topik
+            </button>
+            <button
+              onClick={() => setSourceMode("DOCUMENT")}
+              className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                sourceMode === "DOCUMENT"
+                  ? "border-primary bg-primary/5"
+                  : "text-muted-foreground hover:border-primary/40"
+              }`}
+            >
+              <ClipboardPaste className="h-4 w-4" /> Dari Dokumen
+            </button>
           </div>
+
+          {sourceMode === "GENERATE" ? (
+            <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+              <div>
+                <Label htmlFor="topic">Topik / Bahan Quiz *</Label>
+                <Input
+                  id="topic"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Contoh: Peredaran Darah Manusia, Sistem Tata Surya, Teks Anekdot…"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  AI akan membuat soal sesuai mata pelajaran &amp; jenjang kelas yang kamu pilih di langkah 1.
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="count">Jumlah Soal</Label>
+                <select
+                  id="count"
+                  value={questionCount}
+                  onChange={(e) => setQuestionCount(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  {[5, 10, 15, 20, 25].map((n) => (
+                    <option key={n} value={n}>
+                      {n} soal
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button onClick={handleGenerate} disabled={isConverting} className="gap-2">
+                {isConverting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                )}
+                {isConverting ? "AI sedang membuat soal…" : "Generate Soal dengan AI"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="doc">Dokumen soal (dari AI Studio atau tempel manual)</Label>
+                <Textarea
+                  id="doc"
+                  value={documentText}
+                  onChange={(e) => setDocumentText(e.target.value)}
+                  placeholder="Tempel dokumen soal PG beserta kunci jawabannya. Contoh: 1. Soal... A. ... B. ... lalu bagian Kunci Jawaban: 1. B"
+                  className="min-h-40 font-mono text-xs"
+                />
+              </div>
+              <Button onClick={handleConvert} disabled={isConverting} className="gap-2">
+                {isConverting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                )}
+                Konversi Dokumen dengan AI
+              </Button>
+            </div>
+          )}
+
           <Button onClick={handleConvert} disabled={isConverting} className="gap-2">
             {isConverting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
