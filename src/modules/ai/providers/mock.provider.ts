@@ -189,4 +189,21 @@ export class MockAiContentProvider implements AiContentProvider {
       modelUsed: "mock-model-v1",
     };
   }
+
+  async generateStructured(_prompt: string, _systemInstruction?: string): Promise<string> {
+    void _prompt;
+    void _systemInstruction;
+    if (this.options.shouldReturnMalformed) {
+      return "Teks acak bukan JSON";
+    }
+    return JSON.stringify([
+      {
+        text: "Contoh Soal Pilihan Ganda dari Mock Provider",
+        options: ["Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D"],
+        correctIndex: 0,
+        points: 1,
+        explanation: "Penjelasan jawaban A benar.",
+      },
+    ]);
+  }
 }

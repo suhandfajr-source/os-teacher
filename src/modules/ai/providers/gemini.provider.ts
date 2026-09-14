@@ -65,10 +65,31 @@ export class GeminiAiContentProvider implements AiContentProvider {
     return this.callGeminiWithFallback(prompt, systemInstruction);
   }
 
+  async generateStructured(
+    prompt: string,
+    systemInstruction?: string,
+    timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 120000
+  ): Promise<string> {
+    const sysInstruction =
+      systemInstruction ||
+      "Anda adalah asisten AI guru profesional untuk Teacher OS di Indonesia. " +
+      "Tugas Anda adalah menghasilkan data terstruktur dalam format JSON array yang valid. " +
+      "HANYA keluarkan array JSON murni, tanpa teks lain, tanpa markdown code block, dan tanpa salam pembuka/penutup.";
+
+    const res = await this.callGeminiWithFallback(
+      prompt,
+      sysInstruction,
+      timeoutMs,
+      "application/json"
+    );
+    return res.content;
+  }
+
   private async callGeminiWithFallback(
     prompt: string,
     systemInstruction: string,
-    timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 120000
+    timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 120000,
+    responseMimeType?: string
   ): Promise<AiProviderResult> {
     let lastError: unknown;
 
@@ -111,6 +132,7 @@ export class GeminiAiContentProvider implements AiContentProvider {
               systemInstruction,
               temperature: 0.7,
               maxOutputTokens: 16384,
+              ...(responseMimeType ? { responseMimeType } : {}),
             },
           });
 
@@ -124,6 +146,14 @@ export class GeminiAiContentProvider implements AiContentProvider {
 
           if (!rawText.trim()) {
             throw new Error("Penyedia AI memberikan respons kosong.");
+          }
+
+          if (responseMimeType === "application/json") {
+            return {
+              title: "Structured Output",
+              content: rawText.trim(),
+              modelUsed: currentModel,
+            };
           }
 
           const validated = validateAiOutput(rawText);

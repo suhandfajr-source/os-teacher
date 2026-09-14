@@ -12,6 +12,7 @@ import {
   buildGenerateQuestionsPrompt,
   buildConvertDocumentPrompt,
   parseAiQuestionsJson,
+  parseMarkdownOrTextQuestions,
 } from "./quiz-ai.service";
 
 export type { ExtractedQuestion };
@@ -44,14 +45,24 @@ export async function generateQuizQuestionsAction(input: unknown): Promise<{
     const provider = getAiContentProvider();
     const prompt = buildGenerateQuestionsPrompt(params);
 
-    const result = await provider.generate({
-      contentType: "TASK_INSTRUCTION",
-      topic: `Generate ${params.count} soal PG: ${params.topic}`,
-      instruction: prompt,
-      tone: "CONCISE",
-    });
+    let rawOutput: string;
+    if (typeof provider.generateStructured === "function") {
+      rawOutput = await provider.generateStructured(
+        prompt,
+        "Anda adalah asisten AI pembuat soal ujian profesional untuk Teacher OS di Indonesia. " +
+        "Tugas Anda adalah menghasilkan soal pilihan ganda sekolah dalam format array JSON murni."
+      );
+    } else {
+      const result = await provider.generate({
+        contentType: "TASK_INSTRUCTION",
+        topic: `Generate ${params.count} soal PG: ${params.topic}`,
+        instruction: prompt,
+        tone: "CONCISE",
+      });
+      rawOutput = result.content;
+    }
 
-    return parseAiQuestionsJson(result.content, "Tidak ada soal valid yang dihasilkan. Coba lagi.");
+    return parseAiQuestionsJson(rawOutput, "Tidak ada soal valid yang dihasilkan. Coba lagi.");
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Gagal generate soal";
     return { success: false, error: message };
@@ -70,18 +81,34 @@ export async function convertDocumentToQuizAction(input: unknown): Promise<{
     const params = convertInputSchema.parse(input);
     await verifyActiveSchoolMembership();
 
+    // Fast path: if the pasted document is already structured text (e.g. 1. Soal... A. B. C. D. Kunci: A),
+    // parse it directly without waiting for an AI roundtrip.
+    const preParsed = parseMarkdownOrTextQuestions(params.documentText);
+    if (preParsed.length >= 2) {
+      return { success: true, data: { questions: preParsed } };
+    }
+
     const provider = getAiContentProvider();
     const prompt = buildConvertDocumentPrompt(params);
 
-    const result = await provider.generate({
-      contentType: "TASK_INSTRUCTION",
-      topic: "Konversi soal pilihan ganda ke JSON",
-      instruction: prompt,
-      tone: "CONCISE",
-    });
+    let rawOutput: string;
+    if (typeof provider.generateStructured === "function") {
+      rawOutput = await provider.generateStructured(
+        prompt,
+        "Anda adalah asisten AI konversi soal untuk Teacher OS. Ekstrak soal pilihan ganda menjadi array JSON murni."
+      );
+    } else {
+      const result = await provider.generate({
+        contentType: "TASK_INSTRUCTION",
+        topic: "Konversi soal pilihan ganda ke JSON",
+        instruction: prompt,
+        tone: "CONCISE",
+      });
+      rawOutput = result.content;
+    }
 
     return parseAiQuestionsJson(
-      result.content,
+      rawOutput,
       "Tidak ditemukan soal pilihan ganda yang valid di dokumen ini."
     );
   } catch (error: unknown) {

@@ -23,4 +23,14 @@ export interface AiContentProvider {
    * Refines an existing transient content draft based on teacher's follow-up instruction.
    */
   refine(request: AiProviderRefineRequest): Promise<AiProviderResult>;
+
+  /**
+   * Generates structured output (e.g. pure JSON array or object) without
+   * markdown document wrapping (# Title).
+   */
+  generateStructured?(
+    prompt: string,
+    systemInstruction?: string,
+    timeoutMs?: number
+  ): Promise<string>;
 }
