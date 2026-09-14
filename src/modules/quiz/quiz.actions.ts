@@ -28,6 +28,7 @@ import {
   buildAttemptSnapshot,
   reconstructLegacySnapshot,
   generateUniquePins,
+  generateClassroomPin,
   normalizePin,
   checkPinRateLimit,
   recordPinFailure,
@@ -68,6 +69,9 @@ export async function createQuizAction(input: unknown): Promise<{
       return { success: false, error: "Tidak ada soal yang valid (teks & minimal 2 opsi harus terisi)" };
     }
 
+    const classroomPin =
+      parsed.accessMode === "CLASSROOM_PIN" ? generateClassroomPin() : undefined;
+
     const quiz = await prisma.quiz.create({
       data: {
         teachingContextId: parsed.teachingContextId,
@@ -77,7 +81,10 @@ export async function createQuizAction(input: unknown): Promise<{
         shuffleQuestions: parsed.shuffleQuestions,
         shuffleOptions: parsed.shuffleOptions,
         standardScore: parsed.standardScore,
+        validFrom: parsed.validFrom ? new Date(parsed.validFrom) : undefined,
         deadline: parsed.deadline ? new Date(parsed.deadline) : undefined,
+        accessMode: parsed.accessMode,
+        classroomPin,
         shareToken: generateShareToken(),
         questions: {
           create: sanitizedQuestions.map((q, idx) => ({
@@ -114,6 +121,11 @@ export async function updateQuizSettingsAction(input: unknown): Promise<{
 
     await verifyTeachingContextAccess(quiz.teachingContextId);
 
+    const classroomPin =
+      parsed.accessMode === "CLASSROOM_PIN"
+        ? (await prisma.quiz.findUnique({ where: { id: parsed.quizId }, select: { classroomPin: true } }))?.classroomPin || generateClassroomPin()
+        : undefined;
+
     await prisma.quiz.update({
       where: { id: parsed.quizId },
       data: {
@@ -123,7 +135,10 @@ export async function updateQuizSettingsAction(input: unknown): Promise<{
         shuffleQuestions: parsed.shuffleQuestions,
         shuffleOptions: parsed.shuffleOptions,
         standardScore: parsed.standardScore,
-        deadline: parsed.deadline ? new Date(parsed.deadline) : undefined,
+        validFrom: parsed.validFrom ? new Date(parsed.validFrom) : null,
+        deadline: parsed.deadline ? new Date(parsed.deadline) : null,
+        accessMode: parsed.accessMode,
+        ...(classroomPin ? { classroomPin } : {}),
       },
     });
     return { success: true };
@@ -140,6 +155,8 @@ async function ensureQuizStudentAccesses(quizId: string): Promise<void> {
   const quiz = await prisma.quiz.findUnique({
     where: { id: quizId },
     select: {
+      accessMode: true,
+      classroomPin: true,
       teachingContext: {
         select: {
           academicPeriodId: true,
@@ -160,23 +177,34 @@ async function ensureQuizStudentAccesses(quizId: string): Promise<void> {
   });
   if (!quiz) return;
 
-  const rosterIds = quiz.teachingContext.class.classStudents
-    .filter((cs) => cs.academicPeriodId === quiz.teachingContext.academicPeriodId)
-    .filter((cs) => cs.student.status === "ACTIVE")
-    .map((cs) => cs.studentId);
+  // If classroom pin mode, ensure classroomPin exists
+  if (quiz.accessMode === "CLASSROOM_PIN" && !quiz.classroomPin) {
+    await prisma.quiz.update({
+      where: { id: quizId },
+      data: { classroomPin: generateClassroomPin() },
+    });
+  }
 
-  const existing = await prisma.quizStudentAccess.findMany({
-    where: { quizId, studentId: { in: rosterIds } },
-    select: { studentId: true, pin: true },
-  });
-  const existingMap = new Map(existing.map((e) => [e.studentId, e.pin]));
-  const missing = rosterIds.filter((id) => !existingMap.has(id));
-  if (missing.length === 0) return;
+  // If individual pin mode, ensure unique pins exist for each student
+  if (quiz.accessMode === "INDIVIDUAL_PIN") {
+    const rosterIds = quiz.teachingContext.class.classStudents
+      .filter((cs) => cs.academicPeriodId === quiz.teachingContext.academicPeriodId)
+      .filter((cs) => cs.student.status === "ACTIVE")
+      .map((cs) => cs.studentId);
 
-  const pins = generateUniquePins(missing.length, new Set(existing.map((e) => e.pin)));
-  await prisma.quizStudentAccess.createMany({
-    data: missing.map((studentId, i) => ({ quizId, studentId, pin: pins[i] })),
-  });
+    const existing = await prisma.quizStudentAccess.findMany({
+      where: { quizId, studentId: { in: rosterIds } },
+      select: { studentId: true, pin: true },
+    });
+    const existingMap = new Map(existing.map((e) => [e.studentId, e.pin]));
+    const missing = rosterIds.filter((id) => !existingMap.has(id));
+    if (missing.length > 0) {
+      const pins = generateUniquePins(missing.length, new Set(existing.map((e) => e.pin)));
+      await prisma.quizStudentAccess.createMany({
+        data: missing.map((studentId, i) => ({ quizId, studentId, pin: pins[i] })),
+      });
+    }
+  }
 }
 
 export async function setQuizStatusAction(quizId: string, status: "PUBLISHED" | "CLOSED" | "DRAFT") {
@@ -452,7 +480,10 @@ export async function getQuizDetailAction(quizId: string) {
           shuffleQuestions: quiz.shuffleQuestions,
           shuffleOptions: quiz.shuffleOptions,
           standardScore: quiz.standardScore ? Number(quiz.standardScore) : null,
+          validFrom: quiz.validFrom?.toISOString() ?? null,
           deadline: quiz.deadline?.toISOString() ?? null,
+          accessMode: quiz.accessMode,
+          classroomPin: quiz.classroomPin,
         },
         contextLabel: `${quiz.teachingContext.subject.name} · ${quiz.teachingContext.class.name} · ${quiz.teachingContext.academicPeriod.year}`,
         questions: quiz.questions.map((q) => ({
@@ -830,6 +861,7 @@ export async function getPublicQuizAction(token: string): Promise<{
     const quiz = await getPublishedQuizByToken(token);
     if (!quiz) return { success: false, error: "Quiz tidak ditemukan. Periksa kembali link dari guru." };
 
+    const isUpcoming = !!quiz.validFrom && quiz.validFrom.getTime() > Date.now();
     const isDeadlinePassed = !!quiz.deadline && quiz.deadline.getTime() < Date.now();
 
     // Lazy-ensure PINs exist so students are always verifiable.
@@ -853,11 +885,15 @@ export async function getPublicQuizAction(token: string): Promise<{
         description: quiz.description ?? undefined,
         durationMinutes: quiz.durationMinutes ?? undefined,
         status: quiz.status,
+        isUpcoming,
+        validFrom: quiz.validFrom?.toISOString(),
+        deadline: quiz.deadline?.toISOString(),
         isDeadlinePassed,
         standardScore: quiz.standardScore ? Number(quiz.standardScore) : undefined,
         questionCount: quiz._count.questions,
         totalPoints: 0,
         pinRequired: true,
+        accessMode: quiz.accessMode,
         roster: rosterStudents,
       },
     };
@@ -897,6 +933,9 @@ export async function startQuizAttemptAction(
     if (quiz.status !== "PUBLISHED") {
       return { success: false, error: "Quiz belum dibuka atau sudah ditutup oleh guru" };
     }
+    if (quiz.validFrom && quiz.validFrom.getTime() > Date.now()) {
+      return { success: false, error: "Ujian belum dimulai. Silakan tunggu jadwal mulai ujian." };
+    }
     if (quiz.deadline && quiz.deadline.getTime() < Date.now()) {
       return { success: false, error: "Batas waktu quiz sudah terlewat" };
     }
@@ -920,18 +959,36 @@ export async function startQuizAttemptAction(
       };
     }
 
-    const access = await prisma.quizStudentAccess.findUnique({
-      where: { quizId_studentId: { quizId: quiz.id, studentId } },
-      select: { pin: true },
-    });
-    if (!access) {
-      // Rare race: link opened before PINs were ensured.
-      await ensureQuizStudentAccesses(quiz.id);
-      return { success: false, error: "Sesi verifikasi diperbarui. Silakan coba lagi." };
-    }
-    if (normalizePin(pin ?? "") !== normalizePin(access.pin)) {
-      recordPinFailure(rateLimitKey);
-      return { success: false, wrongPin: true, error: "PIN salah. Periksa kembali PIN dari gurumu." };
+    if (quiz.accessMode === "CLASSROOM_PIN") {
+      let roomPin = quiz.classroomPin;
+      if (!roomPin) {
+        await ensureQuizStudentAccesses(quiz.id);
+        const refreshed = await prisma.quiz.findUnique({ where: { id: quiz.id }, select: { classroomPin: true } });
+        roomPin = refreshed?.classroomPin ?? null;
+      }
+      if (!roomPin || normalizePin(pin ?? "") !== normalizePin(roomPin)) {
+        recordPinFailure(rateLimitKey);
+        return {
+          success: false,
+          wrongPin: true,
+          error: "Kode kelas salah. Periksa kembali kode di papan tulis atau layar proyektor.",
+        };
+      }
+    } else {
+      // INDIVIDUAL_PIN
+      const access = await prisma.quizStudentAccess.findUnique({
+        where: { quizId_studentId: { quizId: quiz.id, studentId } },
+        select: { pin: true },
+      });
+      if (!access) {
+        // Rare race: link opened before PINs were ensured.
+        await ensureQuizStudentAccesses(quiz.id);
+        return { success: false, error: "Sesi verifikasi diperbarui. Silakan coba lagi." };
+      }
+      if (normalizePin(pin ?? "") !== normalizePin(access.pin)) {
+        recordPinFailure(rateLimitKey);
+        return { success: false, wrongPin: true, error: "PIN salah. Periksa kembali PIN dari gurumu." };
+      }
     }
 
     // Success: clear rate limit counter
@@ -996,11 +1053,23 @@ export async function startQuizAttemptAction(
       points: q.points,
     }));
 
+    // Server-Authoritative Duration Clamping (Sprint 2.1)
+    let effectiveDuration = quiz.durationMinutes ?? undefined;
+    if (quiz.deadline) {
+      const msLeft = quiz.deadline.getTime() - attempt.startedAt.getTime();
+      const minutesLeft = Math.max(1, Math.floor(msLeft / 60_000));
+      if (effectiveDuration) {
+        effectiveDuration = Math.min(effectiveDuration, minutesLeft);
+      } else {
+        effectiveDuration = minutesLeft;
+      }
+    }
+
     return {
       success: true,
       data: {
         quizTitle: quiz.title,
-        durationMinutes: quiz.durationMinutes ?? undefined,
+        durationMinutes: effectiveDuration,
         startedAt: attempt.startedAt.toISOString(),
         isRemedial: attempt.isRemedial,
         questions: view,
@@ -1099,7 +1168,7 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
     if (attempt.status === "SUBMITTED") {
       return { success: false, error: "Attempt ini sudah dikumpulkan" };
     }
-    if (isAttemptExpired(attempt.startedAt, quiz.durationMinutes)) {
+    if (isAttemptExpired(attempt.startedAt, quiz.durationMinutes, quiz.deadline)) {
       return { success: false, error: "Waktu pengerjaan sudah habis. Hubungi gurumu." };
     }
 

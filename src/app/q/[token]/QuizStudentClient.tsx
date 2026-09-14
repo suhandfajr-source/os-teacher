@@ -24,6 +24,7 @@ import {
   ArrowRight,
   GraduationCap,
   School,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -67,6 +68,38 @@ export function QuizStudentClient({ token }: { token: string }) {
     });
   }, [token]);
 
+  // Live countdown for upcoming scheduled exams (Story 2.1)
+  const [upcomingSeconds, setUpcomingSeconds] = useState<number | null>(null);
+  useEffect(() => {
+    if (!quiz?.isUpcoming || !quiz.validFrom) return;
+    const startMs = new Date(quiz.validFrom).getTime();
+    const tick = () => {
+      const diff = Math.max(0, Math.round((startMs - Date.now()) / 1000));
+      setUpcomingSeconds(diff);
+      if (diff <= 0) {
+        // Exam window has arrived! Refresh public view
+        getPublicQuizAction(token).then((res) => {
+          if (res.success && res.data) setQuiz(res.data);
+        });
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [quiz?.isUpcoming, quiz?.validFrom, token]);
+
+  // Offline resilience / LocalStorage Autosave (Story 2.2)
+  const storageKey = studentId ? `ai_teacher_quiz_answers_${token}_${studentId}` : null;
+
+  // Autosave answers on change to localStorage
+  useEffect(() => {
+    if (stage === "WORKING" && storageKey && Object.keys(answers).length > 0) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(answers));
+      } catch {}
+    }
+  }, [answers, stage, storageKey]);
+
   const filteredRoster = (quiz?.roster ?? []).filter((r) =>
     r.fullName.toLowerCase().includes(nameFilter.toLowerCase())
   );
@@ -85,6 +118,18 @@ export function QuizStudentClient({ token }: { token: string }) {
     if (res.success && res.data) {
       setQuestions(res.data.questions);
       setStartedAt(new Date(res.data.startedAt).getTime());
+      if (storageKey) {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && typeof parsed === "object") {
+              setAnswers(parsed);
+              toast.info("Jawaban tersimpan di perangkat dipulihkan otomatis");
+            }
+          }
+        } catch {}
+      }
       setStage("WORKING");
     } else if (res.alreadySubmitted) {
       // Let the student review their own result (score + correct/wrong marks,
@@ -138,6 +183,9 @@ export function QuizStudentClient({ token }: { token: string }) {
           })),
         });
         if (res.success && res.data) {
+          if (storageKey) {
+            try { localStorage.removeItem(storageKey); } catch {}
+          }
           setResult(res.data);
           setStage("RESULT");
         } else {
@@ -148,7 +196,7 @@ export function QuizStudentClient({ token }: { token: string }) {
         setIsSubmitting(false);
       }
     },
-    [token, studentId, answers, questions.length, hasSubmitted]
+    [token, studentId, answers, questions.length, hasSubmitted, storageKey]
   );
 
   // Timer — declared after handleSubmit so the callback is in scope.
@@ -199,6 +247,51 @@ export function QuizStudentClient({ token }: { token: string }) {
           <Clock className="h-10 w-10 text-muted-foreground/50 mx-auto" />
           <p className="text-muted-foreground">
             {quiz.status === "DRAFT" ? "Quiz belum dibuka." : "Quiz sudah ditutup oleh guru."}
+          </p>
+        </div>
+      </Shell>
+    );
+  }
+
+  // ---------- Scheduled Window: Upcoming Exam Countdown (Story 2.1) ----------
+  if (quiz.isUpcoming && quiz.validFrom) {
+    const hours = upcomingSeconds !== null ? Math.floor(upcomingSeconds / 3600) : 0;
+    const mins = upcomingSeconds !== null ? Math.floor((upcomingSeconds % 3600) / 60) : 0;
+    const secs = upcomingSeconds !== null ? upcomingSeconds % 60 : 0;
+    const startDateFormatted = new Date(quiz.validFrom).toLocaleString("id-ID", {
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+
+    return (
+      <Shell title={quiz.title} description={quiz.description}>
+        <div className="text-center space-y-6 py-8">
+          <div className="mx-auto rounded-full bg-amber-100 p-4 w-fit">
+            <Calendar className="h-10 w-10 text-amber-600" />
+          </div>
+          <div>
+            <Badge variant="outline" className="border-amber-500/40 text-amber-700 bg-amber-50 mb-2">
+              Ujian Terjadwal
+            </Badge>
+            <h2 className="text-xl font-bold">Ujian Belum Dimulai</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Kuis ini dijadwalkan mulai pada:
+            </p>
+            <p className="text-sm font-semibold text-foreground mt-0.5">
+              {startDateFormatted} WIB
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-muted/30 p-4 max-w-xs mx-auto">
+            <p className="text-xs text-muted-foreground mb-1">Dimulai dalam:</p>
+            <p className="text-3xl font-extrabold tabular-nums tracking-wider text-primary">
+              {String(hours).padStart(2, "0")}:{String(mins).padStart(2, "0")}:
+              {String(secs).padStart(2, "0")}
+            </p>
+          </div>
+
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+            Halaman ini akan otomatis membuka daftar peserta begitu jam ujian tiba. Harap tetap berada di halaman ini.
           </p>
         </div>
       </Shell>
@@ -324,8 +417,11 @@ export function QuizStudentClient({ token }: { token: string }) {
     );
   }
 
-  // ---------- PIN ----------
+  // ---------- PIN (Story 2.3: Room PIN vs Individual PIN) ----------
   if (stage === "PIN") {
+    const isClassroomMode = quiz.accessMode === "CLASSROOM_PIN";
+    const expectedLength = isClassroomMode ? 6 : 4;
+
     return (
       <Shell title={quiz.title} description={quiz.description}>
         <div className="space-y-5">
@@ -333,26 +429,30 @@ export function QuizStudentClient({ token }: { token: string }) {
             <p className="text-sm text-muted-foreground">
               Mengerjakan sebagai <span className="font-semibold text-foreground">{studentName}</span>
             </p>
-            <p className="text-2xl font-bold tracking-tight">Masukkan PIN</p>
+            <p className="text-2xl font-bold tracking-tight">
+              {isClassroomMode ? "Masukkan Kode Kelas" : "Masukkan PIN Siswa"}
+            </p>
             <p className="text-xs text-muted-foreground">
-              PIN 4 digit diberikan gurumu bersama link quiz ini.
+              {isClassroomMode
+                ? "Kode 6 digit tertera di papan tulis atau layar proyektor kelas."
+                : "PIN 4 digit diberikan gurumu bersama link quiz ini."}
             </p>
           </div>
           <div>
             <Input
               value={pinInput}
               onChange={(e) => {
-                setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4));
+                setPinInput(e.target.value.replace(/\D/g, "").slice(0, expectedLength));
                 setPinError(null);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && pinInput.length === 4) void handlePinSubmit();
+                if (e.key === "Enter" && pinInput.length === expectedLength) void handlePinSubmit();
               }}
               inputMode="numeric"
               autoFocus
-              placeholder="••••"
+              placeholder={isClassroomMode ? "••••••" : "••••"}
               className={cn(
-                "text-center text-3xl font-bold tracking-[0.5em] h-14",
+                "text-center text-3xl font-bold tracking-[0.4em] h-14",
                 pinError && "border-destructive"
               )}
             />
@@ -364,7 +464,7 @@ export function QuizStudentClient({ token }: { token: string }) {
             </Button>
             <Button
               className="flex-1"
-              disabled={pinInput.length !== 4}
+              disabled={pinInput.length !== expectedLength}
               onClick={() => void handlePinSubmit()}
             >
               Mulai Quiz
@@ -414,11 +514,13 @@ export function QuizStudentClient({ token }: { token: string }) {
       <div className="space-y-6">
         {/* Progress */}
         <div>
-          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+          <div className="flex justify-between items-center text-xs text-muted-foreground mb-1">
             <span>
-              Soal {currentIdx + 1} dari {questions.length}
+              Soal {currentIdx + 1} dari {questions.length} · {answeredCount} terjawab
             </span>
-            <span>{answeredCount} terjawab</span>
+            <span className="text-[11px] text-emerald-600 flex items-center gap-1 font-medium">
+              <CircleCheck className="h-3 w-3" /> Tersimpan di HP
+            </span>
           </div>
           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
             <div

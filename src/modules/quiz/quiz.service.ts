@@ -100,12 +100,26 @@ export function generateShareToken(): string {
   return token;
 }
 
-/** True when the attempt window (startedAt + durationMinutes) has elapsed. */
-export function isAttemptExpired(startedAt: Date, durationMinutes?: number | null): boolean {
+/** True when the attempt window (startedAt + durationMinutes or deadline) has elapsed. */
+export function isAttemptExpired(
+  startedAt: Date,
+  durationMinutes?: number | null,
+  deadline?: Date | null
+): boolean {
+  if (deadline && Date.now() > deadline.getTime() + 60_000) {
+    return true;
+  }
   if (!durationMinutes) return false;
   const endsAt = new Date(startedAt.getTime() + durationMinutes * 60_000);
   // 60s grace for network latency on submit.
   return Date.now() > endsAt.getTime() + 60_000;
+}
+
+/**
+ * Generates a 6-digit numeric room PIN for whole-class quizzes (e.g. "742198").
+ */
+export function generateClassroomPin(): string {
+  return String(Math.floor(100_000 + Math.random() * 900_000));
 }
 
 // ----------------------------------------------------------------------------

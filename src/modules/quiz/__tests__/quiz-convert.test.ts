@@ -3,7 +3,7 @@ import {
   buildGenerateQuestionsPrompt,
   buildConvertDocumentPrompt,
   parseAiQuestionsJson,
-} from "../quiz-convert.action";
+} from "../quiz-ai.service";
 
 describe("quiz-convert prompt builders & parser (Sprint 1.3)", () => {
   it("buildGenerateQuestionsPrompt includes topic, count, subject, and gradeLevel", () => {

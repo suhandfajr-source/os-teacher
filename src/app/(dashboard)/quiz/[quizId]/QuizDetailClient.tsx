@@ -29,7 +29,7 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3 } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2 } from "lucide-react";
 import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getStudentAttemptDetailAction } from "@/modules/quiz/quiz.actions";
@@ -54,7 +54,10 @@ interface QuizDetail {
     shuffleQuestions: boolean;
     shuffleOptions: boolean;
     standardScore?: number | null;
+    validFrom?: string | null;
     deadline?: string | null;
+    accessMode: "CLASSROOM_PIN" | "INDIVIDUAL_PIN";
+    classroomPin?: string | null;
   };
   contextLabel: string;
   questions: Array<{
@@ -107,6 +110,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } | null;
   }>({ open: false, loading: false, data: null });
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [projectorModeOpen, setProjectorModeOpen] = useState(false);
   const [analytics, setAnalytics] = useState<{
     open: boolean;
     loading: boolean;
@@ -238,11 +242,32 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {quiz.status === "PUBLISHED" ? "Aktif" : quiz.status === "CLOSED" ? "Ditutup" : "Draft"}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {contextLabel} · {questions.length} soal
-            {quiz.durationMinutes ? ` · ${quiz.durationMinutes} menit` : ""}
-            {quiz.standardScore != null ? ` · KKM ${quiz.standardScore}` : ""}
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-1">
+            <span>{contextLabel}</span>
+            <span>·</span>
+            <span>{questions.length} soal</span>
+            {quiz.durationMinutes && (
+              <>
+                <span>·</span>
+                <span>{quiz.durationMinutes} menit</span>
+              </>
+            )}
+            {quiz.standardScore != null && (
+              <>
+                <span>·</span>
+                <span>KKM {quiz.standardScore}</span>
+              </>
+            )}
+            <span>·</span>
+            <Badge variant="outline" className="text-xs">
+              {quiz.accessMode === "CLASSROOM_PIN" ? "Mode Kode Kelas" : "Mode PIN Siswa"}
+            </Badge>
+          </div>
+          {quiz.validFrom && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 w-fit mt-1.5">
+              Jadwal Mulai: {new Date(quiz.validFrom).toLocaleString("id-ID")}
+            </p>
+          )}
         </div>
       </div>
 
@@ -264,9 +289,49 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <Copy className="h-3.5 w-3.5" /> Salin
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Siswa membuka link → memilih namanya → mengerjakan. Tidak perlu login.
-              </p>
+
+              {quiz.accessMode === "CLASSROOM_PIN" ? (
+                <div className="p-3.5 rounded-xl border bg-emerald-50/50 border-emerald-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 text-[10px]">
+                        Kode Kelas
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        Satu kode untuk seluruh siswa di kelas
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setProjectorModeOpen(true)}
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" /> Tampilkan di Layar
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-3xl font-mono font-extrabold tracking-widest text-emerald-950">
+                      {quiz.classroomPin || "—"}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs gap-1 text-emerald-800"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(quiz.classroomPin ?? "");
+                        toast.success("Kode kelas disalin!");
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" /> Salin Kode
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Siswa membuka link → memilih namanya → memasukkan PIN siswa masing-masing.
+                </p>
+              )}
             </>
           ) : (
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -533,15 +598,17 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </Badge>
               )}
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1"
-              onClick={() => setPinDialogOpen(true)}
-              title="Lihat & salin PIN tiap siswa untuk dibagikan"
-            >
-              <KeyRound className="h-3.5 w-3.5" /> Daftar PIN
-            </Button>
+            {quiz.accessMode === "INDIVIDUAL_PIN" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => setPinDialogOpen(true)}
+                title="Lihat & salin PIN tiap siswa untuk dibagikan"
+              >
+                <KeyRound className="h-3.5 w-3.5" /> Daftar PIN Siswa
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -564,7 +631,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">
                         {r.fullName}
-                        {r.pin && (
+                        {quiz.accessMode === "INDIVIDUAL_PIN" && r.pin && (
                           <Badge variant="outline" className="ml-2 font-mono text-[10px]">
                             PIN {r.pin}
                           </Badge>
@@ -818,6 +885,37 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Projector Modal (Sprint 2.3) */}
+      <Dialog open={projectorModeOpen} onOpenChange={setProjectorModeOpen}>
+        <DialogContent className="max-w-lg text-center p-8 flex flex-col items-center gap-5">
+          <DialogHeader className="text-center sm:text-center">
+            <Badge variant="outline" className="mx-auto w-fit mb-1 border-emerald-500/40 text-emerald-700 bg-emerald-50">
+              Teacher OS · Ujian Kelas
+            </Badge>
+            <DialogTitle className="text-2xl font-bold">{quiz.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              Buka link di browser HP siswa:
+            </p>
+            <code className="text-sm sm:text-base font-bold bg-muted px-4 py-2 rounded-lg inline-block text-primary">
+              {shareUrl}
+            </code>
+          </div>
+          <div className="p-6 rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/50 w-full max-w-sm">
+            <p className="text-xs uppercase tracking-wider text-emerald-800 font-semibold mb-1">
+              Kode Kelas
+            </p>
+            <p className="text-5xl sm:text-6xl font-black font-mono tracking-widest text-emerald-950">
+              {quiz.classroomPin}
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground max-w-sm">
+            Pilih namamu dari daftar kelas lalu masukkan kode kelas di atas untuk mulai mengerjakan.
+          </p>
         </DialogContent>
       </Dialog>
 

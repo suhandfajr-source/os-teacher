@@ -55,7 +55,9 @@ export function NewQuizClient() {
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState<string>("");
   const [standardScore, setStandardScore] = useState<string>("");
+  const [validFrom, setValidFrom] = useState<string>("");
   const [deadline, setDeadline] = useState<string>("");
+  const [accessMode, setAccessMode] = useState<"CLASSROOM_PIN" | "INDIVIDUAL_PIN">("CLASSROOM_PIN");
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
   const [shuffleOptions, setShuffleOptions] = useState(true);
 
@@ -170,7 +172,9 @@ export function NewQuizClient() {
         description: description.trim() || undefined,
         durationMinutes: duration ? Number(duration) : undefined,
         standardScore: standardScore ? Number(standardScore) : undefined,
+        validFrom: validFrom ? new Date(validFrom).toISOString() : undefined,
         deadline: deadline ? new Date(deadline).toISOString() : undefined,
+        accessMode,
         shuffleQuestions,
         shuffleOptions,
         questions: questions.map((q) => ({
@@ -393,7 +397,55 @@ export function NewQuizClient() {
               placeholder="Petunjuk singkat untuk siswa"
             />
           </div>
-          <div className="grid sm:grid-cols-3 gap-4">
+          {/* Access Mode Selector (Sprint 2.3) */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Metode Akses Masuk Siswa</Label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div
+                onClick={() => setAccessMode("CLASSROOM_PIN")}
+                className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between ${
+                  accessMode === "CLASSROOM_PIN"
+                    ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20"
+                    : "hover:border-primary/40 bg-card"
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold">Kode Kelas (Room PIN)</span>
+                    <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-800">
+                      Rekomendasi
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    1 kode 6-digit untuk seluruh kelas. Cukup tulis di papan tulis atau proyektor saat ulangan.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                onClick={() => setAccessMode("INDIVIDUAL_PIN")}
+                className={`cursor-pointer rounded-xl border p-3.5 transition-all flex flex-col justify-between ${
+                  accessMode === "INDIVIDUAL_PIN"
+                    ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20"
+                    : "hover:border-primary/40 bg-card"
+                }`}
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold">PIN Siswa (Individual)</span>
+                    <Badge variant="outline" className="text-[10px]">
+                      Strict Mode
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    PIN 4-digit unik untuk setiap siswa. Dibagikan guru perorangan untuk ujian berisiko tinggi.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="duration">Timer (menit)</Label>
               <Input
@@ -418,7 +470,16 @@ export function NewQuizClient() {
               />
             </div>
             <div>
-              <Label htmlFor="deadline">Deadline</Label>
+              <Label htmlFor="validFrom">Jadwal Mulai (Opsional)</Label>
+              <Input
+                id="validFrom"
+                type="datetime-local"
+                value={validFrom}
+                onChange={(e) => setValidFrom(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="deadline">Tenggat Selesai (Opsional)</Label>
               <Input
                 id="deadline"
                 type="datetime-local"

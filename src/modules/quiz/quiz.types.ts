@@ -26,7 +26,9 @@ export const createQuizSchema = z.object({
   shuffleQuestions: z.boolean().default(true),
   shuffleOptions: z.boolean().default(true),
   standardScore: z.number().min(0).max(100).optional(),
+  validFrom: z.string().datetime().optional(),
   deadline: z.string().datetime().optional(),
+  accessMode: z.enum(["CLASSROOM_PIN", "INDIVIDUAL_PIN"]).default("CLASSROOM_PIN"),
   questions: z.array(quizQuestionSchema).min(1, "Quiz minimal memiliki 1 soal").max(100),
 });
 
@@ -40,7 +42,9 @@ export const quizSettingsSchema = z.object({
   shuffleQuestions: z.boolean(),
   shuffleOptions: z.boolean(),
   standardScore: z.number().min(0).max(100).optional(),
+  validFrom: z.string().datetime().optional(),
   deadline: z.string().datetime().optional(),
+  accessMode: z.enum(["CLASSROOM_PIN", "INDIVIDUAL_PIN"]),
 });
 
 export const submitAttemptSchema = z.object({
@@ -74,12 +78,16 @@ export interface PublicQuizView {
   description?: string;
   durationMinutes?: number;
   status: string;
+  isUpcoming: boolean;
+  validFrom?: string;
+  deadline?: string;
   isDeadlinePassed: boolean;
   standardScore?: number;
   questionCount: number;
   totalPoints: number;
   roster: Array<{ id: string; fullName: string }>;
   pinRequired: boolean;
+  accessMode: "CLASSROOM_PIN" | "INDIVIDUAL_PIN";
 }
 
 export interface AttemptResultView {

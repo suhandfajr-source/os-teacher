@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   shuffleArray,
   generateUniquePins,
+  generateClassroomPin,
   normalizePin,
   checkPinRateLimit,
   recordPinFailure,
@@ -132,6 +133,31 @@ describe("PIN helpers", () => {
       // reset restores allowed
       resetPinRateLimit(key);
       expect(checkPinRateLimit(key, 5).allowed).toBe(true);
+    });
+  });
+
+  describe("generateClassroomPin & isAttemptExpired with deadline (Sprint 2)", () => {
+    it("generateClassroomPin menghasilkan string 6 digit numerik", () => {
+      for (let i = 0; i < 20; i++) {
+        const pin = generateClassroomPin();
+        expect(pin).toMatch(/^\d{6}$/);
+        expect(Number(pin)).toBeGreaterThanOrEqual(100_000);
+        expect(Number(pin)).toBeLessThanOrEqual(999_999);
+      }
+    });
+
+    it("isAttemptExpired: kedaluwarsa jika melewati deadline global meskipun durasi pengerjaan belum habis", () => {
+      // Started 5 mins ago, duration 60 mins (so normally 55 mins left)
+      const started = new Date(Date.now() - 5 * 60_000);
+      // But deadline was 2 minutes ago
+      const deadline = new Date(Date.now() - 2 * 60_000);
+      expect(isAttemptExpired(started, 60, deadline)).toBe(true);
+    });
+
+    it("isAttemptExpired: belum kedaluwarsa jika masih dalam jendela deadline dan durasi", () => {
+      const started = new Date(Date.now() - 5 * 60_000);
+      const deadline = new Date(Date.now() + 30 * 60_000);
+      expect(isAttemptExpired(started, 60, deadline)).toBe(false);
     });
   });
 });
