@@ -29,7 +29,7 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2 } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw } from "lucide-react";
 import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getStudentAttemptDetailAction } from "@/modules/quiz/quiz.actions";
@@ -111,6 +111,8 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   }>({ open: false, loading: false, data: null });
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [projectorModeOpen, setProjectorModeOpen] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState<{
     open: boolean;
     loading: boolean;
@@ -142,11 +144,63 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }, [quizId]);
 
+  const refreshSilently = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await getQuizDetailAction(quizId);
+      if (res.success && res.data) {
+        setDetail(res.data as QuizDetail);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [quizId]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- window only exists client-side
     setOrigin(window.location.origin);
     void load();
   }, [load]);
+
+  // Smart Auto-Polling (Option 1: Live Classroom Monitor)
+  useEffect(() => {
+    if (!autoRefresh || !detail || detail.quiz.status !== "PUBLISHED") return;
+
+    // Automatically stop polling if all students have finished
+    const allSubmitted =
+      detail.roster.length > 0 &&
+      detail.roster.every((r) => r.attemptStatus === "SUBMITTED");
+    if (allSubmitted) return;
+
+    const interval = setInterval(() => {
+      // Pause if browser tab is hidden/minimized
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      // Skip background update while editing questions or viewing dialogs
+      if (
+        isEditingQuestions ||
+        answerSheet.open ||
+        pinDialogOpen ||
+        projectorModeOpen ||
+        analytics.open
+      ) {
+        return;
+      }
+      void refreshSilently();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [
+    autoRefresh,
+    detail,
+    isEditingQuestions,
+    answerSheet.open,
+    pinDialogOpen,
+    projectorModeOpen,
+    analytics.open,
+    refreshSilently,
+  ]);
 
   const shareUrl = useMemo(
     () => (detail && origin ? `${origin}/q/${detail.quiz.shareToken}` : ""),
@@ -589,26 +643,78 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       {/* Roster monitoring */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" /> Siswa ({roster.length})
-              {quiz.standardScore != null && belowStandard.length > 0 && (
-                <Badge variant="destructive" className="ml-1">
-                  {belowStandard.length} di bawah KKM
-                </Badge>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" /> Siswa ({roster.length})
+                {quiz.standardScore != null && belowStandard.length > 0 && (
+                  <Badge variant="destructive" className="ml-1">
+                    {belowStandard.length} di bawah KKM
+                  </Badge>
+                )}
+              </CardTitle>
+
+              {/* Live Monitor Indicator */}
+              {quiz.status === "PUBLISHED" && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  {roster.length > 0 && roster.every((r) => r.attemptStatus === "SUBMITTED") ? (
+                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px]">
+                      Semua Selesai
+                    </Badge>
+                  ) : autoRefresh ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full"
+                      title="Data siswa ter-update otomatis setiap 5 detik"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Live Monitor
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                      Auto-update nonaktif
+                    </span>
+                  )}
+                </div>
               )}
-            </CardTitle>
-            {quiz.accessMode === "INDIVIDUAL_PIN" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1"
-                onClick={() => setPinDialogOpen(true)}
-                title="Lihat & salin PIN tiap siswa untuk dibagikan"
-              >
-                <KeyRound className="h-3.5 w-3.5" /> Daftar PIN Siswa
-              </Button>
-            )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {quiz.status === "PUBLISHED" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => setAutoRefresh((prev) => !prev)}
+                    title={autoRefresh ? "Matikan pembaruan otomatis" : "Nyalakan pembaruan otomatis"}
+                  >
+                    {autoRefresh ? "Pause Live" : "Aktifkan Live"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs gap-1.5"
+                    disabled={isRefreshing}
+                    onClick={() => void refreshSilently()}
+                    title="Segarkan data sekarang"
+                  >
+                    <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+                    Segarkan
+                  </Button>
+                </>
+              )}
+              {quiz.accessMode === "INDIVIDUAL_PIN" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 h-8 text-xs"
+                  onClick={() => setPinDialogOpen(true)}
+                  title="Lihat & salin PIN tiap siswa untuk dibagikan"
+                >
+                  <KeyRound className="h-3.5 w-3.5" /> Daftar PIN Siswa
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
