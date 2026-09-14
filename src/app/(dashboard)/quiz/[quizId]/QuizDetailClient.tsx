@@ -29,8 +29,9 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw, Download } from "lucide-react";
 import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
+import { exportQuizRecapToExcel } from "@/lib/export/quiz-recap-exporter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getStudentAttemptDetailAction } from "@/modules/quiz/quiz.actions";
 import {
@@ -241,6 +242,23 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!detail) return;
+    try {
+      exportQuizRecapToExcel({
+        quizTitle: detail.quiz.title,
+        contextLabel: detail.contextLabel,
+        standardScore: detail.quiz.standardScore,
+        durationMinutes: detail.quiz.durationMinutes,
+        questionCount: detail.questions.length,
+        roster: detail.roster,
+      });
+      toast.success("Rekap nilai Excel berhasil diunduh!");
+    } catch {
+      toast.error("Gagal mengunduh rekap nilai Excel");
     }
   };
 
@@ -703,6 +721,17 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </Button>
                 </>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+                onClick={handleExportExcel}
+                title="Unduh seluruh rekap nilai siswa dalam format Excel (.xlsx)"
+              >
+                <Download className="h-3.5 w-3.5 text-emerald-600" />
+                Unduh Excel
+              </Button>
+
               {quiz.accessMode === "INDIVIDUAL_PIN" && (
                 <Button
                   variant="outline"
