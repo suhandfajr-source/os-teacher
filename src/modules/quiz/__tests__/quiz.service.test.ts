@@ -120,18 +120,18 @@ describe("PIN helpers", () => {
       resetPinRateLimit(key);
 
       for (let i = 0; i < 5; i++) {
-        expect(checkPinRateLimit(key, 5, 60000).allowed).toBe(true);
+        expect(checkPinRateLimit(key, 5).allowed).toBe(true);
         recordPinFailure(key, 60000);
       }
 
-      const blocked = checkPinRateLimit(key, 5, 60000);
+      const blocked = checkPinRateLimit(key, 5);
       expect(blocked.allowed).toBe(false);
       expect(blocked.remainingSeconds).toBeGreaterThan(0);
       expect(blocked.remainingSeconds).toBeLessThanOrEqual(60);
 
       // reset restores allowed
       resetPinRateLimit(key);
-      expect(checkPinRateLimit(key, 5, 60000).allowed).toBe(true);
+      expect(checkPinRateLimit(key, 5).allowed).toBe(true);
     });
   });
 });

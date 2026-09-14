@@ -3,11 +3,9 @@
 /**
  * QUIZ ONLINE MODULE — AI Question Generation & Conversion
  *
- * Two paths into structured MCQs:
+ * Centralized prompt building and robust JSON output validation for:
  * 1. generateQuizQuestionsAction — AI generates fresh questions from a topic
  * 2. convertDocumentToQuizAction — AI extracts MCQs from a pasted document
- *
- * Both return validated ExtractedQuestion[] ready for the quiz builder.
  */
 
 import { z } from "zod";
@@ -23,25 +21,85 @@ export interface ExtractedQuestion {
   explanation?: string;
 }
 
-const generateInputSchema = z.object({
+export const generateInputSchema = z.object({
   topic: z.string().min(3, "Topik terlalu pendek").max(300),
   count: z.number().int().min(1).max(30).default(10),
   subjectName: z.string().max(120).optional(),
   gradeLevel: z.string().max(20).optional(),
 });
 
-const convertInputSchema = z.object({
+export const convertInputSchema = z.object({
   documentText: z.string().min(50, "Dokumen soal terlalu pendek").max(50_000),
   expectedCount: z.number().int().min(1).max(50).optional(),
 });
 
-/** Shared: extracts & validates a JSON question array from AI output. */
-function parseAiQuestionsJson(content: string, emptyMessage: string): {
+/** Pure helper: constructs the prompt for generating new MCQ questions from topic. */
+export function buildGenerateQuestionsPrompt(params: {
+  topic: string;
+  count: number;
+  subjectName?: string;
+  gradeLevel?: string;
+}): string {
+  return [
+    `Buat ${params.count} soal pilihan ganda untuk quiz sekolah.`,
+    `Mata pelajaran: ${params.subjectName ?? "umum"}.`,
+    params.gradeLevel ? `Jenjang kelas: ${params.gradeLevel}.` : "",
+    `Topik/bahan: ${params.topic}`,
+    "",
+    "FORMAT OUTPUT — array JSON murni (tanpa pembungkus markdown):",
+    '[{"text": "teks soal", "options": ["opsi1", "opsi2", "opsi3", "opsi4"], "correctIndex": 0, "points": 1, "explanation": "alasan singkat"}]',
+    "",
+    "ATURAN:",
+    "1. Soal berstandar kurikulum, bahasa Indonesia yang baik, sesuai jenjang.",
+    "2. 4 opsi jawaban per soal, hanya satu benar, distraktor yang masuk akal.",
+    "3. correctIndex = indeks jawaban benar (mulai dari 0), variasikan posisinya.",
+    "4. explanation = penjelasan singkat mengapa jawaban itu benar.",
+    "5. Output HANYA array JSON, tanpa teks lain.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Pure helper: constructs the prompt for converting a text document into MCQs. */
+export function buildConvertDocumentPrompt(params: {
+  documentText: string;
+  expectedCount?: number;
+}): string {
+  const target = params.expectedCount
+    ? `Sekitar ${params.expectedCount} soal.`
+    : "Sebanyak mungkin soal valid.";
+  return [
+    "Konversikan dokumen soal pilihan ganda berikut menjadi JSON murni (tanpa pembungkus markdown).",
+    target,
+    "",
+    "FORMAT OUTPUT — array JSON dengan elemen:",
+    '{"text": "teks soal", "options": ["A", "B", "C", "D"], "correctIndex": 0, "points": 1, "explanation": "alasan singkat"}',
+    "",
+    "ATURAN:",
+    "1. Hanya soal pilihan ganda yang jelas jawabannya. Abaikan soal essay/isian.",
+    "2. correctIndex = indeks opsi jawaban benar (mulai dari 0).",
+    "3. Hilangkan prefiks huruf (A., B., dst) dari isi opsi.",
+    "4. Jika ada kunci jawaban di bagian akhir dokumen, gunakan itu.",
+    "5. Jika ada pembahasan, masukkan ke explanation.",
+    "6. Output HANYA array JSON, tanpa teks lain.",
+    "",
+    "DOKUMEN SOAL:",
+    params.documentText,
+  ].join("\n");
+}
+
+/**
+ * Shared: extracts & validates a JSON question array from raw AI output.
+ * Tolerates markdown code blocks (```json ... ```) and sanitizes blank options.
+ */
+export function parseAiQuestionsJson(
+  content: string,
+  emptyMessage: string = "Tidak ada soal valid yang dihasilkan."
+): {
   success: boolean;
   data?: { questions: ExtractedQuestion[] };
   error?: string;
 } {
-  // Extract the JSON array from the response (tolerate markdown fences)
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
     return { success: false, error: "AI tidak menghasilkan format soal yang valid. Coba lagi." };
@@ -51,24 +109,37 @@ function parseAiQuestionsJson(content: string, emptyMessage: string): {
   try {
     rawQuestions = JSON.parse(jsonMatch[0]) as unknown[];
   } catch {
-    return { success: false, error: "Gagal membaca hasil AI. Silakan coba lagi." };
+    return { success: false, error: "Gagal membaca format JSON dari AI. Silakan coba lagi." };
   }
 
   const questions: ExtractedQuestion[] = [];
 
   for (const raw of rawQuestions) {
+    if (typeof raw !== "object" || raw === null) continue;
     const rawRecord = raw as Record<string, unknown>;
     const rawOptions = Array.isArray(rawRecord.options) ? (rawRecord.options as unknown[]) : [];
+
+    // Filter out blank or whitespace-only options
+    const cleanedOptions = rawOptions
+      .map((o) => String(o ?? "").trim())
+      .filter((o) => o.length > 0);
+
+    if (cleanedOptions.length < 2) continue;
+
     const candidate = {
-      text: String(rawRecord.text ?? ""),
-      options: rawOptions.map((o) => String(o)),
+      text: String(rawRecord.text ?? "").trim(),
+      options: cleanedOptions,
       correctIndex: Number(rawRecord.correctIndex ?? 0),
       points: Number(rawRecord.points ?? 1) || 1,
-      explanation: rawRecord.explanation ? String(rawRecord.explanation as string) : undefined,
+      explanation: rawRecord.explanation ? String(rawRecord.explanation as string).trim() : undefined,
     };
 
     const validated = quizQuestionSchema.safeParse(candidate);
-    if (validated.success && validated.data.correctIndex < validated.data.options.length) {
+    if (
+      validated.success &&
+      validated.data.text.length > 0 &&
+      validated.data.correctIndex < validated.data.options.length
+    ) {
       questions.push(validated.data);
     }
   }
@@ -90,33 +161,15 @@ export async function generateQuizQuestionsAction(input: unknown): Promise<{
   error?: string;
 }> {
   try {
-    const { topic, count, subjectName, gradeLevel } = generateInputSchema.parse(input);
+    const params = generateInputSchema.parse(input);
     await verifyActiveSchoolMembership();
 
     const provider = getAiContentProvider();
-
-    const prompt = [
-      `Buat ${count} soal pilihan ganda untuk quiz sekolah.`,
-      `Mata pelajaran: ${subjectName ?? "umum"}.`,
-      gradeLevel ? `Jenjang kelas: ${gradeLevel}.` : "",
-      `Topik/bahan: ${topic}`,
-      "",
-      "FORMAT OUTPUT — array JSON murni (tanpa pembungkus markdown):",
-      '[{"text": "teks soal", "options": ["opsi1", "opsi2", "opsi3", "opsi4"], "correctIndex": 0, "points": 1, "explanation": "alasan singkat"}]',
-      "",
-      "ATURAN:",
-      "1. Soal berstandar kurikulum, bahasa Indonesia yang baik, sesuai jenjang.",
-      "2. 4 opsi jawaban per soal, hanya satu benar, distraktor yang masuk akal.",
-      "3. correctIndex = indeks jawaban benar (mulai dari 0), variasikan posisinya.",
-      "4. explanation = penjelasan singkat mengapa jawaban itu benar.",
-      "5. Output HANYA array JSON, tanpa teks lain.",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const prompt = buildGenerateQuestionsPrompt(params);
 
     const result = await provider.generate({
       contentType: "TASK_INSTRUCTION",
-      topic: `Generate ${count} soal PG: ${topic}`,
+      topic: `Generate ${params.count} soal PG: ${params.topic}`,
       instruction: prompt,
       tone: "CONCISE",
     });
@@ -137,30 +190,11 @@ export async function convertDocumentToQuizAction(input: unknown): Promise<{
   error?: string;
 }> {
   try {
-    const { documentText, expectedCount } = convertInputSchema.parse(input);
+    const params = convertInputSchema.parse(input);
     await verifyActiveSchoolMembership();
 
     const provider = getAiContentProvider();
-
-    const target = expectedCount ? `Sekitar ${expectedCount} soal.` : "Sebanyak mungkin soal valid.";
-    const prompt = [
-      "Konversikan dokumen soal pilihan ganda berikut menjadi JSON murni (tanpa pembungkus markdown).",
-      target,
-      "",
-      "FORMAT OUTPUT — array JSON dengan elemen:",
-      '{"text": "teks soal", "options": ["A", "B", "C", "D"], "correctIndex": 0, "points": 1, "explanation": "alasan singkat"}',
-      "",
-      "ATURAN:",
-      "1. Hanya soal pilihan ganda yang jelas jawabannya. Abaikan soal essay/isian.",
-      "2. correctIndex = indeks opsi jawaban benar (mulai dari 0).",
-      "3. Hilangkan prefiks huruf (A., B., dst) dari isi opsi.",
-      "4. Jika ada kunci jawaban di bagian akhir dokumen, gunakan itu.",
-      "5. Jika ada pembahasan, masukkan ke explanation.",
-      "6. Output HANYA array JSON, tanpa teks lain.",
-      "",
-      "DOKUMEN SOAL:",
-      documentText,
-    ].join("\n");
+    const prompt = buildConvertDocumentPrompt(params);
 
     const result = await provider.generate({
       contentType: "TASK_INSTRUCTION",

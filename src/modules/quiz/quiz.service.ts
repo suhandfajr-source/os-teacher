@@ -232,8 +232,7 @@ const pinAttemptStore = new Map<string, PinRateLimitEntry>();
 
 export function checkPinRateLimit(
   key: string,
-  maxAttempts: number = 5,
-  windowMs: number = 60_000
+  maxAttempts: number = 5
 ): { allowed: boolean; remainingSeconds: number } {
   const now = Date.now();
   const entry = pinAttemptStore.get(key);
