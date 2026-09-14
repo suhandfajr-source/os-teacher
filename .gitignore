@@ -50,3 +50,11 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Agent & local experiment artifacts
+_ppt_sample/
+problem/
+_tmp*
+.agents/
+.claude/
+*.mjs.tmp
