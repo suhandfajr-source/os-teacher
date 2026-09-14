@@ -862,11 +862,14 @@ enum QuizStatus {
 
 enum QuizQuestionType {
   MULTIPLE_CHOICE
+  SHORT_ANSWER
+  ESSAY
 }
 
 enum QuizAttemptStatus {
   IN_PROGRESS
   SUBMITTED
+  NEEDS_GRADING
 }
 
 enum QuizAccessMode {
@@ -953,6 +956,9 @@ model QuizAnswer {
   question      QuizQuestion? @relation(fields: [questionId], references: [id], onDelete: SetNull)
   selectedIndex Int?
   isCorrect     Boolean?
+  essayAnswer   String?       @db.Text
+  score         Decimal?      @db.Decimal(5, 2)
+  feedback      String?       @db.Text
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 

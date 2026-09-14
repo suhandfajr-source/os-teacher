@@ -178,6 +178,7 @@ export function NewQuizClient() {
         shuffleQuestions,
         shuffleOptions,
         questions: questions.map((q) => ({
+          type: q.type,
           text: q.text,
           options: q.options,
           correctIndex: q.correctIndex,
@@ -349,7 +350,7 @@ export function NewQuizClient() {
           {questions.length > 0 && (
             <QuestionListEditor questions={questions} onChange={setQuestions} />
           )}
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -358,7 +359,8 @@ export function NewQuizClient() {
                 setQuestions((qs) => [
                   ...qs,
                   {
-                    id: `manual-${Date.now()}`,
+                    id: `manual-mcq-${Date.now()}`,
+                    type: "MULTIPLE_CHOICE",
                     text: "",
                     options: ["", "", "", ""],
                     correctIndex: 0,
@@ -367,7 +369,27 @@ export function NewQuizClient() {
                 ])
               }
             >
-              <Plus className="h-4 w-4" /> Tambah Soal Manual
+              <Plus className="h-4 w-4" /> Tambah Soal PG
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() =>
+                setQuestions((qs) => [
+                  ...qs,
+                  {
+                    id: `manual-essay-${Date.now()}`,
+                    type: "ESSAY",
+                    text: "",
+                    options: [],
+                    correctIndex: null,
+                    points: 5,
+                  },
+                ])
+              }
+            >
+              <Plus className="h-4 w-4" /> Tambah Soal Esai
             </Button>
           </div>
         </CardContent>

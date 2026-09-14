@@ -12,6 +12,7 @@ import {
   normalizeScore,
   generateShareToken,
   isAttemptExpired,
+  buildAttemptSnapshot,
 } from "../quiz.service";
 
 describe("quiz.service", () => {
@@ -158,6 +159,49 @@ describe("PIN helpers", () => {
       const started = new Date(Date.now() - 5 * 60_000);
       const deadline = new Date(Date.now() + 30 * 60_000);
       expect(isAttemptExpired(started, 60, deadline)).toBe(false);
+    });
+  });
+
+  describe("Essay & Short Answer questions (Sprint 3)", () => {
+    it("gradeAttempt: mengoreksi otomatis soal PG dan membiarkan soal esai pending review", () => {
+      const questions = [
+        { id: "mcq1", type: "MULTIPLE_CHOICE" as const, correctIndex: 1, points: 2 },
+        { id: "mcq2", type: "MULTIPLE_CHOICE" as const, correctIndex: 0, points: 2 },
+        { id: "essay1", type: "ESSAY" as const, correctIndex: null, points: 6 },
+      ];
+
+      const answers = [
+        { questionId: "mcq1", selectedIndex: 1 }, // Correct (+2)
+        { questionId: "mcq2", selectedIndex: 3 }, // Wrong (+0)
+        { questionId: "essay1", essayAnswer: "Jawaban esai panjang siswa..." },
+      ];
+
+      const res = gradeAttempt(questions, answers);
+      expect(res.hasEssays).toBe(true);
+      expect(res.totalPoints).toBe(10); // 2 + 2 + 6
+      expect(res.score).toBe(2); // Only mcq1 points
+      expect(res.perQuestion[0].isCorrect).toBe(true);
+      expect(res.perQuestion[0].pointsEarned).toBe(2);
+      expect(res.perQuestion[1].isCorrect).toBe(false);
+      expect(res.perQuestion[2].isCorrect).toBeNull(); // Pending review
+      expect(res.perQuestion[2].essayAnswer).toBe("Jawaban esai panjang siswa...");
+      expect(res.perQuestion[2].pointsEarned).toBe(0);
+      expect(res.perQuestion[2].pointsMax).toBe(6);
+    });
+
+    it("buildAttemptSnapshot: mempertahankan tipe soal ESSAY dan tidak mengacak opsi kosong", () => {
+      const questions = [
+        { id: "q1", type: "ESSAY" as const, text: "Uraikan hikmah beriman...", options: [], correctIndex: null, points: 10, explanation: "Rubrik guru..." },
+        { id: "q2", type: "MULTIPLE_CHOICE" as const, text: "Soal PG", options: ["A", "B"], correctIndex: 0, points: 1 },
+      ];
+
+      const snapshot = buildAttemptSnapshot(questions, false, true);
+      expect(snapshot[0].type).toBe("ESSAY");
+      expect(snapshot[0].options).toEqual([]);
+      expect(snapshot[0].correctIndex).toBeNull();
+      expect(snapshot[0].points).toBe(10);
+      expect(snapshot[0].explanation).toBe("Rubrik guru...");
+      expect(snapshot[1].type).toBe("MULTIPLE_CHOICE");
     });
   });
 });

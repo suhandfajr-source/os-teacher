@@ -56,17 +56,28 @@ export async function createQuizAction(input: unknown): Promise<{
     const parsed = createQuizSchema.parse(input);
     await verifyTeachingContextAccess(parsed.teachingContextId);
 
-    // Sanitize: never persist blank/whitespace options or question text.
+    // Sanitize: validate MCQ (min 2 options) and ESSAY/SHORT_ANSWER (text required).
     const sanitizedQuestions = parsed.questions
-      .map((q) => ({
-        ...q,
-        text: q.text.trim(),
-        options: q.options.map((o) => o.trim()).filter((o) => o.length > 0),
-      }))
-      .filter((q) => q.text.length > 0 && q.options.length >= 2);
+      .map((q) => {
+        const qType = q.type ?? "MULTIPLE_CHOICE";
+        const cleanedOpts = q.options.map((o) => o.trim()).filter((o) => o.length > 0);
+        return {
+          ...q,
+          type: qType,
+          text: q.text.trim(),
+          options: qType === "MULTIPLE_CHOICE" ? cleanedOpts : [],
+          correctIndex: qType === "MULTIPLE_CHOICE" ? q.correctIndex : null,
+        };
+      })
+      .filter((q) => {
+        if (q.type === "MULTIPLE_CHOICE") {
+          return q.text.length > 0 && q.options.length >= 2;
+        }
+        return q.text.length > 0;
+      });
 
     if (sanitizedQuestions.length === 0) {
-      return { success: false, error: "Tidak ada soal yang valid (teks & minimal 2 opsi harus terisi)" };
+      return { success: false, error: "Tidak ada soal yang valid untuk disimpan" };
     }
 
     const classroomPin =
@@ -89,7 +100,7 @@ export async function createQuizAction(input: unknown): Promise<{
         questions: {
           create: sanitizedQuestions.map((q, idx) => ({
             order: idx + 1,
-            type: "MULTIPLE_CHOICE" as const,
+            type: q.type,
             text: q.text,
             options: q.options,
             correctIndex: q.correctIndex,
@@ -489,10 +500,12 @@ export async function getQuizDetailAction(quizId: string) {
         questions: quiz.questions.map((q) => ({
           id: q.id,
           order: q.order,
+          type: q.type,
           text: q.text,
           options: q.options as string[],
           correctIndex: q.correctIndex,
           points: Number(q.points),
+          explanation: q.explanation ?? undefined,
         })),
         roster,
         assessments: assessments.map((a) => ({
@@ -514,9 +527,10 @@ export async function getQuizDetailAction(quizId: string) {
 export async function updateQuizQuestionsAction(
   quizId: string,
   questions: Array<{
+    type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
     text: string;
     options: string[];
-    correctIndex: number;
+    correctIndex?: number | null;
     points: number;
     explanation?: string;
   }>
@@ -533,19 +547,35 @@ export async function updateQuizQuestionsAction(
     await verifyTeachingContextAccess(quiz.teachingContextId);
 
     const validated = questions
-      .map((q) =>
-        quizQuestionSchema.parse({
+      .map((q) => {
+        const qType = q.type ?? "MULTIPLE_CHOICE";
+        const cleanedOpts = q.options.map((o) => o.trim()).filter((o) => o.length > 0);
+        return quizQuestionSchema.parse({
           ...q,
+          type: qType,
           text: q.text.trim(),
-          options: q.options.map((o) => o.trim()).filter((o) => o.length > 0),
-        })
-      )
-      .filter((q) => q.text.length > 0 && q.options.length >= 2);
+          options: qType === "MULTIPLE_CHOICE" ? cleanedOpts : [],
+          correctIndex: qType === "MULTIPLE_CHOICE" ? q.correctIndex : null,
+        });
+      })
+      .filter((q) => {
+        if (q.type === "MULTIPLE_CHOICE") {
+          return q.text.length > 0 && q.options.length >= 2;
+        }
+        return q.text.length > 0;
+      });
+
     if (validated.length === 0) {
-      return { success: false, error: "Tidak ada soal yang valid (teks & minimal 2 opsi harus terisi)" };
+      return { success: false, error: "Tidak ada soal yang valid untuk disimpan" };
     }
-    if (validated.some((q) => q.correctIndex >= q.options.length)) {
-      return { success: false, error: "Ada soal dengan kunci jawaban di luar daftar opsi" };
+    if (
+      validated.some(
+        (q) =>
+          q.type === "MULTIPLE_CHOICE" &&
+          (q.correctIndex === null || q.correctIndex === undefined || q.correctIndex >= q.options.length)
+      )
+    ) {
+      return { success: false, error: "Ada soal pilihan ganda dengan kunci jawaban tidak valid" };
     }
 
     await prisma.$transaction([
@@ -554,7 +584,7 @@ export async function updateQuizQuestionsAction(
         data: validated.map((q, idx) => ({
           quizId,
           order: idx + 1,
-          type: "MULTIPLE_CHOICE" as const,
+          type: q.type,
           text: q.text,
           options: q.options,
           correctIndex: q.correctIndex,
@@ -742,10 +772,12 @@ async function resolveAttemptSnapshot(
   });
   const live = liveQuestions.map((q) => ({
     id: q.id,
+    type: q.type,
     text: q.text,
     options: q.options as string[],
     correctIndex: q.correctIndex,
     points: Number(q.points),
+    explanation: q.explanation ?? undefined,
   }));
 
   if (stored?.questionIds?.length && stored.optionOrders) {
@@ -764,17 +796,25 @@ async function resolveAttemptSnapshot(
 export async function getStudentAttemptDetailAction(quizId: string, studentId: string): Promise<{
   success: boolean;
   data?: {
+    attemptId: string;
+    attemptStatus: string;
     studentName: string;
     score: number;
     submittedAt: string;
     isRemedial: boolean;
     perQuestion: Array<{
+      questionId: string;
+      type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
       questionText: string;
       options: string[];
       selectedIndex: number | null;
+      essayAnswer: string | null;
       correctIndex: number | null;
       pointsEarned: number;
       pointsMax: number;
+      explanation: string | null;
+      scoreAwarded: number | null;
+      feedback: string | null;
     }>;
   };
   error?: string;
@@ -791,37 +831,146 @@ export async function getStudentAttemptDetailAction(quizId: string, studentId: s
       where: { quizId_studentId: { quizId, studentId } },
       include: { answers: true, student: { select: { fullName: true } } },
     });
-    if (!attempt || attempt.status !== "SUBMITTED") {
+    if (!attempt || (attempt.status !== "SUBMITTED" && attempt.status !== "NEEDS_GRADING")) {
       return { success: false, error: "Siswa ini belum menyelesaikan quiz" };
     }
 
     const snapshot = await resolveAttemptSnapshot(attempt, quizId);
 
-    const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a.selectedIndex]));
+    const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a]));
 
     return {
       success: true,
       data: {
+        attemptId: attempt.id,
+        attemptStatus: attempt.status,
         studentName: attempt.student.fullName,
         score: attempt.score ? Number(attempt.score) : 0,
         submittedAt: attempt.submittedAt?.toISOString() ?? "",
         isRemedial: attempt.isRemedial,
         perQuestion: snapshot.map((q) => {
-          const sel = answerMap.has(q.id) ? answerMap.get(q.id)! : null;
-          const isCorrect = q.correctIndex !== null && sel === q.correctIndex;
+          const ans = answerMap.get(q.id);
+          const sel = ans?.selectedIndex !== undefined ? ans.selectedIndex : null;
+          const essay = ans?.essayAnswer ?? null;
+          const manualScore = ans?.score !== null && ans?.score !== undefined ? Number(ans.score) : null;
+          const feedback = ans?.feedback ?? null;
+
+          const isMcq = q.type === "MULTIPLE_CHOICE" || !q.type;
+          const isCorrect = isMcq
+            ? (q.correctIndex !== null && sel === q.correctIndex)
+            : (manualScore !== null ? manualScore > 0 : null);
+          const pointsEarned = isMcq
+            ? (isCorrect ? q.points : 0)
+            : (manualScore ?? 0);
+
           return {
+            questionId: q.id,
+            type: q.type ?? "MULTIPLE_CHOICE",
             questionText: q.text,
             options: q.options,
             selectedIndex: sel,
+            essayAnswer: essay,
             correctIndex: q.correctIndex,
-            pointsEarned: isCorrect ? q.points : 0,
+            pointsEarned,
             pointsMax: q.points,
+            explanation: q.explanation ?? null,
+            scoreAwarded: manualScore,
+            feedback,
           };
         }),
       },
     };
   } catch (error: unknown) {
     return { success: false, error: formatActionError(error, "Gagal memuat jawaban siswa") };
+  }
+}
+
+/**
+ * Teacher: manually grades a student's essay / short answer questions.
+ * Updates points awarded, optional feedback, recalculates total attempt score,
+ * and updates attempt status to SUBMITTED once all essays are graded.
+ */
+export async function gradeStudentEssayAction(
+  quizId: string,
+  studentId: string,
+  grades: Array<{
+    questionId: string;
+    scoreAwarded: number;
+    feedback?: string;
+  }>
+): Promise<{ success: boolean; data?: { finalScore: number }; error?: string }> {
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { teachingContextId: true, standardScore: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+    await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { quizId_studentId: { quizId, studentId } },
+      include: { answers: true },
+    });
+    if (!attempt) return { success: false, error: "Attempt tidak ditemukan" };
+
+    const snapshot = await resolveAttemptSnapshot(attempt, quizId);
+
+    // 1. Update each graded essay question answer in database
+    await prisma.$transaction(
+      grades.map((g) =>
+        prisma.quizAnswer.updateMany({
+          where: { attemptId: attempt.id, questionId: g.questionId },
+          data: {
+            score: g.scoreAwarded,
+            feedback: g.feedback?.trim() || null,
+            isCorrect: g.scoreAwarded > 0,
+          },
+        })
+      )
+    );
+
+    // 2. Fetch updated answers and recalculate total score
+    const updatedAnswers = await prisma.quizAnswer.findMany({
+      where: { attemptId: attempt.id },
+    });
+    const updatedAnswerMap = new Map(updatedAnswers.map((a) => [a.questionId, a]));
+
+    let totalPoints = 0;
+    let totalScore = 0;
+    let allEssaysGraded = true;
+
+    for (const q of snapshot) {
+      const max = Number(q.points) || 0;
+      totalPoints += max;
+      const ans = updatedAnswerMap.get(q.id);
+
+      if (q.type === "ESSAY" || q.type === "SHORT_ANSWER") {
+        if (ans?.score !== null && ans?.score !== undefined) {
+          totalScore += Number(ans.score);
+        } else {
+          allEssaysGraded = false;
+        }
+      } else {
+        // MCQ
+        if (ans?.isCorrect) {
+          totalScore += max;
+        }
+      }
+    }
+
+    const normalized = normalizeScore(totalScore, totalPoints);
+
+    await prisma.quizAttempt.update({
+      where: { id: attempt.id },
+      data: {
+        score: normalized,
+        status: allEssaysGraded ? "SUBMITTED" : "NEEDS_GRADING",
+      },
+    });
+
+    return { success: true, data: { finalScore: normalized } };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal menyimpan nilai esai") };
   }
 }
 
@@ -1048,6 +1197,7 @@ export async function startQuizAttemptAction(
     const view: StudentQuizQuestionView[] = stored!.questions!.map((q, idx) => ({
       id: q.id,
       order: idx + 1,
+      type: q.type ?? "MULTIPLE_CHOICE",
       text: q.text,
       options: q.options,
       points: q.points,
@@ -1094,6 +1244,7 @@ export async function getPublicAttemptResultAction(
     score: number;
     passed: boolean;
     isRemedial: boolean;
+    needsGrading: boolean;
     submittedAt: string;
     perQuestion: Array<{
       questionText: string;
@@ -1116,7 +1267,7 @@ export async function getPublicAttemptResultAction(
       where: { quizId_studentId: { quizId: quiz.id, studentId } },
       include: { answers: true },
     });
-    if (!attempt || attempt.status !== "SUBMITTED") {
+    if (!attempt || (attempt.status !== "SUBMITTED" && attempt.status !== "NEEDS_GRADING")) {
       return { success: false, error: "Hasil belum tersedia" };
     }
 
@@ -1130,6 +1281,7 @@ export async function getPublicAttemptResultAction(
         score: attempt.score ? Number(attempt.score) : 0,
         passed: quiz.standardScore === null ? true : (attempt.score ? Number(attempt.score) : 0) >= Number(quiz.standardScore),
         isRemedial: attempt.isRemedial,
+        needsGrading: attempt.status === "NEEDS_GRADING",
         submittedAt: attempt.submittedAt?.toISOString() ?? "",
         perQuestion: snapshot.map((q) => {
           const sel = answerMap.has(q.id) ? answerMap.get(q.id)! : null;
@@ -1188,9 +1340,10 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
     }
     const snapshot = stored.questions;
 
-    const { score, totalPoints, perQuestion } = gradeAttempt(
+    const { score, totalPoints, hasEssays, perQuestion } = gradeAttempt(
       snapshot.map((q) => ({
         id: q.id,
+        type: q.type,
         correctIndex: q.correctIndex,
         points: q.points,
       })),
@@ -1217,10 +1370,12 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
             attemptId: attempt.id,
             questionId: pq.questionId,
             selectedIndex: pq.selectedIndex ?? undefined,
+            essayAnswer: pq.essayAnswer ?? undefined,
             isCorrect: pq.isCorrect ?? undefined,
           },
           update: {
             selectedIndex: pq.selectedIndex ?? undefined,
+            essayAnswer: pq.essayAnswer ?? undefined,
             isCorrect: pq.isCorrect ?? undefined,
           },
         })
@@ -1228,7 +1383,7 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
       prisma.quizAttempt.update({
         where: { id: attempt.id },
         data: {
-          status: "SUBMITTED",
+          status: hasEssays ? "NEEDS_GRADING" : "SUBMITTED",
           submittedAt: new Date(),
           score: normalized,
         },
@@ -1245,10 +1400,13 @@ export async function submitQuizAttemptAction(input: unknown): Promise<{
         totalPoints,
         passed: standard === null ? true : normalized >= standard,
         isRemedial: attempt.isRemedial,
+        needsGrading: hasEssays,
         submittedAt: new Date().toISOString(),
         perQuestion: perQuestion.map((pq) => ({
           questionText: snapshotMap.get(pq.questionId)?.text ?? "",
+          type: pq.type,
           selectedIndex: pq.selectedIndex,
+          essayAnswer: pq.essayAnswer,
           isCorrect: pq.isCorrect,
           pointsEarned: pq.pointsEarned,
           pointsMax: pq.pointsMax,
@@ -1275,7 +1433,7 @@ export async function getAttemptResultAction(
       where: { quizId_studentId: { quizId: quiz.id, studentId } },
       include: { answers: true },
     });
-    if (!attempt || attempt.status !== "SUBMITTED") {
+    if (!attempt || (attempt.status !== "SUBMITTED" && attempt.status !== "NEEDS_GRADING")) {
       return { success: false, error: "Hasil belum tersedia" };
     }
 
@@ -1304,6 +1462,7 @@ export async function getAttemptResultAction(
         totalPoints: 100,
         passed: standard === null ? true : score >= standard,
         isRemedial: attempt.isRemedial,
+        needsGrading: attempt.status === "NEEDS_GRADING",
         submittedAt: attempt.submittedAt?.toISOString() ?? "",
         perQuestion,
       },

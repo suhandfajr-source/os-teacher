@@ -6,9 +6,10 @@
 import { quizQuestionSchema } from "./quiz.types";
 
 export interface ExtractedQuestion {
+  type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
   text: string;
   options: string[];
-  correctIndex: number;
+  correctIndex?: number | null;
   points: number;
   explanation?: string;
 }
@@ -204,10 +205,17 @@ export function parseAiQuestionsJson(
 
         if (cleanedOptions.length < 2) continue;
 
+        const qType: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY" =
+          rawRecord.type === "ESSAY" || rawRecord.type === "SHORT_ANSWER"
+            ? rawRecord.type
+            : "MULTIPLE_CHOICE";
+
         const candidate = {
+          type: qType,
           text: String(rawRecord.text ?? "").trim(),
-          options: cleanedOptions,
-          correctIndex: Number(rawRecord.correctIndex ?? 0),
+          options: qType === "MULTIPLE_CHOICE" ? cleanedOptions : [],
+          correctIndex:
+            qType === "MULTIPLE_CHOICE" ? Number(rawRecord.correctIndex ?? 0) : null,
           points: Number(rawRecord.points ?? 1) || 1,
           explanation: rawRecord.explanation ? String(rawRecord.explanation as string).trim() : undefined,
         };
@@ -216,7 +224,10 @@ export function parseAiQuestionsJson(
         if (
           validated.success &&
           validated.data.text.length > 0 &&
-          validated.data.correctIndex < validated.data.options.length
+          (qType !== "MULTIPLE_CHOICE" ||
+            (validated.data.correctIndex !== null &&
+              validated.data.correctIndex !== undefined &&
+              validated.data.correctIndex < validated.data.options.length))
         ) {
           questions.push(validated.data);
         }

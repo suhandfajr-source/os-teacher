@@ -8,12 +8,10 @@ import { z } from "zod";
 // ----------------------------------------------------------------------------
 
 export const quizQuestionSchema = z.object({
+  type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER", "ESSAY"]).default("MULTIPLE_CHOICE"),
   text: z.string().min(3, "Teks soal terlalu pendek").max(2000),
-  options: z
-    .array(z.string().min(1).max(500))
-    .min(2, "Minimal 2 opsi jawaban")
-    .max(6, "Maksimal 6 opsi jawaban"),
-  correctIndex: z.number().int().min(0),
+  options: z.array(z.string().max(500)).max(6).default([]),
+  correctIndex: z.number().int().min(0).optional().nullable(),
   points: z.number().positive().max(100).default(1),
   explanation: z.string().max(2000).optional(),
 });
@@ -54,7 +52,8 @@ export const submitAttemptSchema = z.object({
     .array(
       z.object({
         questionId: z.string().min(1),
-        selectedIndex: z.number().int().min(0).max(5),
+        selectedIndex: z.number().int().min(0).max(5).optional().nullable(),
+        essayAnswer: z.string().max(10_000).optional().nullable(),
       })
     )
     .max(100),
@@ -67,6 +66,7 @@ export const submitAttemptSchema = z.object({
 export interface StudentQuizQuestionView {
   id: string;
   order: number;
+  type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
   text: string;
   /** Options in attempt-specific shuffled order; index maps to selectedIndex. */
   options: string[];
@@ -95,12 +95,16 @@ export interface AttemptResultView {
   totalPoints: number;
   passed: boolean;
   isRemedial: boolean;
+  needsGrading: boolean;
   submittedAt: string;
   perQuestion: Array<{
     questionText: string;
+    type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
     selectedIndex: number | null;
+    essayAnswer?: string | null;
     isCorrect: boolean | null;
     pointsEarned: number;
     pointsMax: number;
+    feedback?: string | null;
   }>;
 }

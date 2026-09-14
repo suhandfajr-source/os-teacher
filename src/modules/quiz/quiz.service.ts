@@ -5,11 +5,13 @@
 
 export interface ScorableAnswer {
   questionId: string;
-  selectedIndex: number;
+  selectedIndex?: number | null;
+  essayAnswer?: string | null;
 }
 
 export interface ScorableQuestion {
   id: string;
+  type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
   correctIndex: number | null;
   points: number | string; // Prisma Decimal serializes to string over JSON
 }
@@ -50,38 +52,65 @@ export function gradeAttempt(
 ): {
   score: number;
   totalPoints: number;
+  hasEssays: boolean;
   perQuestion: Array<{
     questionId: string;
+    type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
     selectedIndex: number | null;
+    essayAnswer: string | null;
     isCorrect: boolean | null;
     pointsEarned: number;
     pointsMax: number;
   }>;
 } {
-  const answerMap = new Map(answers.map((a) => [a.questionId, a.selectedIndex]));
+  const answerMap = new Map(answers.map((a) => [a.questionId, a]));
 
   let score = 0;
   let totalPoints = 0;
+  let hasEssays = false;
 
   const perQuestion = questions.map((q) => {
+    const qType: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY" =
+      q.type ?? "MULTIPLE_CHOICE";
     const max = Number(q.points) || 0;
     totalPoints += max;
 
-    const selected = answerMap.has(q.id) ? answerMap.get(q.id)! : null;
+    const ans = answerMap.get(q.id);
+    const selected =
+      ans?.selectedIndex !== undefined && ans?.selectedIndex !== null
+        ? ans.selectedIndex
+        : null;
+    const essay = ans?.essayAnswer ?? null;
+
+    if (qType === "ESSAY" || qType === "SHORT_ANSWER") {
+      hasEssays = true;
+      return {
+        questionId: q.id,
+        type: qType,
+        selectedIndex: null,
+        essayAnswer: essay,
+        isCorrect: null, // Pending teacher manual review
+        pointsEarned: 0,
+        pointsMax: max,
+      };
+    }
+
     const isCorrect = q.correctIndex !== null && selected === q.correctIndex;
     const pointsEarned = isCorrect ? max : 0;
     score += pointsEarned;
 
     return {
       questionId: q.id,
+      type: qType,
       selectedIndex: selected,
+      essayAnswer: null,
       isCorrect: q.correctIndex === null ? null : isCorrect,
       pointsEarned,
       pointsMax: max,
     };
   });
 
-  return { score, totalPoints, perQuestion };
+  return { score, totalPoints, hasEssays, perQuestion };
 }
 
 /** Normalizes score to 0–100 scale (rounded to 1 decimal). */
@@ -128,12 +157,14 @@ export function generateClassroomPin(): string {
 
 export interface AttemptQuestionSnapshot {
   id: string;
+  type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
   text: string;
   /** Options already in the student's display order. */
   options: string[];
   /** Correct index aligned to the displayed options order. */
   correctIndex: number | null;
   points: number;
+  explanation?: string;
 }
 
 export interface LegacyAttemptOrder {
@@ -148,23 +179,34 @@ export interface LegacyAttemptOrder {
  */
 export function reconstructLegacySnapshot(
   order: LegacyAttemptOrder,
-  questions: Array<{ id: string; text: string; options: string[]; correctIndex: number | null; points: number }>
+  questions: Array<{
+    id: string;
+    type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
+    text: string;
+    options: string[];
+    correctIndex: number | null;
+    points: number;
+    explanation?: string;
+  }>
 ): AttemptQuestionSnapshot[] {
   const map = new Map(questions.map((q) => [q.id, q]));
   const out: AttemptQuestionSnapshot[] = [];
   for (const qid of order.questionIds) {
     const q = map.get(qid);
     if (!q) continue;
+    const qType = q.type ?? "MULTIPLE_CHOICE";
     const perm = order.optionOrders[qid] ?? q.options.map((_, i) => i);
     const options = perm.map((i) => q.options[i]).filter((o) => o !== undefined);
     const correctIndex =
       q.correctIndex === null ? null : perm.indexOf(q.correctIndex);
     out.push({
       id: q.id,
+      type: qType,
       text: q.text,
       options,
       correctIndex,
       points: Number(q.points) || 0,
+      explanation: q.explanation,
     });
   }
   return out;
@@ -177,28 +219,41 @@ export function reconstructLegacySnapshot(
  * naturally pick up the latest questions.
  */
 export function buildAttemptSnapshot(
-  questions: Array<{ id: string; text: string; options: string[]; correctIndex: number | null; points: number }>,
+  questions: Array<{
+    id: string;
+    type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
+    text: string;
+    options: string[];
+    correctIndex: number | null;
+    points: number;
+    explanation?: string;
+  }>,
   shuffleQuestions: boolean,
   shuffleOpts: boolean
 ): AttemptQuestionSnapshot[] {
   const ordered = shuffleQuestions ? shuffleArray(questions) : [...questions];
   return ordered.map((q) => {
-    if (shuffleOpts && q.correctIndex !== null) {
+    const qType = q.type ?? "MULTIPLE_CHOICE";
+    if (qType === "MULTIPLE_CHOICE" && shuffleOpts && q.correctIndex !== null) {
       const res = shuffleOptions(q.options, q.correctIndex);
       return {
         id: q.id,
+        type: qType,
         text: q.text,
         options: res.options,
         correctIndex: res.correctIndex,
         points: Number(q.points) || 0,
+        explanation: q.explanation,
       };
     }
     return {
       id: q.id,
+      type: qType,
       text: q.text,
       options: [...q.options],
       correctIndex: q.correctIndex,
       points: Number(q.points) || 0,
+      explanation: q.explanation,
     };
   });
 }

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -50,6 +51,7 @@ export function QuizStudentClient({ token }: { token: string }) {
 
   const [questions, setQuestions] = useState<StudentQuizQuestionView[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [essayAnswers, setEssayAnswers] = useState<Record<string, string>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
@@ -91,14 +93,21 @@ export function QuizStudentClient({ token }: { token: string }) {
   // Offline resilience / LocalStorage Autosave (Story 2.2)
   const storageKey = studentId ? `ai_teacher_quiz_answers_${token}_${studentId}` : null;
 
-  // Autosave answers on change to localStorage
+  // Autosave answers on change to localStorage (MCQ + Essay)
   useEffect(() => {
-    if (stage === "WORKING" && storageKey && Object.keys(answers).length > 0) {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(answers));
-      } catch {}
+    if (stage === "WORKING" && storageKey) {
+      const hasMcq = Object.keys(answers).length > 0;
+      const hasEssays = Object.keys(essayAnswers).length > 0;
+      if (hasMcq || hasEssays) {
+        try {
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({ mcq: answers, essays: essayAnswers })
+          );
+        } catch {}
+      }
     }
-  }, [answers, stage, storageKey]);
+  }, [answers, essayAnswers, stage, storageKey]);
 
   const filteredRoster = (quiz?.roster ?? []).filter((r) =>
     r.fullName.toLowerCase().includes(nameFilter.toLowerCase())
@@ -124,7 +133,14 @@ export function QuizStudentClient({ token }: { token: string }) {
           if (saved) {
             const parsed = JSON.parse(saved);
             if (parsed && typeof parsed === "object") {
-              setAnswers(parsed);
+              if (parsed.mcq && typeof parsed.mcq === "object") {
+                setAnswers(parsed.mcq);
+              } else if (!parsed.essays) {
+                setAnswers(parsed);
+              }
+              if (parsed.essays && typeof parsed.essays === "object") {
+                setEssayAnswers(parsed.essays);
+              }
               toast.info("Jawaban tersimpan di perangkat dipulihkan otomatis");
             }
           }
@@ -141,6 +157,7 @@ export function QuizStudentClient({ token }: { token: string }) {
           totalPoints: 100,
           passed: resRes.data.passed,
           isRemedial: resRes.data.isRemedial,
+          needsGrading: resRes.data.needsGrading,
           submittedAt: resRes.data.submittedAt,
           perQuestion: resRes.data.perQuestion.map((pq) => ({
             questionText: pq.questionText,
@@ -167,20 +184,30 @@ export function QuizStudentClient({ token }: { token: string }) {
   const handleSubmit = useCallback(
     async (auto = false) => {
       if (hasSubmitted) return;
-      if (!auto && Object.keys(answers).length < questions.length) {
-        const unanswered = questions.length - Object.keys(answers).length;
+      const totalAnswered =
+        Object.keys(answers).length +
+        Object.values(essayAnswers).filter((t) => t.trim().length > 0).length;
+      if (!auto && totalAnswered < questions.length) {
+        const unanswered = questions.length - totalAnswered;
         if (!confirm(`Masih ada ${unanswered} soal belum dijawab. Kumpulkan sekarang?`)) return;
       }
       setHasSubmitted(true);
       setIsSubmitting(true);
       try {
+        const payloadMap = new Map<string, { questionId: string; selectedIndex?: number; essayAnswer?: string }>();
+        for (const [qid, sIdx] of Object.entries(answers)) {
+          payloadMap.set(qid, { questionId: qid, selectedIndex: sIdx });
+        }
+        for (const [qid, text] of Object.entries(essayAnswers)) {
+          const item = payloadMap.get(qid) ?? { questionId: qid };
+          item.essayAnswer = text;
+          payloadMap.set(qid, item);
+        }
+
         const res = await submitQuizAttemptAction({
           token,
           studentId,
-          answers: Object.entries(answers).map(([questionId, selectedIndex]) => ({
-            questionId,
-            selectedIndex,
-          })),
+          answers: Array.from(payloadMap.values()),
         });
         if (res.success && res.data) {
           if (storageKey) {
@@ -196,7 +223,7 @@ export function QuizStudentClient({ token }: { token: string }) {
         setIsSubmitting(false);
       }
     },
-    [token, studentId, answers, questions.length, hasSubmitted, storageKey]
+    [token, studentId, answers, essayAnswers, questions.length, hasSubmitted, storageKey]
   );
 
   // Timer — declared after handleSubmit so the callback is in scope.
@@ -314,7 +341,18 @@ export function QuizStudentClient({ token }: { token: string }) {
             />
           </div>
           <div>
-            <p className="text-muted-foreground text-sm">Nilai Kamu</p>
+            {result.needsGrading ? (
+              <div className="space-y-1 mb-2">
+                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300">
+                  Menunggu Koreksi Guru
+                </Badge>
+                <p className="text-muted-foreground text-xs">
+                  Nilai akhir akan diperbarui setelah gurumu selesai memeriksa soal esai.
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Nilai Kamu</p>
+            )}
             <p
               className={cn(
                 "text-6xl font-extrabold",
@@ -489,7 +527,9 @@ export function QuizStudentClient({ token }: { token: string }) {
 
   // ---------- Working ----------
   const current = questions[currentIdx];
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount =
+    Object.keys(answers).length +
+    Object.values(essayAnswers).filter((t) => t.trim().length > 0).length;
   const mm = remainingSeconds !== null ? Math.floor(remainingSeconds / 60) : null;
   const ss = remainingSeconds !== null ? remainingSeconds % 60 : null;
 
@@ -532,26 +572,54 @@ export function QuizStudentClient({ token }: { token: string }) {
 
         {/* Question */}
         <div>
-          <p className="text-lg font-medium leading-relaxed">{current?.text}</p>
-          <div className="mt-4 space-y-2">
-            {current?.options.map((opt, oIdx) => (
-              <button
-                key={oIdx}
-                onClick={() => setAnswers((a) => ({ ...a, [current.id]: oIdx }))}
-                className={cn(
-                  "w-full text-left rounded-xl border px-4 py-3 text-sm transition-all",
-                  answers[current.id] === oIdx
-                    ? "border-emerald-500 bg-emerald-50 font-medium"
-                    : "hover:border-primary/40"
-                )}
-              >
-                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border text-xs mr-3">
-                  {String.fromCharCode(65 + oIdx)}
-                </span>
-                {opt}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant="outline" className="text-xs">
+              {current?.type === "ESSAY"
+                ? "Soal Esai / Uraian"
+                : current?.type === "SHORT_ANSWER"
+                ? "Soal Isian Singkat"
+                : "Pilihan Ganda"}
+            </Badge>
+            <span className="text-xs text-muted-foreground">{current?.points} poin</span>
           </div>
+          <p className="text-lg font-medium leading-relaxed">{current?.text}</p>
+
+          {current?.type === "ESSAY" || current?.type === "SHORT_ANSWER" || !current?.options?.length ? (
+            <div className="mt-4 space-y-2">
+              <label className="text-xs text-muted-foreground block font-medium">
+                Tuliskan jawaban lengkapmu di bawah ini:
+              </label>
+              <Textarea
+                rows={6}
+                value={essayAnswers[current.id] ?? ""}
+                onChange={(e) =>
+                  setEssayAnswers((prev) => ({ ...prev, [current.id]: e.target.value }))
+                }
+                placeholder="Ketik uraian jawaban di sini..."
+                className="text-sm leading-relaxed bg-background"
+              />
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {current?.options.map((opt, oIdx) => (
+                <button
+                  key={oIdx}
+                  onClick={() => setAnswers((a) => ({ ...a, [current.id]: oIdx }))}
+                  className={cn(
+                    "w-full text-left rounded-xl border px-4 py-3 text-sm transition-all",
+                    answers[current.id] === oIdx
+                      ? "border-emerald-500 bg-emerald-50 font-medium"
+                      : "hover:border-primary/40"
+                  )}
+                >
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border text-xs mr-3">
+                    {String.fromCharCode(65 + oIdx)}
+                  </span>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Nav */}

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   Copy,
@@ -29,7 +30,7 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/components/quiz/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw, Download } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw, Download, CircleAlert } from "lucide-react";
 import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
 import { exportQuizRecapToExcel } from "@/lib/export/quiz-recap-exporter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -42,6 +43,7 @@ import {
   deleteQuizAction,
   updateQuizQuestionsAction,
   resetAllAttemptsAction,
+  gradeStudentEssayAction,
 } from "@/modules/quiz/quiz.actions";
 
 interface QuizDetail {
@@ -64,10 +66,12 @@ interface QuizDetail {
   questions: Array<{
     id: string;
     order: number;
+    type?: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
     text: string;
     options: string[];
     correctIndex: number | null;
     points: number;
+    explanation?: string;
   }>;
   roster: Array<{
     studentId: string;
@@ -92,21 +96,33 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [currentStudentId, setCurrentStudentId] = useState<string>("");
+  const [essayScores, setEssayScores] = useState<Record<string, number>>({});
+  const [essayFeedbacks, setEssayFeedbacks] = useState<Record<string, string>>({});
+  const [isSavingGrades, setIsSavingGrades] = useState(false);
   const [answerSheet, setAnswerSheet] = useState<{
     open: boolean;
     loading: boolean;
     data: {
+      attemptId: string;
+      attemptStatus: string;
       studentName: string;
       score: number;
       submittedAt: string;
       isRemedial: boolean;
       perQuestion: Array<{
+        questionId: string;
+        type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
         questionText: string;
         options: string[];
         selectedIndex: number | null;
+        essayAnswer: string | null;
         correctIndex: number | null;
         pointsEarned: number;
         pointsMax: number;
+        explanation: string | null;
+        scoreAwarded: number | null;
+        feedback: string | null;
       }>;
     } | null;
   }>({ open: false, loading: false, data: null });
@@ -209,13 +225,62 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   );
 
   const handleViewAnswers = async (studentId: string) => {
+    setCurrentStudentId(studentId);
+    setEssayScores({});
+    setEssayFeedbacks({});
     setAnswerSheet({ open: true, loading: true, data: null });
     const res = await getStudentAttemptDetailAction(quizId, studentId);
     if (res.success && res.data) {
       setAnswerSheet({ open: true, loading: false, data: res.data });
+      // Pre-populate essay grading inputs
+      const initialScores: Record<string, number> = {};
+      const initialFeedbacks: Record<string, string> = {};
+      for (const q of res.data.perQuestion) {
+        if (q.scoreAwarded !== null) initialScores[q.questionId] = q.scoreAwarded;
+        if (q.feedback) initialFeedbacks[q.questionId] = q.feedback;
+      }
+      setEssayScores(initialScores);
+      setEssayFeedbacks(initialFeedbacks);
     } else {
       setAnswerSheet({ open: false, loading: false, data: null });
       toast.error(res.error ?? "Gagal memuat jawaban");
+    }
+  };
+
+  const handleSaveEssayGrades = async () => {
+    if (!currentStudentId || !answerSheet.data) return;
+    setIsSavingGrades(true);
+    try {
+      const essayQuestions = answerSheet.data.perQuestion.filter(
+        (q) => q.type === "ESSAY" || q.type === "SHORT_ANSWER"
+      );
+      const grades = essayQuestions.map((q) => ({
+        questionId: q.questionId,
+        scoreAwarded: essayScores[q.questionId] ?? (q.scoreAwarded ?? 0),
+        feedback: essayFeedbacks[q.questionId] ?? (q.feedback ?? undefined),
+      }));
+
+      const res = await gradeStudentEssayAction(quizId, currentStudentId, grades);
+      if (res.success && res.data) {
+        toast.success("Nilai esai berhasil disimpan!");
+        setAnswerSheet((prev) =>
+          prev.data
+            ? {
+                ...prev,
+                data: {
+                  ...prev.data,
+                  score: res.data!.finalScore,
+                  attemptStatus: "SUBMITTED",
+                },
+              }
+            : prev
+        );
+        void refreshSilently();
+      } else {
+        toast.error(res.error ?? "Gagal menyimpan nilai esai");
+      }
+    } finally {
+      setIsSavingGrades(false);
     }
   };
 
@@ -758,6 +823,8 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <div className="flex items-center gap-3 min-w-0">
                     {r.attemptStatus === "SUBMITTED" ? (
                       <CircleCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+                    ) : r.attemptStatus === "NEEDS_GRADING" ? (
+                      <CircleAlert className="h-5 w-5 text-amber-600 shrink-0" />
                     ) : r.attemptStatus === "IN_PROGRESS" ? (
                       <Circle className="h-5 w-5 text-amber-500 fill-amber-500/30 shrink-0" />
                     ) : (
@@ -771,12 +838,19 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                             PIN {r.pin}
                           </Badge>
                         )}
+                        {r.attemptStatus === "NEEDS_GRADING" && (
+                          <Badge variant="outline" className="ml-2 text-[10px] bg-amber-50 text-amber-800 border-amber-300">
+                            Perlu Koreksi
+                          </Badge>
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {r.attemptStatus === "NOT_STARTED"
                           ? "Belum mengerjakan"
                           : r.attemptStatus === "IN_PROGRESS"
                           ? "Sedang mengerjakan…"
+                          : r.attemptStatus === "NEEDS_GRADING"
+                          ? "Esai menunggu pemeriksaan guru"
                           : `Selesai ${r.submittedAt ? new Date(r.submittedAt).toLocaleString("id-ID") : ""}`}
                       </p>
                     </div>
@@ -791,7 +865,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         {r.score}
                       </Badge>
                     )}
-                    {r.attemptStatus === "SUBMITTED" && (
+                    {(r.attemptStatus === "SUBMITTED" || r.attemptStatus === "NEEDS_GRADING") && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1116,54 +1190,157 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </span>
               </div>
               <div className="space-y-3">
-                {answerSheet.data.perQuestion.map((pq, idx) => (
-                  <div key={idx} className="rounded-lg border p-3 space-y-2">
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline" className="shrink-0">
-                        {idx + 1}
-                      </Badge>
-                      <p className="text-sm font-medium flex-1">{pq.questionText}</p>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          pq.correctIndex !== null &&
-                          pq.selectedIndex !== null &&
-                          pq.selectedIndex === pq.correctIndex
-                            ? "bg-emerald-100 text-emerald-800 shrink-0"
-                            : "bg-rose-100 text-rose-800 shrink-0"
-                        }
-                      >
-                        {pq.pointsEarned}/{pq.pointsMax}
-                      </Badge>
-                    </div>
-                    <div className="pl-8 space-y-1">
-                      {pq.options.map((opt, oIdx) => {
-                        const isSelected = pq.selectedIndex === oIdx;
-                        const isCorrect = pq.correctIndex === oIdx;
-                        return (
-                          <div
-                            key={oIdx}
-                            className={cn(
-                              "text-xs rounded-md px-2 py-1.5 flex items-center gap-2",
-                              isCorrect && "bg-emerald-50 text-emerald-800",
-                              isSelected && !isCorrect && "bg-rose-50 text-rose-800",
-                              !isSelected && !isCorrect && "text-muted-foreground"
-                            )}
-                          >
-                            <span className="font-semibold">{String.fromCharCode(65 + oIdx)}.</span>
-                            <span className="flex-1">{opt}</span>
-                            {isCorrect && <span className="text-[10px] font-bold">KUNCI</span>}
-                            {isSelected && <span className="text-[10px] font-bold">JAWABAN SISWA</span>}
+                {answerSheet.data.perQuestion.map((pq, idx) => {
+                  const isEssay = pq.type === "ESSAY" || pq.type === "SHORT_ANSWER";
+
+                  return (
+                    <div key={idx} className="rounded-lg border p-3 space-y-2.5 bg-card">
+                      <div className="flex items-start gap-2">
+                        <Badge variant="outline" className="shrink-0 font-bold">
+                          {idx + 1}
+                        </Badge>
+                        <div className="flex-1">
+                          <Badge variant="outline" className="text-[10px] mb-1">
+                            {isEssay ? "Soal Esai" : "Pilihan Ganda"}
+                          </Badge>
+                          <p className="text-sm font-medium">{pq.questionText}</p>
+                        </div>
+                        <Badge
+                          variant="secondary"
+                          className={
+                            isEssay
+                              ? (pq.scoreAwarded !== null && pq.scoreAwarded > 0
+                                  ? "bg-emerald-100 text-emerald-800 shrink-0"
+                                  : "bg-amber-100 text-amber-800 shrink-0")
+                              : (pq.correctIndex !== null &&
+                                 pq.selectedIndex !== null &&
+                                 pq.selectedIndex === pq.correctIndex
+                                  ? "bg-emerald-100 text-emerald-800 shrink-0"
+                                  : "bg-rose-100 text-rose-800 shrink-0")
+                          }
+                        >
+                          {pq.pointsEarned}/{pq.pointsMax}
+                        </Badge>
+                      </div>
+
+                      {/* Multiple Choice Options display */}
+                      {!isEssay && (
+                        <div className="pl-8 space-y-1">
+                          {pq.options.map((opt, oIdx) => {
+                            const isSelected = pq.selectedIndex === oIdx;
+                            const isCorrect = pq.correctIndex === oIdx;
+                            return (
+                              <div
+                                key={oIdx}
+                                className={cn(
+                                  "text-xs rounded-md px-2 py-1.5 flex items-center gap-2",
+                                  isCorrect && "bg-emerald-50 text-emerald-800 font-medium",
+                                  isSelected && !isCorrect && "bg-rose-50 text-rose-800",
+                                  !isSelected && !isCorrect && "text-muted-foreground"
+                                )}
+                              >
+                                <span className="font-semibold">{String.fromCharCode(65 + oIdx)}.</span>
+                                <span className="flex-1">{opt}</span>
+                                {isCorrect && <span className="text-[10px] font-bold">KUNCI</span>}
+                                {isSelected && <span className="text-[10px] font-bold">JAWABAN SISWA</span>}
+                              </div>
+                            );
+                          })}
+                          {pq.selectedIndex === null && (
+                            <p className="text-xs text-muted-foreground italic">Tidak dijawab</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Essay Answer + Rubric + Grading Inputs */}
+                      {isEssay && (
+                        <div className="pl-8 space-y-2.5">
+                          {/* Student's answer */}
+                          <div className="rounded-lg border bg-muted/20 p-2.5 space-y-1">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                              Jawaban Siswa:
+                            </span>
+                            <p className="text-xs whitespace-pre-wrap leading-relaxed text-foreground font-mono">
+                              {pq.essayAnswer || <em className="text-muted-foreground">Siswa tidak mengisi jawaban</em>}
+                            </p>
                           </div>
-                        );
-                      })}
-                      {pq.selectedIndex === null && (
-                        <p className="text-xs text-muted-foreground italic">Tidak dijawab</p>
+
+                          {/* Teacher's rubric / guide */}
+                          {pq.explanation && (
+                            <div className="rounded-lg border border-dashed bg-muted/10 p-2 text-xs text-muted-foreground">
+                              <span className="font-semibold text-foreground">Pedoman Kunci: </span>
+                              {pq.explanation}
+                            </div>
+                          )}
+
+                          {/* Grading controls */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground">Beri Nilai:</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={pq.pointsMax}
+                                value={
+                                  essayScores[pq.questionId] !== undefined
+                                    ? essayScores[pq.questionId]
+                                    : (pq.scoreAwarded ?? "")
+                                }
+                                onChange={(e) => {
+                                  const val = e.target.value === "" ? 0 : Number(e.target.value);
+                                  setEssayScores((prev) => ({
+                                    ...prev,
+                                    [pq.questionId]: Math.min(pq.pointsMax, Math.max(0, val)),
+                                  }));
+                                }}
+                                className="w-16 h-7 text-xs font-bold text-right"
+                                placeholder={`0 - ${pq.pointsMax}`}
+                              />
+                              <span className="text-muted-foreground">/ {pq.pointsMax} poin</span>
+                            </div>
+                            <div className="flex-1 max-w-xs">
+                              <Input
+                                type="text"
+                                value={
+                                  essayFeedbacks[pq.questionId] !== undefined
+                                    ? essayFeedbacks[pq.questionId]
+                                    : (pq.feedback ?? "")
+                                }
+                                onChange={(e) =>
+                                  setEssayFeedbacks((prev) => ({
+                                    ...prev,
+                                    [pq.questionId]: e.target.value,
+                                  }))
+                                }
+                                placeholder="Umpan balik guru (opsional)…"
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+
+              {/* Save Essay Grades Button */}
+              {answerSheet.data.perQuestion.some((q) => q.type === "ESSAY" || q.type === "SHORT_ANSWER") && (
+                <div className="pt-3 border-t flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Perubahan nilai esai otomatis menghitung ulang skor akhir siswa.
+                  </span>
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={isSavingGrades}
+                    onClick={handleSaveEssayGrades}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {isSavingGrades ? "Menyimpan Nilai…" : "Simpan Nilai Esai"}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
