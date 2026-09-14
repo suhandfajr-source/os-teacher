@@ -29,6 +29,9 @@ import {
   reconstructLegacySnapshot,
   generateUniquePins,
   normalizePin,
+  checkPinRateLimit,
+  recordPinFailure,
+  resetPinRateLimit,
   AttemptQuestionSnapshot,
 } from "./quiz.service";
 
@@ -907,6 +910,16 @@ export async function startQuizAttemptAction(
     if (!isOnRoster) return { success: false, error: "Nama siswa tidak terdaftar di kelas ini" };
 
     // PIN verification — prevents impersonating a classmate.
+    const rateLimitKey = `${quiz.id}:${studentId}`;
+    const rateLimit = checkPinRateLimit(rateLimitKey);
+    if (!rateLimit.allowed) {
+      return {
+        success: false,
+        wrongPin: true,
+        error: `Terlalu banyak percobaan PIN salah. Tunggu ${rateLimit.remainingSeconds} detik sebelum mencoba lagi.`,
+      };
+    }
+
     const access = await prisma.quizStudentAccess.findUnique({
       where: { quizId_studentId: { quizId: quiz.id, studentId } },
       select: { pin: true },
@@ -917,8 +930,12 @@ export async function startQuizAttemptAction(
       return { success: false, error: "Sesi verifikasi diperbarui. Silakan coba lagi." };
     }
     if (normalizePin(pin ?? "") !== normalizePin(access.pin)) {
+      recordPinFailure(rateLimitKey);
       return { success: false, wrongPin: true, error: "PIN salah. Periksa kembali PIN dari gurumu." };
     }
+
+    // Success: clear rate limit counter
+    resetPinRateLimit(rateLimitKey);
 
     const existing = await prisma.quizAttempt.findUnique({
       where: { quizId_studentId: { quizId: quiz.id, studentId } },

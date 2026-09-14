@@ -218,3 +218,58 @@ export function normalizePin(pin: string): string {
   const digits = String(pin ?? "").replace(/\D/g, "");
   return digits.length === 0 ? "" : String(Number(digits));
 }
+
+// ----------------------------------------------------------------------------
+// PIN Rate Limiter (in-memory, per student attempt key)
+// ----------------------------------------------------------------------------
+
+interface PinRateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+const pinAttemptStore = new Map<string, PinRateLimitEntry>();
+
+export function checkPinRateLimit(
+  key: string,
+  maxAttempts: number = 5,
+  windowMs: number = 60_000
+): { allowed: boolean; remainingSeconds: number } {
+  const now = Date.now();
+  const entry = pinAttemptStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    return { allowed: true, remainingSeconds: 0 };
+  }
+
+  if (entry.count >= maxAttempts) {
+    const remaining = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    return { allowed: false, remainingSeconds: remaining };
+  }
+
+  return { allowed: true, remainingSeconds: 0 };
+}
+
+export function recordPinFailure(
+  key: string,
+  windowMs: number = 60_000
+): void {
+  const now = Date.now();
+  const entry = pinAttemptStore.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    pinAttemptStore.set(key, { count: 1, resetAt: now + windowMs });
+  } else {
+    entry.count += 1;
+  }
+
+  if (pinAttemptStore.size > 500) {
+    for (const [k, v] of pinAttemptStore.entries()) {
+      if (now > v.resetAt) pinAttemptStore.delete(k);
+    }
+  }
+}
+
+export function resetPinRateLimit(key: string): void {
+  pinAttemptStore.delete(key);
+}

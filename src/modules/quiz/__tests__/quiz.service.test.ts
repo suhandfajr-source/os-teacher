@@ -3,6 +3,9 @@ import {
   shuffleArray,
   generateUniquePins,
   normalizePin,
+  checkPinRateLimit,
+  recordPinFailure,
+  resetPinRateLimit,
   shuffleOptions,
   gradeAttempt,
   normalizeScore,
@@ -109,5 +112,26 @@ describe("PIN helpers", () => {
     expect(normalizePin(" 7 ")).toBe("7");
     expect(normalizePin("PIN 1234")).toBe("1234");
     expect(normalizePin("abc")).toBe("");
+  });
+
+  describe("checkPinRateLimit & recordPinFailure", () => {
+    it("mengizinkan 5 percobaan pertama dan memblokir pada percobaan ke-6", () => {
+      const key = "test-student-rate-limit-1";
+      resetPinRateLimit(key);
+
+      for (let i = 0; i < 5; i++) {
+        expect(checkPinRateLimit(key, 5, 60000).allowed).toBe(true);
+        recordPinFailure(key, 60000);
+      }
+
+      const blocked = checkPinRateLimit(key, 5, 60000);
+      expect(blocked.allowed).toBe(false);
+      expect(blocked.remainingSeconds).toBeGreaterThan(0);
+      expect(blocked.remainingSeconds).toBeLessThanOrEqual(60);
+
+      // reset restores allowed
+      resetPinRateLimit(key);
+      expect(checkPinRateLimit(key, 5, 60000).allowed).toBe(true);
+    });
   });
 });
