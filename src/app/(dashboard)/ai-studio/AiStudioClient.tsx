@@ -98,15 +98,19 @@ interface AiDraftItem {
 interface AiStudioClientProps {
   contexts: TeachingContextOption[];
   initialDrafts: AiDraftItem[];
+  initialFlow?: AiStudioFlowType;
 }
 
-export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps) {
+export function AiStudioClient({ contexts, initialDrafts, initialFlow }: AiStudioClientProps) {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<"CREATE" | "SAVED">("CREATE");
 
   // Generator inputs
-  const [selectedFlow, setSelectedFlow] = useState<AiStudioFlowType>("LESSON_PLAN");
-  const [contentType, setContentType] = useState<AiContentType>("LESSON_PLAN");
+  const defaultFlow: AiStudioFlowType = initialFlow || "LESSON_PLAN";
+  const [selectedFlow, setSelectedFlow] = useState<AiStudioFlowType>(defaultFlow);
+  const [contentType, setContentType] = useState<AiContentType>(
+    AI_STUDIO_FLOWS[defaultFlow]?.parentContentType || "LESSON_PLAN"
+  );
   const [selectedContextId, setSelectedContextId] = useState<string>("");
   const [includeHistoricalTopics, setIncludeHistoricalTopics] = useState<boolean>(false);
   const [topic, setTopic] = useState<string>("");

@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OS Teacher v2 — Interactive UI/UX Preview (Deep Navy & AI Purple)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            // Sesuai OS Teacher v2 Color Palette Spec
+            navy: {
+              DEFAULT: '#1E293B', // Deep Education Navy
+              dark: '#0F172A',
+              light: '#334155',
+              soft: '#F1F5F9',
+            },
+            ai: {
+              DEFAULT: '#7C3AED', // AI Purple
+              hover: '#6D28D9',
+              soft: '#F5F3FF',
+              border: '#DDD6FE',
+            },
+            eduGreen: {
+              DEFAULT: '#16A34A', // Education Green
+              soft: '#F0FDF4',
+              border: '#BBF7D0',
+            },
+            eduAmber: {
+              DEFAULT: '#F59E0B', // Teacher Amber
+              soft: '#FFFBEB',
+              border: '#FDE68A',
+            },
+            eduRed: {
+              DEFAULT: '#DC2626', // Soft Red
+              soft: '#FEF2F2',
+              border: '#FECACA',
+            },
+            surface: {
+              bg: '#F8FAFC',
+              card: '#FFFFFF',
+              border: '#E2E8F0',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+    }
+    h1, h2, h3, h4, h5, h6, .font-heading {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .card-os {
+      background-color: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.02);
+    }
+    .nav-item-active {
+      background-color: #1E293B;
+      color: #FFFFFF !important;
+      box-shadow: 0 4px 12px -2px rgba(30, 41, 59, 0.25);
+    }
+    .ai-btn-glow {
+      background-color: #7C3AED;
+      color: #FFFFFF;
+      box-shadow: 0 4px 14px -2px rgba(124, 58, 237, 0.35);
+    }
+    .ai-btn-glow:hover {
+      background-color: #6D28D9;
+    }
+    .ai-soft-badge {
+      background-color: #F5F3FF;
+      color: #7C3AED;
+      border: 1px solid #DDD6FE;
+    }
+    .green-soft-badge {
+      background-color: #F0FDF4;
+      color: #16A34A;
+      border: 1px solid #BBF7D0;
+    }
+    .amber-soft-badge {
+      background-color: #FFFBEB;
+      color: #D97706;
+      border: 1px solid #FDE68A;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+
+  <!-- TOP APP HEADER (OS TEACHER BRAND & NAVIGATION) -->
+  <header class="bg-white border-b border-surface-border sticky top-0 z-50 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- BRAND LOGO -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-navy text-white flex items-center justify-center shadow-md shadow-navy/20 font-bold">
+            <i data-lucide="sparkles" class="w-5 h-5 text-purple-300"></i>
+          </div>
+          <div>
+            <div class="font-heading font-extrabold text-navy-dark text-base tracking-tight flex items-center gap-2">
+              <span>OS Teacher</span>
+              <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-ai-soft text-ai border border-ai-border">v2 Workspace</span>
+            </div>
+            <div class="text-xs text-slate-500 font-medium">SMAN 1 Teladan Jakarta • Ganjil 2026/2027</div>
+          </div>
+        </div>
+
+        <!-- MAIN NAVIGATION (STRUKTUR NAVIGASI V2 DOKUMEN) -->
+        <nav class="hidden md:flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+          <button onclick="switchScreen('dashboard')" id="nav-dashboard" class="nav-btn nav-item-active px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all text-slate-700">
+            <i data-lucide="home" class="w-4 h-4"></i>
+            <span>Beranda</span>
+          </button>
+          <button onclick="switchScreen('hariini')" id="nav-hariini" class="nav-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 hover:text-navy hover:bg-white">
+            <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i>
+            <span>Hari Ini</span>
+          </button>
+          <button onclick="switchScreen('kelassaya')" id="nav-kelassaya" class="nav-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 hover:text-navy hover:bg-white">
+            <i data-lucide="school" class="w-4 h-4 text-slate-500"></i>
+            <span>Kelas Saya</span>
+          </button>
+          <button onclick="switchScreen('perangkatajar')" id="nav-perangkatajar" class="nav-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 hover:text-navy hover:bg-white">
+            <i data-lucide="book-open" class="w-4 h-4 text-slate-500"></i>
+            <span>Perangkat Ajar</span>
+          </button>
+          <button onclick="switchScreen('asistenai')" id="nav-asistenai" class="nav-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 hover:text-ai hover:bg-white">
+            <i data-lucide="wand-2" class="w-4 h-4 text-ai"></i>
+            <span>Asisten AI</span>
+          </button>
+          <button onclick="switchScreen('evaluasi')" id="nav-evaluasi" class="nav-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all text-slate-600 hover:text-navy hover:bg-white">
+            <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-500"></i>
+            <span>Evaluasi</span>
+          </button>
+        </nav>
+
+        <!-- TEACHER PROFILE & QUICK SETTINGS -->
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden sm:block">
+            <div class="text-xs font-bold text-navy-dark">Bu Siti Rahmawati, S.Pd</div>
+            <div class="text-[11px] text-slate-500">Guru Biologi</div>
+          </div>
+          <div class="w-9 h-9 rounded-full bg-navy text-white font-bold flex items-center justify-center text-xs shadow-xs">
+            SR
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CANVAS -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col gap-6">
+
+    <!-- ========================================================================= -->
+    <!-- SCREEN 1: DAILY TEACHING WORKSPACE (BERANDA V2) -->
+    <!-- ========================================================================= -->
+    <section id="screen-dashboard" class="screen-view flex flex-col gap-6">
+      
+      <!-- HERO HEADER: RUANG KERJA MENGAJAR HARI INI -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-surface-border">
+        <div>
+          <h1 class="text-2xl font-heading font-extrabold text-navy-dark">Workspace Mengajar Hari Ini</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Selasa, 15 September 2026 • Fokus pada persiapan, pelaksanaan kelas, dan tindak lanjut siswa.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="green-soft-badge px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-eduGreen animate-pulse"></span>
+            2 Sesi Mengajar Terjadwal
+          </span>
+        </div>
+      </div>
+
+      <!-- 1. AKTIVITAS HARI INI (KOMPONEN UTAMA DOKUMEN V2 - TANPA PERSENTASE) -->
+      <div class="card-os rounded-2xl p-6 space-y-4 border-l-4 border-l-navy">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-4">
+            <div class="p-3 rounded-xl bg-navy text-white flex-shrink-0">
+              <i data-lucide="clock" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="green-soft-badge px-2.5 py-0.5 rounded text-[11px] font-bold">SESI BERIKUTNYA</span>
+                <span class="text-xs font-bold text-navy">07:30 - 09:00 WIB</span>
+                <span class="text-xs text-slate-400">• Lab Biologi</span>
+              </div>
+              <h2 class="text-lg font-heading font-bold text-navy-dark mt-1">Biologi — Kelas XI RPL 1</h2>
+              <div class="text-xs text-slate-600 mt-0.5">
+                Topik Hari Ini: <strong class="text-navy-dark">Struktur Sel, Membran Plasma & Transport Zat</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- STATUS KESIAPAN MATERI (CHECKLIST RAMAH, TANPA PERSENTASE) -->
+          <div class="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <span class="green-soft-badge px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Modul Ajar Siap
+              </span>
+              <span class="green-soft-badge px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Soal Kuis Siap
+              </span>
+              <span class="amber-soft-badge px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1">
+                <i data-lucide="help-circle" class="w-3.5 h-3.5"></i> PPT Belum Ada
+              </span>
+            </div>
+
+            <!-- AKSI CEPAT LANGSUNG -->
+            <div class="flex items-center gap-2 w-full sm:w-auto pt-1">
+              <button onclick="switchScreen('perangkatajar')" class="flex-1 sm:flex-initial px-3 py-2 rounded-xl text-xs font-bold ai-soft-badge hover:bg-purple-100 flex items-center justify-center gap-1.5 transition-all">
+                <i data-lucide="wand-2" class="w-3.5 h-3.5 text-ai"></i>
+                ✨ Buat PPT dengan AI
+              </button>
+              <button onclick="switchScreen('hariini')" class="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold bg-navy hover:bg-navy-light text-white flex items-center justify-center gap-1.5 shadow-sm transition-all">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                Mulai Mengajar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. QUICK CREATE AI (PILIHAN CEPAT TANPA PROMPT KOSONG - WARNA AI PURPLE) -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-4 h-4 text-ai"></i>
+            Quick Create AI (Asisten Guru)
+          </h2>
+          <span class="text-[11px] text-slate-400">Pilih kebutuhan, AI langsung siapkan sesuai kurikulum</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          
+          <!-- 1. BUAT PPT -->
+          <div onclick="switchScreen('asistenai')" class="card-os rounded-2xl p-4 hover:border-ai hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-32">
+            <div class="w-9 h-9 rounded-xl bg-ai-soft text-ai flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i data-lucide="presentation" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-navy-dark group-hover:text-ai transition-colors">Buat PPT</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Slide tayang presentasi</p>
+            </div>
+          </div>
+
+          <!-- 2. BUAT SOAL & KUIS -->
+          <div onclick="switchScreen('asistenai')" class="card-os rounded-2xl p-4 hover:border-ai hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-32">
+            <div class="w-9 h-9 rounded-xl bg-ai-soft text-ai flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i data-lucide="help-circle" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-navy-dark group-hover:text-ai transition-colors">Buat Soal & Kuis</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Pilihan ganda & esai rubrik</p>
+            </div>
+          </div>
+
+          <!-- 3. BUAT MODUL AJAR / RPP -->
+          <div onclick="switchScreen('asistenai')" class="card-os rounded-2xl p-4 hover:border-ai hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-32">
+            <div class="w-9 h-9 rounded-xl bg-ai-soft text-ai flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i data-lucide="file-text" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-navy-dark group-hover:text-ai transition-colors">Buat Modul Ajar</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Kurikulum Merdeka 1-Klik</p>
+            </div>
+          </div>
+
+          <!-- 4. BUAT LKPD -->
+          <div onclick="switchScreen('asistenai')" class="card-os rounded-2xl p-4 hover:border-ai hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-32">
+            <div class="w-9 h-9 rounded-xl bg-ai-soft text-ai flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-navy-dark group-hover:text-ai transition-colors">Buat LKPD</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Lembar kerja praktikum</p>
+            </div>
+          </div>
+
+          <!-- 5. BUAT MATERI & RINGKASAN -->
+          <div onclick="switchScreen('asistenai')" class="card-os rounded-2xl p-4 hover:border-ai hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-32 col-span-2 sm:col-span-1">
+            <div class="w-9 h-9 rounded-xl bg-ai-soft text-ai flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i data-lucide="book-marked" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-xs text-navy-dark group-hover:text-ai transition-colors">Buat Bahan Ajar</div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Bahan bacaan & analogi</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- DUA KOLOM: 3. LANJUTKAN PEKERJAAN & 4. RINGKASAN KELAS SAYA -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- KOLOM KIRI: LANJUTKAN PEKERJAAN DRAFTS (7 COLS) -->
+        <div class="lg:col-span-7 card-os rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+              <i data-lucide="history" class="w-5 h-5 text-navy"></i>
+              <h3 class="font-heading font-bold text-sm text-navy-dark">Lanjutkan Pekerjaan Terakhir</h3>
+            </div>
+            <span class="text-xs text-slate-400">3 Draft Tersimpan</span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- DRAFT 1 -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-purple-100 text-ai flex items-center justify-center font-bold text-xs">
+                  PPT
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-navy-dark">Slide: Struktur Sel & Membran (12 Slide)</div>
+                  <div class="text-[11px] text-slate-500">XI RPL 1 • Terakhir diubah 35 menit lalu</div>
+                </div>
+              </div>
+              <button onclick="switchScreen('perangkatajar')" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-navy-dark text-xs font-bold">
+                Lanjutkan &rarr;
+              </button>
+            </div>
+
+            <!-- DRAFT 2 -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">
+                  ESAI
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-navy-dark">8 Jawaban Esai Kuis Sel Belum Dinilai</div>
+                  <div class="text-[11px] text-slate-500">XI RPL 1 • Butuh rubrik penilaian guru</div>
+                </div>
+              </div>
+              <button onclick="switchScreen('evaluasi')" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs">
+                Koreksi &rarr;
+              </button>
+            </div>
+
+            <!-- DRAFT 3 -->
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                  RPP
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-navy-dark">Modul Ajar: Sistem Peredaran Darah</div>
+                  <div class="text-[11px] text-slate-500">XI IPA 2 • Draft Kurikulum Merdeka</div>
+                </div>
+              </div>
+              <button onclick="switchScreen('asistenai')" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-navy-dark text-xs font-bold">
+                Lanjutkan &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- KOLOM KANAN: RINGKASAN KELAS SAYA (5 COLS) -->
+        <div class="lg:col-span-5 card-os rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+              <i data-lucide="school" class="w-5 h-5 text-navy"></i>
+              <h3 class="font-heading font-bold text-sm text-navy-dark">Ringkasan Kelas Saya</h3>
+            </div>
+            <button onclick="switchScreen('kelassaya')" class="text-xs font-bold text-ai hover:underline">
+              Kelola &rarr;
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <!-- KELAS 1 -->
+            <div onclick="switchScreen('kelassaya')" class="p-3.5 rounded-xl border border-slate-200 hover:border-navy hover:bg-slate-50/50 transition-all cursor-pointer space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-navy-dark">XI RPL 1 (Biologi)</span>
+                <span class="text-[11px] text-slate-500">32 Siswa</span>
+              </div>
+              <div class="text-[11px] text-slate-600">Jadwal: Selasa, 07:30 - 09:00 WIB</div>
+              <div class="flex items-center gap-2 pt-1">
+                <span class="green-soft-badge px-2 py-0.5 rounded text-[10px] font-bold">90.6% Tuntas KKM</span>
+                <span class="amber-soft-badge px-2 py-0.5 rounded text-[10px] font-bold">3 Perlu Remedial</span>
+              </div>
+            </div>
+
+            <!-- KELAS 2 -->
+            <div onclick="switchScreen('kelassaya')" class="p-3.5 rounded-xl border border-slate-200 hover:border-navy hover:bg-slate-50/50 transition-all cursor-pointer space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs text-navy-dark">XI IPA 2 (Biologi)</span>
+                <span class="text-[11px] text-slate-500">30 Siswa</span>
+              </div>
+              <div class="text-[11px] text-slate-600">Jadwal: Selasa, 10:15 - 11:45 WIB</div>
+              <div class="flex items-center gap-2 pt-1">
+                <span class="green-soft-badge px-2 py-0.5 rounded text-[10px] font-bold">100% Tuntas KKM</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- SCREEN 2: HARI INI (PELAKSANAAN MENGAJAR DI KELAS) -->
+    <!-- ========================================================================= -->
+    <section id="screen-hariini" class="screen-view hidden flex-col gap-6">
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-surface-border">
+        <div>
+          <h1 class="text-2xl font-heading font-extrabold text-navy-dark">Jadwal & Pelaksanaan Hari Ini</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Alur mengajar tatap muka, absensi kilat, dan materi tayang kelas.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-3.5 py-2 rounded-xl bg-navy text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+            Presensi Siswa Sekarang
+          </button>
+        </div>
+      </div>
+
+      <!-- TIMELINE SESI HARI INI -->
+      <div class="space-y-4">
+        
+        <!-- SESI 1 (AKTIF) -->
+        <div class="card-os rounded-2xl p-6 border-l-4 border-l-eduGreen space-y-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="green-soft-badge px-2.5 py-0.5 rounded text-[11px] font-bold">SEDANG BERLANGSUNG</span>
+                <span class="text-xs font-mono font-bold text-navy">07:30 - 09:00 WIB</span>
+              </div>
+              <h2 class="text-lg font-heading font-bold text-navy-dark mt-1">XI RPL 1 • Biologi (Fase F)</h2>
+              <div class="text-xs text-slate-600">Materi: Ketauhidan Nabi Ibrahim & Relevansinya dengan Sains</div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button class="px-3 py-1.5 rounded-lg bg-navy hover:bg-navy-light text-white text-xs font-bold">
+                Buka Absensi (32 Siswa)
+              </button>
+              <button onclick="switchScreen('perangkatajar')" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-navy-dark text-xs font-semibold">
+                Tayangkan PPT
+              </button>
+            </div>
+          </div>
+
+          <!-- MATERI & TAHAPAN AKTIVITAS BELAJAR -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-500 uppercase">1. Pembuka (15 Menit)</div>
+              <div class="text-xs font-semibold text-navy-dark mt-1">Apersepsi & Tayang Studi Kasus</div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-500 uppercase">2. Inti (50 Menit)</div>
+              <div class="text-xs font-semibold text-navy-dark mt-1">Diskusi Kelompok & Praktikum</div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="text-[11px] font-bold text-slate-500 uppercase">3. Penutup (25 Menit)</div>
+              <div class="text-xs font-semibold text-navy-dark mt-1">Kuis Kilat via PIN Ruang</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SESI 2 (SIANG) -->
+        <div class="card-os rounded-2xl p-6 border-l-4 border-l-slate-400 space-y-3">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded text-[11px] font-bold">SESI 2 (NANTI SIANG)</span>
+                <span class="text-xs font-mono font-bold text-slate-600">10:15 - 11:45 WIB</span>
+              </div>
+              <h2 class="text-base font-heading font-bold text-navy-dark mt-1">XI IPA 2 • Biologi</h2>
+              <div class="text-xs text-slate-500">Materi: Sistem Peredaran Darah Manusia</div>
+            </div>
+            <button class="px-3.5 py-1.5 rounded-lg bg-white border border-slate-300 text-navy-dark text-xs font-bold hover:bg-slate-50">
+              Siapkan Bahan
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- SCREEN 3: KELAS SAYA (HUB TERPADU KELAS - STRUKTUR V2 DOKUMEN) -->
+    <!-- ========================================================================= -->
+    <section id="screen-kelassaya" class="screen-view hidden flex-col gap-6">
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-surface-border">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-heading font-extrabold text-navy-dark">Kelas XI RPL 1</h1>
+            <span class="green-soft-badge px-2.5 py-0.5 rounded-full text-xs font-bold">Biologi • 32 Siswa</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Satu workspace terpadu untuk mengelola seluruh data siswa, presensi, nilai, catatan guru, dan materi kelas.</p>
+        </div>
+
+        <!-- PILIHAN KELAS LAIN -->
+        <select class="bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-navy-dark font-bold">
+          <option selected>Ganti Kelas: XI RPL 1</option>
+          <option>Ganti Kelas: XI IPA 2</option>
+          <option>Ganti Kelas: X MIPA 3</option>
+        </select>
+      </div>
+
+      <!-- TAB MENU INTERNAL KELAS (SISWA | PRESENSI | NILAI | CATATAN | MATERI) -->
+      <div class="flex items-center gap-2 border-b border-surface-border pb-2 overflow-x-auto">
+        <button class="px-4 py-2 rounded-xl bg-navy text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          Daftar Siswa (32)
+        </button>
+        <button class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-navy hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i>
+          Presensi & Absensi
+        </button>
+        <button class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-navy hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="table-2" class="w-4 h-4"></i>
+          Buku Nilai (Excel)
+        </button>
+        <button class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-navy hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          Catatan & Jurnal Guru
+        </button>
+        <button class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-navy hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          Materi & Modul
+        </button>
+      </div>
+
+      <!-- KONTEN TAB: DAFTAR SISWA KELAS -->
+      <div class="card-os rounded-2xl p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="text-xs text-slate-500 font-medium">Menampilkan 32 siswa terdaftar aktif di kelas XI RPL 1</div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="text" placeholder="Cari nama atau NISN..." class="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs text-navy-dark w-full sm:w-64" />
+            <button class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-navy-dark text-xs font-bold border border-slate-200 flex-shrink-0">
+              + Tambah Catatan
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left text-xs text-slate-700">
+            <thead class="bg-slate-100 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-3.5">NISN</th>
+                <th class="p-3.5">Nama Lengkap Siswa</th>
+                <th class="p-3.5 text-center">Kehadiran</th>
+                <th class="p-3.5 text-center">Rata-Rata Nilai</th>
+                <th class="p-3.5 text-center">Status KKM</th>
+                <th class="p-3.5 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white font-medium">
+              <tr class="hover:bg-slate-50">
+                <td class="p-3.5 font-mono text-slate-500">00849201</td>
+                <td class="p-3.5 font-bold text-navy-dark">Ahmad Fauzi</td>
+                <td class="p-3.5 text-center text-emerald-600 font-bold">100% (Hadir)</td>
+                <td class="p-3.5 text-center font-mono font-bold text-navy-dark">90.8</td>
+                <td class="p-3.5 text-center">
+                  <span class="green-soft-badge px-2.5 py-0.5 rounded-full text-[11px] font-bold">Tuntas</span>
+                </td>
+                <td class="p-3.5 text-right">
+                  <button class="text-xs text-ai font-bold hover:underline">Profil & Jurnal</button>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50">
+                <td class="p-3.5 font-mono text-slate-500">00849202</td>
+                <td class="p-3.5 font-bold text-navy-dark">Budi Santoso</td>
+                <td class="p-3.5 text-center text-emerald-600 font-bold">96%</td>
+                <td class="p-3.5 text-center font-mono font-bold text-navy-dark">82.5</td>
+                <td class="p-3.5 text-center">
+                  <span class="green-soft-badge px-2.5 py-0.5 rounded-full text-[11px] font-bold">Tuntas</span>
+                </td>
+                <td class="p-3.5 text-right">
+                  <button class="text-xs text-ai font-bold hover:underline">Profil & Jurnal</button>
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-50">
+                <td class="p-3.5 font-mono text-slate-500">00849203</td>
+                <td class="p-3.5 font-bold text-navy-dark">Dedi Kusnadi</td>
+                <td class="p-3.5 text-center text-amber-600 font-bold">88% (1 Izin)</td>
+                <td class="p-3.5 text-center font-mono font-bold text-amber-600">68.3</td>
+                <td class="p-3.5 text-center">
+                  <span class="amber-soft-badge px-2.5 py-0.5 rounded-full text-[11px] font-bold">Remedial</span>
+                </td>
+                <td class="p-3.5 text-right">
+                  <button class="text-xs text-ai font-bold hover:underline">Profil & Jurnal</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- SCREEN 4: ASISTEN AI & PERANGKAT AJAR (AI PURPLE COPILOT) -->
+    <!-- ========================================================================= -->
+    <section id="screen-asistenai" class="screen-view hidden flex-col gap-6">
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-surface-border">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-heading font-extrabold text-navy-dark">Asisten AI Guru</h1>
+            <span class="ai-soft-badge px-2.5 py-0.5 rounded-full text-xs font-bold">Gemini 3.6 Flash</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Pembuatan RPP, Slide PPTX, LKPD, dan Soal Kuis tanpa perlu kemampuan prompt engineering rumit.</p>
+        </div>
+      </div>
+
+      <!-- WORKSPACE AI DUAL-PANE -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px]">
+        
+        <!-- PANE KIRI: PARAMETER INPUT SEDERHANA -->
+        <div class="lg:col-span-5 card-os rounded-2xl p-6 flex flex-col justify-between space-y-5">
+          <div class="space-y-4">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+              <i data-lucide="sliders" class="w-4 h-4 text-ai"></i>
+              Pengaturan Cepat Pembuatan
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-navy-dark">Pilih Format Output</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button class="p-2.5 rounded-xl text-xs font-bold bg-ai text-white shadow-xs">Slide Presentasi (PPTX)</button>
+                <button class="p-2.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">Modul Ajar / RPP</button>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-navy-dark">Target Kelas & Mapel</label>
+              <select class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-navy-dark font-medium">
+                <option selected>Biologi — Kelas XI RPL 1 (Fase F)</option>
+                <option>Biologi — Kelas XI IPA 2</option>
+              </select>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-navy-dark">Topik Pembelajaran</label>
+              <input type="text" value="Struktur Sel, Membran Plasma & Transport Zat" class="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-navy-dark font-medium" />
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-navy-dark">Instruksi Guru (Opsional)</label>
+              <textarea rows="3" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-xs text-navy-dark" placeholder="Contoh: Buat 10 slide ringkas disertai analogi lalu lintas sel...">Buatkan slide presentasi 10 halaman dengan diagram alur osmosis dan studi kasus praktikum kentang.</textarea>
+            </div>
+          </div>
+
+          <button class="w-full py-3 rounded-xl ai-btn-glow font-bold text-xs flex items-center justify-center gap-2 transition-all">
+            <i data-lucide="sparkles" class="w-4 h-4 text-purple-200"></i>
+            Buat Slide PPTX Sekarang
+          </button>
+        </div>
+
+        <!-- PANE KANAN: PRATINJAU SLIDE CANVAS -->
+        <div class="lg:col-span-7 card-os rounded-2xl p-6 flex flex-col justify-between space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-surface-border">
+            <div class="flex items-center gap-2">
+              <i data-lucide="layout" class="w-5 h-5 text-ai"></i>
+              <span class="text-xs font-bold text-navy-dark">Pratinjau Slide Presentasi (10 Slide Siap)</span>
+            </div>
+            <button class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              Unduh File .pptx
+            </button>
+          </div>
+
+          <!-- SLIDE PREVIEW CONTAINER -->
+          <div class="flex-1 bg-slate-900 rounded-2xl p-6 text-white flex flex-col justify-between aspect-video max-h-[380px] shadow-lg border border-slate-800">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-widest text-purple-300">BIOLOGI KELAS XI • SLIDE 1 DARI 10</span>
+              <span class="text-xs text-slate-400">Kurikulum Merdeka</span>
+            </div>
+            
+            <div class="space-y-2 text-center py-6">
+              <div class="inline-block px-3 py-1 rounded-full bg-white/10 text-xs font-bold text-purple-300 backdrop-blur-sm">
+                Bab 2: Fisiologi Sel
+              </div>
+              <h2 class="text-2xl font-heading font-extrabold text-white">
+                Struktur Membran Sel & Transport Aktif
+              </h2>
+              <p class="text-xs text-slate-300 max-w-md mx-auto">
+                Bagaimana sel mengatur keluar-masuknya molekul nutrisi dan air untuk menjaga keseimbangan tubuh.
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800 pt-3">
+              <span>Pengampu: Bu Siti Rahmawati, S.Pd</span>
+              <span>SMAN 1 Teladan Jakarta</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <span class="text-xs text-slate-500">✨ Slide tersusun rapi dengan tipografi 16:9 siap tayang ke proyektor.</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- SCREEN 5: EVALUASI & REKAP KUIS (KOREKSI & NILAI) -->
+    <!-- ========================================================================= -->
+    <section id="screen-evaluasi" class="screen-view hidden flex-col gap-6">
+      
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-surface-border">
+        <div>
+          <h1 class="text-2xl font-heading font-extrabold text-navy-dark">Evaluasi Pembelajaran & Nilai</h1>
+          <p class="text-xs text-slate-500 mt-0.5">Penilaian formatif, koreksi esai dengan rubrik, dan rekapitulasi nilai resmi.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Ekspor Rekap Nilai (.xlsx)
+          </button>
+        </div>
+      </div>
+
+      <!-- LEMBAR KOREKSI ESAI CEPAT -->
+      <div class="card-os rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-surface-border">
+          <div class="flex items-center gap-2">
+            <i data-lucide="check-square" class="w-5 h-5 text-amber-600"></i>
+            <h3 class="font-heading font-bold text-sm text-navy-dark">Koreksi Esai: Kuis Biologi (XI RPL 1)</h3>
+          </div>
+          <span class="amber-soft-badge px-2.5 py-0.5 rounded-full text-xs font-bold">8 Siswa Menunggu Koreksi</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- JAWABAN SISWA -->
+          <div class="lg:col-span-7 bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-navy-dark">Siswa: Ahmad Fauzi (NISN: 00849201)</span>
+              <span class="text-[11px] text-slate-500">Skor PG: 80/80</span>
+            </div>
+            <div class="text-xs font-semibold text-navy-dark">Soal: Jelaskan peristiwa hemolisis sel darah merah pada larutan hipotonik!</div>
+            <div class="p-3 rounded-lg bg-white border border-slate-200 text-xs italic text-slate-800">
+              "Air masuk ke dalam sel darah secara osmosis hingga sel membengkak dan akhirnya pecah karena tidak memiliki dinding sel."
+            </div>
+          </div>
+
+          <!-- RUBRIK & INPUT NILAI -->
+          <div class="lg:col-span-5 space-y-3">
+            <div class="text-xs font-bold text-navy-dark">Beri Nilai Esai (Maks: 20 Poin):</div>
+            <div class="grid grid-cols-4 gap-2">
+              <button class="py-2 rounded-lg border border-slate-300 text-xs font-bold hover:bg-slate-100">5 Pts</button>
+              <button class="py-2 rounded-lg border border-slate-300 text-xs font-bold hover:bg-slate-100">10 Pts</button>
+              <button class="py-2 rounded-lg border border-slate-300 text-xs font-bold hover:bg-slate-100">15 Pts</button>
+              <button class="py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold shadow-xs">20 (Full)</button>
+            </div>
+            <button class="w-full py-2.5 rounded-xl bg-navy hover:bg-navy-light text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs">
+              Simpan & Siswa Berikutnya (Ctrl + Enter)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION PERANGKAT AJAR (ALIAS UNTUK NAVIGASI) -->
+    <section id="screen-perangkatajar" class="screen-view hidden flex-col gap-6">
+      <div class="card-os rounded-2xl p-6 text-center space-y-3">
+        <h2 class="text-base font-bold text-navy-dark">Perangkat Ajar Terintegrasi</h2>
+        <p class="text-xs text-slate-500">Seluruh modul ajar, slide presentasi PPTX, dan LKPD dapat dikelola dari Asisten AI dan Ruang Kelas.</p>
+        <button onclick="switchScreen('asistenai')" class="px-4 py-2 rounded-xl ai-btn-glow text-xs font-bold">
+          Buka Asisten AI Perangkat Ajar &rarr;
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-surface-border bg-white py-4 px-6 text-center text-xs text-slate-500">
+    OS Teacher v2 • Intelligent Teaching Workspace • Deep Navy & AI Purple Identity
+  </footer>
+
+  <!-- SCRIPT SWITCHER -->
+  <script>
+    lucide.createIcons();
+
+    function switchScreen(screenId) {
+      document.querySelectorAll('.screen-view').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      });
+
+      const target = document.getElementById('screen-' + screenId);
+      if (target) {
+        target.classList.remove('hidden');
+        target.classList.add('flex');
+      }
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('nav-item-active');
+      });
+
+      const activeNav = document.getElementById('nav-' + screenId);
+      if (activeNav) {
+        activeNav.classList.add('nav-item-active');
+      }
+
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
