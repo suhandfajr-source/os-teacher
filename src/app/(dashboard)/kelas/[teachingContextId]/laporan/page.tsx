@@ -10,7 +10,7 @@ import {
   getAcademicCoverageReport,
 } from "@/modules/reporting/reporting.actions";
 import { ReportType } from "@/modules/reporting/reporting.types";
-import KelasTabs from "../KelasTabs";
+
 
 export default async function ContextualReportingPage({
   params,
@@ -99,7 +99,6 @@ export default async function ContextualReportingPage({
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-16">
-      <KelasTabs teachingContextId={teachingContextId} />
       <ReportingClient
         contexts={formattedContexts}
         initialContextId={teachingContextId}

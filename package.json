@@ -21,6 +21,7 @@
     "date-fns": "^4.4.0",
     "docx": "^9.7.1",
     "docxtemplater": "^3.69.3",
+    "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.11.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
@@ -44,6 +45,7 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
+    "@types/exceljs": "^0.5.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

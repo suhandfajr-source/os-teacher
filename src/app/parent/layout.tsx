@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ParentLogoutButton } from "./ParentLogoutButton";
 import { HeartHandshake } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function ParentLayout({ children }: { children: React.ReactNode }) {
   let session = null;
   try {

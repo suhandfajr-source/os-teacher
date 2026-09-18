@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { createClassAction } from "@/modules/classes/classes.actions";
 import { toast } from "sonner";
-import { Plus, GraduationCap } from "lucide-react";
+import { Plus, GraduationCap, Clock } from "lucide-react";
+import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
 import type { TeacherProfile, AcademicPeriod, Subject, Class as PrismaClass, TeachingContext, School } from "@prisma/client";
 
 type ProfileWithContext = TeacherProfile & {
@@ -118,9 +119,17 @@ export default function SetupManager({ initialProfile, activeSchool }: { initial
           {activeTab === "context" && (
             <div className="space-y-4">
               {initialProfile.teachingContexts.map((ctx) => (
-                <div key={ctx.id} className="p-4 border rounded-md">
-                  <div className="font-semibold">{ctx.subject.name} — {ctx.class.name}</div>
-                  <div className="text-sm text-muted-foreground">{ctx.academicPeriod.year} {ctx.academicPeriod.semester}</div>
+                <div key={ctx.id} className="p-4 border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card hover:border-primary/50 transition-colors">
+                  <div>
+                    <div className="font-semibold text-base">{ctx.subject.name} — {ctx.class.name}</div>
+                    <div className="text-sm text-muted-foreground">{ctx.academicPeriod.year} {ctx.academicPeriod.semester}</div>
+                  </div>
+                  <div className="shrink-0">
+                    <ScheduleConfigDialog
+                      teachingContextId={ctx.id}
+                      contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
+                    />
+                  </div>
                 </div>
               ))}
               {initialProfile.teachingContexts.length === 0 && (

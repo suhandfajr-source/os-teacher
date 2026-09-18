@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klassa — Showcase Master Arsitektur Fill Shape System</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              pine: '#0F766E',
+              pineLight: '#14B8A6',
+              mint: '#CCFBF1',
+              pearl: '#F6F8F8',
+              aiIndigo: '#6366F1',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #F6F8F8;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: #0F172A;
+    }
+
+    /* Master Fill Shape Surface Gradients */
+    .shape-card-teal {
+      background: linear-gradient(135deg, #FFFFFF 0%, #F0FDFA 100%);
+      border: 1.5px solid rgba(204, 251, 241, 0.9);
+      box-shadow: 0 4px 20px -2px rgba(15, 118, 110, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+    .shape-card-amber {
+      background: linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 100%);
+      border: 1.5px solid rgba(253, 230, 138, 0.9);
+      box-shadow: 0 4px 20px -2px rgba(217, 119, 6, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+    .shape-card-indigo {
+      background: linear-gradient(135deg, #FFFFFF 0%, #EEF2FF 100%);
+      border: 1.5px solid rgba(199, 210, 254, 0.9);
+      box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    }
+
+    /* Floating 3D Squircle Icon Glow Shaders */
+    .squircle-glow-teal {
+      background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+      box-shadow: 0 8px 18px -2px rgba(15, 118, 110, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+    .squircle-glow-amber {
+      background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      box-shadow: 0 8px 18px -2px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+    .squircle-glow-indigo {
+      background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+      box-shadow: 0 8px 18px -2px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    /* Active Selection Ring */
+    .shape-card-selected {
+      border: 2px solid #0F766E !important;
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2), 0 10px 25px -4px rgba(15, 118, 110, 0.15) !important;
+      transform: translateY(-3px);
+    }
+
+    /* Tactile Button Cushion */
+    .btn-tactile {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-tactile:active {
+      transform: scale(0.97);
+    }
+    .btn-ai-sparkle {
+      background: linear-gradient(135deg, #0F766E 0%, #14B8A6 45%, #6366F1 100%);
+      box-shadow: 0 4px 16px -2px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Calendar Cell Animations */
+    .cell-interactive {
+      transition: all 0.15s ease-in-out;
+    }
+    .cell-interactive:hover {
+      transform: scale(1.08);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 antialiased">
+
+  <!-- TOP HEADER -->
+  <header class="max-w-6xl mx-auto mb-8">
+    <div class="bg-white/95 backdrop-blur-md p-4 md:p-5 rounded-3xl border border-slate-200/80 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="h-11 w-11 rounded-2xl squircle-glow-teal text-white flex items-center justify-center font-black text-xl">
+          ✨
+        </div>
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[10px] font-extrabold uppercase tracking-wider mb-1">
+            Official Master Spec
+          </div>
+          <h1 class="text-base md:text-lg font-black text-slate-900 leading-none">
+            Fill Shape Architecture Showcase
+          </h1>
+          <p class="text-xs text-slate-500 mt-1">
+            Visualisasi Dual-Gradient Glass + Floating 3D Squircle + Tactile Buttons
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-teal-900 bg-teal-50/80 border border-teal-200 px-3.5 py-1.5 rounded-xl font-bold">
+          💡 Coba klik kartu di bawah untuk melihat efek seleksi
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-6xl mx-auto space-y-8">
+
+    <!-- 1. COMPONENT A: WIZARD FEATURE OPTION CARDS (INTERACTIVE CLICKABLE) -->
+    <section class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">
+            1. Kotak Dialog Fitur (Interactive Fill Shape Cards)
+          </h3>
+          <p class="text-xs text-slate-500">
+            Klik kartu di bawah untuk merasakan transisi *active ring*, *checkmark pop*, dan *micro-lift*!
+          </p>
+        </div>
+        <span class="text-xs font-black text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+          Interactive Live Demo
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        <!-- Option 1: CP -->
+        <div
+          onclick="selectOption(1, this)"
+          id="optCard1"
+          class="option-card p-5 rounded-3xl shape-card-indigo cursor-pointer transition-all duration-200 relative group"
+        >
+          <div class="check-badge hidden absolute top-3.5 right-3.5 h-6 w-6 rounded-full bg-teal-700 text-white items-center justify-center text-xs font-black shadow-sm animate-in zoom-in-75 duration-150">
+            ✓
+          </div>
+          <div class="h-12 w-12 rounded-2xl squircle-glow-indigo text-white flex items-center justify-center mb-3.5 text-xl font-bold">
+            📖
+          </div>
+          <h4 class="text-sm font-black text-slate-900 mb-1">Capaian Pembelajaran (CP)</h4>
+          <p class="text-xs text-slate-600 leading-relaxed font-medium">
+            Ekstrak otomatis dari standar CP resmi kementerian (Kurikulum Merdeka Fase A s/d F).
+          </p>
+        </div>
+
+        <!-- Option 2: TOC Image (Pre-selected) -->
+        <div
+          onclick="selectOption(2, this)"
+          id="optCard2"
+          class="option-card p-5 rounded-3xl shape-card-teal shape-card-selected cursor-pointer transition-all duration-200 relative group"
+        >
+          <div class="check-badge flex absolute top-3.5 right-3.5 h-6 w-6 rounded-full bg-teal-700 text-white items-center justify-center text-xs font-black shadow-sm animate-in zoom-in-75 duration-150">
+            ✓
+          </div>
+          <div class="flex items-center gap-2 mb-3.5">
+            <div class="h-12 w-12 rounded-2xl squircle-glow-teal text-white flex items-center justify-center text-xl font-bold">
+              📸
+            </div>
+            <span class="text-[10px] bg-teal-700 text-white font-black px-2.5 py-1 rounded-full shadow-2xs">
+              ⭐ Favorit Guru
+            </span>
+          </div>
+          <h4 class="text-sm font-black text-slate-900 mb-1">Foto Daftar Isi Buku Paket</h4>
+          <p class="text-xs text-teal-950 leading-relaxed font-medium">
+            Jepret/upload foto daftar isi buku cetak siswa (Erlangga, Pusbuk, Yudhistira).
+          </p>
+        </div>
+
+        <!-- Option 3: Custom Text -->
+        <div
+          onclick="selectOption(3, this)"
+          id="optCard3"
+          class="option-card p-5 rounded-3xl shape-card-amber cursor-pointer transition-all duration-200 relative group"
+        >
+          <div class="check-badge hidden absolute top-3.5 right-3.5 h-6 w-6 rounded-full bg-teal-700 text-white items-center justify-center text-xs font-black shadow-sm animate-in zoom-in-75 duration-150">
+            ✓
+          </div>
+          <div class="h-12 w-12 rounded-2xl squircle-glow-amber text-white flex items-center justify-center mb-3.5 text-xl font-bold">
+            ✍️
+          </div>
+          <h4 class="text-sm font-black text-slate-900 mb-1">Tulis / Tempel Silabus</h4>
+          <p class="text-xs text-slate-600 leading-relaxed font-medium">
+            Copy-paste susunan bab dari file Word atau PDF silabus mandiri yang sudah Anda miliki.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. COMPONENT B: DASHBOARD STATISTIC CARDS (DUAL-GRADIENT GLASS) -->
+    <section class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">
+            2. Kartu Statistik Dashboard (Floating Squircles & Dual-Gradient)
+          </h3>
+          <p class="text-xs text-slate-500">
+            Melihat kekayaan warna, angka besar tebal, dan bayangan pendaran ikon
+          </p>
+        </div>
+        <span class="text-xs font-black text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+          Command Center
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+        <!-- Stat Card 1 -->
+        <div class="p-5 rounded-3xl shape-card-teal flex flex-col justify-between transition-all hover:translate-y-[-2px]">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-teal-800 uppercase tracking-wider">Konteks Mengajar</span>
+            <div class="h-11 w-11 rounded-2xl squircle-glow-teal text-white flex items-center justify-center text-base font-bold">
+              📚
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-3xl md:text-4xl font-black text-slate-900">4 Kelas</div>
+            <p class="text-xs text-teal-800 font-semibold mt-1">8A, 8B, 9A &bull; Pendidikan Agama Islam</p>
+          </div>
+        </div>
+
+        <!-- Stat Card 2 -->
+        <div class="p-5 rounded-3xl shape-card-amber flex flex-col justify-between transition-all hover:translate-y-[-2px]">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-amber-800 uppercase tracking-wider">Jadwal Hari Ini</span>
+            <div class="h-11 w-11 rounded-2xl squircle-glow-amber text-white flex items-center justify-center text-base font-bold">
+              📅
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-3xl md:text-4xl font-black text-slate-900">2 Sesi</div>
+            <p class="text-xs text-amber-800 font-semibold mt-1">1 sedang berlangsung, 1 sesi selesai</p>
+          </div>
+        </div>
+
+        <!-- Stat Card 3 -->
+        <div class="p-5 rounded-3xl shape-card-indigo flex flex-col justify-between transition-all hover:translate-y-[-2px]">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-indigo-800 uppercase tracking-wider">Siswa Terdaftar</span>
+            <div class="h-11 w-11 rounded-2xl squircle-glow-indigo text-white flex items-center justify-center text-base font-bold">
+              👥
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="text-3xl md:text-4xl font-black text-slate-900">128 Siswa</div>
+            <p class="text-xs text-indigo-800 font-semibold mt-1">Seluruh peserta didik aktif terdaftar</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. COMPONENT C: HERO SESSION CARD & TACTILE ACTION BUTTONS -->
+    <section class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">
+            3. Hero Sesi Mengajar & Tombol Aksi Taktil (Tactile Buttons)
+          </h3>
+          <p class="text-xs text-slate-500">
+            Melihat kombinasi tombol utama solid, tombol gradasi AI berkilau, dan tombol sekunder
+          </p>
+        </div>
+        <span class="text-xs font-black text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+          ⚡ Waktunya Mengajar
+        </span>
+      </div>
+
+      <!-- Hero Card -->
+      <div class="p-6 rounded-3xl shape-card-teal border-2 border-teal-300 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div class="flex items-start gap-4">
+          <div class="h-14 w-14 rounded-3xl squircle-glow-teal text-white flex items-center justify-center text-2xl font-black shrink-0">
+            ⚡
+          </div>
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs font-black text-teal-900 bg-teal-200/90 px-3 py-0.5 rounded-full uppercase tracking-wider">
+                07:30 - 09:00 WIB
+              </span>
+              <span class="text-xs font-bold text-slate-600">Ruang 8A &bull; 32 Siswa</span>
+            </div>
+            <h4 class="text-lg font-black text-slate-900">
+              Pendidikan Agama Islam — Kelas 8A (Bab 2: Akhlak Terpuji)
+            </h4>
+            <p class="text-xs text-slate-600 font-medium mt-0.5">
+              Jam Ke-1 s/d Ke-2 &bull; Target Materi: Nilai-nilai Kejujuran & Tanggung Jawab
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button class="btn-tactile px-5 py-3 rounded-2xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-black shadow-md flex items-center gap-2">
+            <span>▶️ Buka Sesi & Presensi Sekarang</span>
+          </button>
+          <button class="btn-tactile btn-ai-sparkle px-4 py-3 rounded-2xl text-white text-xs font-black flex items-center gap-2">
+            <span>✨ AI Slide / Modul</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. COMPONENT D: INTERACTIVE CALENDAR PROSEM GRID (VIBRANT CAPSULES) -->
+    <section class="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">
+            4. Matriks Mingguan PROSEM (Vibrant Color-Coded Capsules)
+          </h3>
+          <p class="text-xs text-slate-500">
+            Klik sel kotak di bawah untuk mencoba interaksi aktivasi/pengosongan jam secara langsung!
+          </p>
+        </div>
+        <span class="text-xs font-black text-teal-800 bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+          54 / 54 JP ✅ Seimbang
+        </span>
+      </div>
+
+      <div class="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 border-b border-slate-200 text-slate-900 font-black">
+              <th class="p-3 border-r border-slate-200 text-center w-12">No</th>
+              <th class="p-3 border-r border-slate-200 min-w-[240px]">Materi Pokok / Capaian Pembelajaran</th>
+              <th class="p-3 border-r border-slate-200 text-center w-16">Alokasi</th>
+              <th colspan="5" class="p-2 text-center border-r border-slate-200 bg-teal-100/90 text-teal-950 font-black uppercase">Juli</th>
+              <th colspan="5" class="p-2 text-center border-r border-slate-200 bg-emerald-100/90 text-emerald-950 font-black uppercase">Agustus</th>
+              <th colspan="5" class="p-2 text-center bg-cyan-100/90 text-cyan-950 font-black uppercase">September</th>
+            </tr>
+            <tr class="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 text-center font-mono font-bold">
+              <th class="border-r border-slate-200"></th>
+              <th class="border-r border-slate-200"></th>
+              <th class="border-r border-slate-200"></th>
+              <th class="p-1 border-r border-slate-200">1</th><th class="p-1 border-r border-slate-200">2</th><th class="p-1 border-r border-slate-200">3</th><th class="p-1 border-r border-slate-200">4</th><th class="p-1 border-r border-slate-200">5</th>
+              <th class="p-1 border-r border-slate-200">1</th><th class="p-1 border-r border-slate-200">2</th><th class="p-1 border-r border-slate-200">3</th><th class="p-1 border-r border-slate-200">4</th><th class="p-1 border-r border-slate-200">5</th>
+              <th class="p-1 border-r border-slate-200">1</th><th class="p-1 border-r border-slate-200">2</th><th class="p-1 border-r border-slate-200">3</th><th class="p-1 border-r border-slate-200">4</th><th class="p-1">5</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            <!-- Row 1 -->
+            <tr class="hover:bg-teal-50/30 transition-colors">
+              <td class="p-3 text-center border-r border-slate-200 font-mono text-slate-500 font-bold">1</td>
+              <td class="p-3 border-r border-slate-200 font-bold text-slate-900">Bab 1: Belajar Al-Qur'an Surah al-Ikhlāṣ</td>
+              <td class="p-3 border-r border-slate-200 text-center font-black text-teal-800">9 JP</td>
+              
+              <!-- Juli -->
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-black shadow-2xs cell-interactive">3</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-black shadow-2xs cell-interactive">3</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+
+              <!-- Agustus -->
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-black shadow-2xs cell-interactive">3</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+
+              <!-- September -->
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+            </tr>
+
+            <!-- Row 2: STS -->
+            <tr class="hover:bg-amber-50/40 bg-amber-50/20 transition-colors">
+              <td class="p-3 text-center border-r border-slate-200 font-mono text-slate-500 font-bold">2</td>
+              <td class="p-3 border-r border-slate-200 font-black text-amber-950 flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-200 text-amber-950 font-black shadow-2xs">STS</span>
+                <span>Sumatif Tengah Semester (UTS Gasal)</span>
+              </td>
+              <td class="p-3 border-r border-slate-200 text-center font-black text-amber-900">3 JP</td>
+              
+              <!-- Juli -->
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+
+              <!-- Agustus -->
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+
+              <!-- September -->
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+              <td class="p-1 text-center border-r border-slate-200 cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 text-amber-950 flex items-center justify-center font-black shadow-2xs border border-amber-300 cell-interactive">3</div></td>
+              <td class="p-1 text-center cursor-pointer" onclick="toggleCell(this)"><div class="h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive">·</div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    function selectOption(optId, cardElement) {
+      document.querySelectorAll('.option-card').forEach(card => {
+        card.classList.remove('shape-card-selected');
+        card.querySelector('.check-badge').classList.add('hidden');
+        card.querySelector('.check-badge').classList.remove('flex');
+      });
+
+      cardElement.classList.add('shape-card-selected');
+      const badge = cardElement.querySelector('.check-badge');
+      badge.classList.remove('hidden');
+      badge.classList.add('flex');
+    }
+
+    function toggleCell(tdElement) {
+      const inner = tdElement.querySelector('div');
+      if (inner.textContent.trim() === '·') {
+        inner.textContent = '3';
+        inner.className = 'h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-black shadow-2xs cell-interactive';
+      } else {
+        inner.textContent = '·';
+        inner.className = 'h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-300 cell-interactive';
+      }
+    }
+  </script>
+</body>
+</html>

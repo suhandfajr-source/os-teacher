@@ -8,7 +8,8 @@ import {
   verifyLearningObjectiveAccess,
   verifyAcademicPlanItemAccess,
 } from "@/lib/authorization";
-import { EntityStatus } from "@prisma/client";
+import { EntityStatus, Prisma } from "@prisma/client";
+import { PlanItemCategory } from "./academic.types";
 import {
   saveAcademicProfileSchema,
   createLearningObjectiveSchema,
@@ -16,6 +17,7 @@ import {
   reorderLearningObjectivesSchema,
   createAcademicPlanItemSchema,
   updateAcademicPlanItemSchema,
+  bulkSaveAcademicPlanSchema,
   reorderAcademicPlanItemsSchema,
   linkSessionObjectivesSchema,
   linkAssessmentObjectivesSchema,
@@ -28,9 +30,11 @@ import {
   ReorderLearningObjectivesInput,
   CreateAcademicPlanItemInput,
   UpdateAcademicPlanItemInput,
+  BulkSaveAcademicPlanInput,
   ReorderAcademicPlanItemsInput,
   LinkSessionObjectivesInput,
   LinkAssessmentObjectivesInput,
+  WeeklyDistributionSlot,
 } from "./academic.types";
 
 /**
@@ -58,19 +62,33 @@ export async function getAcademicContext(teachingContextId: string) {
     prisma.academicPlanItem.findMany({
       where: { teachingContextId: context.id },
       orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+      include: {
+        learningObjective: {
+          select: {
+            id: true,
+            code: true,
+            description: true,
+          },
+        },
+      },
     }),
   ]);
+
+  const formattedPlanItems = planItems.map((item) => ({
+    ...item,
+    weeklyDistribution: (item.weeklyDistribution as unknown as WeeklyDistributionSlot[]) || null,
+  }));
 
   return {
     context,
     profile,
     objectives,
-    planItems,
+    planItems: formattedPlanItems,
   };
 }
 
 /**
- * Creates or updates the AcademicContextProfile metadata (Curriculum, Phase, CP, Note).
+ * Creates or updates the AcademicContextProfile metadata (Curriculum, Phase, CP, Note, Hours).
  */
 export async function saveAcademicProfile(input: SaveAcademicProfileInput) {
   const validated = saveAcademicProfileSchema.parse(input);
@@ -84,12 +102,18 @@ export async function saveAcademicProfile(input: SaveAcademicProfileInput) {
       phase: validated.phase || null,
       academicNote: validated.academicNote || null,
       cpText: validated.cpText || null,
+      hoursPerWeek: validated.hoursPerWeek ?? 3,
+      effectiveWeeksSem1: validated.effectiveWeeksSem1 ?? 18,
+      effectiveWeeksSem2: validated.effectiveWeeksSem2 ?? 16,
     },
     update: {
       curriculumName: validated.curriculumName || null,
       phase: validated.phase || null,
       academicNote: validated.academicNote || null,
       cpText: validated.cpText || null,
+      ...(validated.hoursPerWeek !== undefined && { hoursPerWeek: validated.hoursPerWeek }),
+      ...(validated.effectiveWeeksSem1 !== undefined && { effectiveWeeksSem1: validated.effectiveWeeksSem1 }),
+      ...(validated.effectiveWeeksSem2 !== undefined && { effectiveWeeksSem2: validated.effectiveWeeksSem2 }),
     },
   });
 
@@ -120,6 +144,8 @@ export async function createLearningObjective(input: CreateLearningObjectiveInpu
       code: validated.code || null,
       description: validated.description,
       orderIndex,
+      targetSemester: validated.targetSemester ?? 1,
+      allocatedHours: validated.allocatedHours ?? 6,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -141,6 +167,8 @@ export async function updateLearningObjective(input: UpdateLearningObjectiveInpu
     data: {
       code: validated.code || null,
       description: validated.description,
+      ...(validated.targetSemester !== undefined && { targetSemester: validated.targetSemester }),
+      ...(validated.allocatedHours !== undefined && { allocatedHours: validated.allocatedHours }),
     },
   });
 
@@ -210,11 +238,17 @@ export async function createAcademicPlanItem(input: CreateAcademicPlanItemInput)
   const planItem = await prisma.academicPlanItem.create({
     data: {
       teachingContextId: context.id,
+      learningObjectiveId: validated.learningObjectiveId || null,
       planType: validated.planType,
+      category: validated.category || PlanItemCategory.REGULAR_MATERIAL,
       title: validated.title,
       targetMonth: validated.targetMonth || null,
+      targetSemester: validated.targetSemester ?? 1,
       allocatedHours: validated.allocatedHours || null,
       notes: validated.notes || null,
+      weeklyDistribution: validated.weeklyDistribution
+        ? (validated.weeklyDistribution as unknown as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
       orderIndex,
       status: EntityStatus.ACTIVE,
     },
@@ -237,15 +271,102 @@ export async function updateAcademicPlanItem(input: UpdateAcademicPlanItemInput)
   const updated = await prisma.academicPlanItem.update({
     where: { id: planItem.id },
     data: {
-      planType: validated.planType,
+      learningObjectiveId: validated.learningObjectiveId !== undefined ? validated.learningObjectiveId : planItem.learningObjectiveId,
+      planType: validated.planType || planItem.planType,
+      category: validated.category || planItem.category,
       title: validated.title,
-      targetMonth: validated.targetMonth || null,
-      allocatedHours: validated.allocatedHours || null,
-      notes: validated.notes || null,
+      targetMonth: validated.targetMonth !== undefined ? validated.targetMonth : planItem.targetMonth,
+      targetSemester: validated.targetSemester !== undefined ? validated.targetSemester : planItem.targetSemester,
+      allocatedHours: validated.allocatedHours !== undefined ? validated.allocatedHours : planItem.allocatedHours,
+      notes: validated.notes !== undefined ? validated.notes : planItem.notes,
+      weeklyDistribution:
+        validated.weeklyDistribution !== undefined
+          ? validated.weeklyDistribution
+            ? (validated.weeklyDistribution as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull
+          : (planItem.weeklyDistribution as unknown as Prisma.InputJsonValue),
     },
   });
 
   return { success: true, planItem: updated };
+}
+
+/**
+ * Bulk saves or updates an entire semester of AcademicPlanItems transactionally.
+ */
+export async function bulkSaveAcademicPlan(input: BulkSaveAcademicPlanInput) {
+  const validated = bulkSaveAcademicPlanSchema.parse(input);
+  const { context } = await verifyTeachingContextAccess(validated.teachingContextId);
+
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Soft-archive / mark inactive existing items for this context + planType + semester that are not in the new payload
+    const existingItems = await tx.academicPlanItem.findMany({
+      where: {
+        teachingContextId: context.id,
+        planType: validated.planType,
+        targetSemester: validated.targetSemester,
+        status: EntityStatus.ACTIVE,
+      },
+    });
+
+    const incomingIds = new Set(validated.items.filter((it) => it.id).map((it) => it.id!));
+    const toArchive = existingItems.filter((ex) => !incomingIds.has(ex.id));
+
+    if (toArchive.length > 0) {
+      await tx.academicPlanItem.updateMany({
+        where: { id: { in: toArchive.map((t) => t.id) } },
+        data: { status: EntityStatus.ARCHIVED },
+      });
+    }
+
+    // 2. Upsert incoming items
+    const savedItems = [];
+    for (let i = 0; i < validated.items.length; i++) {
+      const item = validated.items[i];
+      if (item.id && incomingIds.has(item.id)) {
+        const updated = await tx.academicPlanItem.update({
+          where: { id: item.id },
+          data: {
+            learningObjectiveId: item.learningObjectiveId || null,
+            category: item.category || PlanItemCategory.REGULAR_MATERIAL,
+            title: item.title,
+            targetSemester: validated.targetSemester,
+            allocatedHours: item.allocatedHours,
+            notes: item.notes || null,
+            weeklyDistribution: item.weeklyDistribution
+              ? (item.weeklyDistribution as unknown as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+            orderIndex: i,
+            status: EntityStatus.ACTIVE,
+          },
+        });
+        savedItems.push(updated);
+      } else {
+        const created = await tx.academicPlanItem.create({
+          data: {
+            teachingContextId: context.id,
+            learningObjectiveId: item.learningObjectiveId || null,
+            planType: validated.planType,
+            category: item.category || PlanItemCategory.REGULAR_MATERIAL,
+            title: item.title,
+            targetSemester: validated.targetSemester,
+            allocatedHours: item.allocatedHours,
+            notes: item.notes || null,
+            weeklyDistribution: item.weeklyDistribution
+              ? (item.weeklyDistribution as unknown as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+            orderIndex: i,
+            status: EntityStatus.ACTIVE,
+          },
+        });
+        savedItems.push(created);
+      }
+    }
+
+    return savedItems;
+  });
+
+  return { success: true, planItems: result };
 }
 
 /**

@@ -21,8 +21,11 @@ export default async function TugasPage({ params }: { params: Promise<{ teaching
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Tugas</h2>
+      <div className="flex flex-col gap-1 pb-1 border-b">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900">Tugas & PR Siswa</h2>
+        <p className="text-xs text-muted-foreground">
+          Kelola instruksi tugas, tenggat waktu pengumpulan, dan keterkaitan tugas dengan sesi mengajar.
+        </p>
       </div>
 
       <TugasClient 

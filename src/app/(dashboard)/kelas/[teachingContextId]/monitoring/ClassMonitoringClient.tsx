@@ -70,22 +70,12 @@ export function ClassMonitoringClient({ initialData }: ClassMonitoringClientProp
   return (
     <div className="space-y-6 pb-16">
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Monitoring Kelas: {context.class.name}</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Mata Pelajaran: <span className="font-semibold text-foreground">{context.subject.name}</span> &bull; Tahun
-            Ajaran: <span className="font-semibold text-foreground">{context.academicPeriod.year}</span> (Semester{" "}
-            {context.academicPeriod.semester})
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Monitoring Perkembangan Siswa 360°</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Pantau ketercapaian KKTP, kehadiran, dan tindak lanjut siswa kelas {context.class.name}.
           </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link
-            href={`/kelas/${context.id}`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            Kembali ke Dashboard Kelas
-          </Link>
         </div>
       </div>
 

@@ -4,20 +4,25 @@ import {
   createLearningObjectiveSchema,
   updateLearningObjectiveSchema,
   createAcademicPlanItemSchema,
+  bulkSaveAcademicPlanSchema,
   assertActiveObjective,
   getMonthNameIndonesian,
+  calculateSemesterTargetHours,
 } from "../academic.service";
-import { AcademicPlanType, EntityStatus } from "@prisma/client";
+import { AcademicPlanType, PlanItemCategory, EntityStatus } from "@prisma/client";
 
 describe("Stage 07 Academic Service Unit Tests", () => {
   describe("saveAcademicProfileSchema", () => {
-    it("validates valid academic profile input", () => {
+    it("validates valid academic profile input with config", () => {
       const input = {
         teachingContextId: "ctx_123",
         curriculumName: "Kurikulum Merdeka",
         phase: "Fase E",
         academicNote: "Fokus literasi",
         cpText: "Peserta didik mampu menganalisis teks.",
+        hoursPerWeek: 3,
+        effectiveWeeksSem1: 18,
+        effectiveWeeksSem2: 16,
       };
       const result = saveAcademicProfileSchema.safeParse(input);
       expect(result.success).toBe(true);
@@ -38,12 +43,14 @@ describe("Stage 07 Academic Service Unit Tests", () => {
   });
 
   describe("createLearningObjectiveSchema & updateLearningObjectiveSchema", () => {
-    it("accepts valid TP creation", () => {
+    it("accepts valid TP creation with targetSemester and allocatedHours", () => {
       const input = {
         teachingContextId: "ctx_123",
         code: "TP 1.1",
         description: "Menjelaskan konsep eksponen",
         orderIndex: 0,
+        targetSemester: 1,
+        allocatedHours: 6,
       };
       const result = createLearningObjectiveSchema.safeParse(input);
       expect(result.success).toBe(true);
@@ -73,6 +80,8 @@ describe("Stage 07 Academic Service Unit Tests", () => {
         objectiveId: "obj_123",
         code: "TP 1.2",
         description: "Mengoperasikan bilangan berpangkat",
+        targetSemester: 2,
+        allocatedHours: 9,
       };
       const result = updateLearningObjectiveSchema.safeParse(input);
       expect(result.success).toBe(true);
@@ -80,14 +89,20 @@ describe("Stage 07 Academic Service Unit Tests", () => {
   });
 
   describe("createAcademicPlanItemSchema (Prota / Prosem)", () => {
-    it("accepts valid PROSEM item with targetMonth 1..12 and positive allocatedHours", () => {
+    it("accepts valid PROSEM item with weeklyDistribution array", () => {
       const input = {
         teachingContextId: "ctx_123",
         planType: AcademicPlanType.PROSEM,
+        category: PlanItemCategory.REGULAR_MATERIAL,
         title: "Eksponen dan Logaritma",
         targetMonth: 7,
+        targetSemester: 1,
         allocatedHours: 6,
         notes: "Asesmen formatif 1",
+        weeklyDistribution: [
+          { month: 7, week: 3, hours: 3 },
+          { month: 7, week: 4, hours: 3 },
+        ],
       };
       const result = createAcademicPlanItemSchema.safeParse(input);
       expect(result.success).toBe(true);
@@ -118,47 +133,71 @@ describe("Stage 07 Academic Service Unit Tests", () => {
       const inputBelow = {
         teachingContextId: "ctx_123",
         planType: AcademicPlanType.PROSEM,
-        title: "Materi X",
+        title: "Materi A",
         targetMonth: 0,
       };
-      expect(createAcademicPlanItemSchema.safeParse(inputBelow).success).toBe(false);
-
       const inputAbove = {
         teachingContextId: "ctx_123",
         planType: AcademicPlanType.PROSEM,
-        title: "Materi X",
+        title: "Materi B",
         targetMonth: 13,
       };
+      expect(createAcademicPlanItemSchema.safeParse(inputBelow).success).toBe(false);
       expect(createAcademicPlanItemSchema.safeParse(inputAbove).success).toBe(false);
     });
 
-    it("rejects allocatedHours <= 0", () => {
+    it("rejects non-positive allocatedHours", () => {
       const inputZero = {
         teachingContextId: "ctx_123",
         planType: AcademicPlanType.PROSEM,
-        title: "Materi X",
+        title: "Materi A",
         allocatedHours: 0,
       };
-      expect(createAcademicPlanItemSchema.safeParse(inputZero).success).toBe(false);
-
       const inputNeg = {
         teachingContextId: "ctx_123",
         planType: AcademicPlanType.PROSEM,
-        title: "Materi X",
-        allocatedHours: -2,
+        title: "Materi B",
+        allocatedHours: -4,
       };
+      expect(createAcademicPlanItemSchema.safeParse(inputZero).success).toBe(false);
       expect(createAcademicPlanItemSchema.safeParse(inputNeg).success).toBe(false);
     });
   });
 
-  describe("assertActiveObjective lifecycle rule", () => {
-    it("passes for ACTIVE status", () => {
+  describe("bulkSaveAcademicPlanSchema", () => {
+    it("accepts valid bulk plan items payload", () => {
+      const input = {
+        teachingContextId: "ctx_123",
+        planType: AcademicPlanType.PROSEM,
+        targetSemester: 1,
+        items: [
+          {
+            title: "Bab 1: Eksponen",
+            allocatedHours: 12,
+            category: PlanItemCategory.REGULAR_MATERIAL,
+            weeklyDistribution: [{ month: 7, week: 3, hours: 3 }],
+          },
+          {
+            title: "Sumatif Tengah Semester",
+            allocatedHours: 3,
+            category: PlanItemCategory.STS,
+            weeklyDistribution: [{ month: 9, week: 3, hours: 3 }],
+          },
+        ],
+      };
+      const result = bulkSaveAcademicPlanSchema.safeParse(input);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe("assertActiveObjective helper", () => {
+    it("does not throw on ACTIVE status", () => {
       expect(() => assertActiveObjective(EntityStatus.ACTIVE)).not.toThrow();
     });
 
-    it("throws for ARCHIVED status", () => {
+    it("throws on ARCHIVED status", () => {
       expect(() => assertActiveObjective(EntityStatus.ARCHIVED)).toThrow(
-        /Tujuan Pembelajaran yang diarsipkan bersifat historis/
+        "Tujuan Pembelajaran yang diarsipkan bersifat historis dan tidak dapat diubah atau ditautkan baru"
       );
     });
   });
@@ -170,11 +209,19 @@ describe("Stage 07 Academic Service Unit Tests", () => {
       expect(getMonthNameIndonesian(12)).toBe("Desember");
     });
 
-    it("returns null for out of range or null values", () => {
-      expect(getMonthNameIndonesian(null)).toBe(null);
-      expect(getMonthNameIndonesian(undefined)).toBe(null);
-      expect(getMonthNameIndonesian(0)).toBe(null);
-      expect(getMonthNameIndonesian(13)).toBe(null);
+    it("returns null for out-of-range or missing numbers", () => {
+      expect(getMonthNameIndonesian(null)).toBeNull();
+      expect(getMonthNameIndonesian(undefined)).toBeNull();
+      expect(getMonthNameIndonesian(0)).toBeNull();
+      expect(getMonthNameIndonesian(13)).toBeNull();
+    });
+  });
+
+  describe("calculateSemesterTargetHours helper", () => {
+    it("computes total target hours correctly", () => {
+      expect(calculateSemesterTargetHours(18, 3)).toBe(54);
+      expect(calculateSemesterTargetHours(16, 2)).toBe(32);
+      expect(calculateSemesterTargetHours(0, 3)).toBe(0);
     });
   });
 });

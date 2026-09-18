@@ -1,5 +1,17 @@
 import { z } from "zod";
-import { AcademicPlanType, EntityStatus } from "@prisma/client";
+import { EntityStatus } from "@prisma/client";
+
+export const AcademicPlanTypeEnum = z.enum(["PROTA", "PROSEM"], {
+  message: "Jenis program harus PROTA atau PROSEM",
+});
+
+export const PlanItemCategoryEnum = z.enum(["REGULAR_MATERIAL", "STS", "SAS", "RESERVE"]);
+
+export const weeklyDistributionSlotSchema = z.object({
+  month: z.number().int().min(1).max(12),
+  week: z.number().int().min(1).max(5),
+  hours: z.number().int().positive(),
+});
 
 export const saveAcademicProfileSchema = z.object({
   teachingContextId: z.string().min(1, "Teaching Context ID is required"),
@@ -7,6 +19,9 @@ export const saveAcademicProfileSchema = z.object({
   phase: z.string().trim().nullable().optional(),
   academicNote: z.string().trim().nullable().optional(),
   cpText: z.string().trim().nullable().optional(),
+  hoursPerWeek: z.number().int().min(1).max(10).optional(),
+  effectiveWeeksSem1: z.number().int().min(1).max(25).optional(),
+  effectiveWeeksSem2: z.number().int().min(1).max(25).optional(),
 });
 
 export const createLearningObjectiveSchema = z.object({
@@ -14,12 +29,16 @@ export const createLearningObjectiveSchema = z.object({
   code: z.string().trim().nullable().optional(),
   description: z.string().trim().min(1, "Deskripsi Tujuan Pembelajaran wajib diisi"),
   orderIndex: z.number().int().min(0, "Order index minimal 0").optional(),
+  targetSemester: z.number().int().min(1).max(2).nullable().optional(),
+  allocatedHours: z.number().int().positive().nullable().optional(),
 });
 
 export const updateLearningObjectiveSchema = z.object({
   objectiveId: z.string().min(1, "Objective ID is required"),
   code: z.string().trim().nullable().optional(),
   description: z.string().trim().min(1, "Deskripsi Tujuan Pembelajaran wajib diisi"),
+  targetSemester: z.number().int().min(1).max(2).nullable().optional(),
+  allocatedHours: z.number().int().positive().nullable().optional(),
 });
 
 export const reorderLearningObjectivesSchema = z.object({
@@ -29,7 +48,9 @@ export const reorderLearningObjectivesSchema = z.object({
 
 export const createAcademicPlanItemSchema = z.object({
   teachingContextId: z.string().min(1, "Teaching Context ID is required"),
-  planType: z.nativeEnum(AcademicPlanType, { message: "Jenis program harus PROTA atau PROSEM" }),
+  learningObjectiveId: z.string().nullable().optional(),
+  planType: AcademicPlanTypeEnum,
+  category: PlanItemCategoryEnum.optional(),
   title: z.string().trim().min(1, "Judul program wajib diisi"),
   targetMonth: z
     .number()
@@ -38,14 +59,18 @@ export const createAcademicPlanItemSchema = z.object({
     .max(12, "Bulan harus antara 1 dan 12")
     .nullable()
     .optional(),
+  targetSemester: z.number().int().min(1).max(2).optional(),
   allocatedHours: z.number().int().positive("Alokasi jam harus lebih besar dari 0").nullable().optional(),
   notes: z.string().trim().nullable().optional(),
+  weeklyDistribution: z.array(weeklyDistributionSlotSchema).nullable().optional(),
   orderIndex: z.number().int().min(0, "Order index minimal 0").optional(),
 });
 
 export const updateAcademicPlanItemSchema = z.object({
   planItemId: z.string().min(1, "Plan Item ID is required"),
-  planType: z.nativeEnum(AcademicPlanType, { message: "Jenis program harus PROTA atau PROSEM" }),
+  learningObjectiveId: z.string().nullable().optional(),
+  planType: AcademicPlanTypeEnum,
+  category: PlanItemCategoryEnum.optional(),
   title: z.string().trim().min(1, "Judul program wajib diisi"),
   targetMonth: z
     .number()
@@ -54,13 +79,32 @@ export const updateAcademicPlanItemSchema = z.object({
     .max(12, "Bulan harus antara 1 dan 12")
     .nullable()
     .optional(),
+  targetSemester: z.number().int().min(1).max(2).optional(),
   allocatedHours: z.number().int().positive("Alokasi jam harus lebih besar dari 0").nullable().optional(),
   notes: z.string().trim().nullable().optional(),
+  weeklyDistribution: z.array(weeklyDistributionSlotSchema).nullable().optional(),
+});
+
+export const bulkSaveAcademicPlanSchema = z.object({
+  teachingContextId: z.string().min(1, "Teaching Context ID is required"),
+  planType: AcademicPlanTypeEnum,
+  targetSemester: z.number().int().min(1).max(2),
+  items: z.array(
+    z.object({
+      id: z.string().optional(),
+      learningObjectiveId: z.string().nullable().optional(),
+      category: PlanItemCategoryEnum.optional(),
+      title: z.string().trim().min(1, "Judul wajib diisi"),
+      allocatedHours: z.number().int().positive("Alokasi jam harus lebih dari 0"),
+      notes: z.string().trim().nullable().optional(),
+      weeklyDistribution: z.array(weeklyDistributionSlotSchema).nullable().optional(),
+    })
+  ),
 });
 
 export const reorderAcademicPlanItemsSchema = z.object({
   teachingContextId: z.string().min(1, "Teaching Context ID is required"),
-  planType: z.nativeEnum(AcademicPlanType),
+  planType: AcademicPlanTypeEnum,
   orderedPlanItemIds: z.array(z.string().min(1)),
 });
 
@@ -103,4 +147,11 @@ export function getMonthNameIndonesian(monthNumber: number | null | undefined): 
     "Desember",
   ];
   return monthNames[monthNumber - 1];
+}
+
+/**
+ * Helper to calculate target total semester hours given weeks and weekly load.
+ */
+export function calculateSemesterTargetHours(effectiveWeeks: number, hoursPerWeek: number): number {
+  return Math.max(0, effectiveWeeks) * Math.max(0, hoursPerWeek);
 }

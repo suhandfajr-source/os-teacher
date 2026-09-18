@@ -1,21 +1,14 @@
-import React from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from "lucide-react";
 
 export default function Loading() {
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Skeleton className="h-10 w-[200px]" />
-        <Skeleton className="h-4 w-[300px] mt-2" />
+    <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-3 text-muted-foreground animate-in fade-in duration-150">
+      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+        <Loader2 className="h-5 w-5 animate-spin" />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-[120px] w-full rounded-xl" />
-        ))}
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Skeleton className="col-span-4 h-[300px] w-full rounded-xl" />
-        <Skeleton className="col-span-3 h-[300px] w-full rounded-xl" />
+      <div className="text-center space-y-0.5">
+        <p className="text-xs font-semibold text-foreground">Memuat Aplikasi...</p>
+        <p className="text-[11px] text-muted-foreground">Menghubungkan ke sistem sekolah</p>
       </div>
     </div>
   );

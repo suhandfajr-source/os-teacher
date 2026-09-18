@@ -6,6 +6,20 @@ export const AcademicPlanType = {
 } as const;
 export type AcademicPlanType = (typeof AcademicPlanType)[keyof typeof AcademicPlanType];
 
+export const PlanItemCategory = {
+  REGULAR_MATERIAL: "REGULAR_MATERIAL",
+  STS: "STS",
+  SAS: "SAS",
+  RESERVE: "RESERVE",
+} as const;
+export type PlanItemCategory = (typeof PlanItemCategory)[keyof typeof PlanItemCategory];
+
+export interface WeeklyDistributionSlot {
+  month: number; // 1-12
+  week: number;  // 1-5
+  hours: number; // e.g. 2, 3, 4
+}
+
 export interface AcademicContextProfileData {
   id: string;
   teachingContextId: string;
@@ -13,6 +27,9 @@ export interface AcademicContextProfileData {
   phase: string | null;
   academicNote: string | null;
   cpText: string | null;
+  hoursPerWeek: number;
+  effectiveWeeksSem1: number;
+  effectiveWeeksSem2: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +40,8 @@ export interface LearningObjectiveData {
   code: string | null;
   description: string;
   orderIndex: number;
+  targetSemester: number | null;
+  allocatedHours: number | null;
   status: EntityStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -35,15 +54,24 @@ export interface LearningObjectiveData {
 export interface AcademicPlanItemData {
   id: string;
   teachingContextId: string;
+  learningObjectiveId: string | null;
   planType: AcademicPlanType;
+  category: PlanItemCategory;
   title: string;
   targetMonth: number | null;
+  targetSemester: number;
   allocatedHours: number | null;
   notes: string | null;
+  weeklyDistribution: WeeklyDistributionSlot[] | null;
   orderIndex: number;
   status: EntityStatus;
   createdAt: Date;
   updatedAt: Date;
+  learningObjective?: {
+    id: string;
+    code: string | null;
+    description: string;
+  } | null;
 }
 
 export interface TeachingSessionLearningObjectiveLinkData {
@@ -70,6 +98,9 @@ export interface SaveAcademicProfileInput {
   phase?: string | null;
   academicNote?: string | null;
   cpText?: string | null;
+  hoursPerWeek?: number;
+  effectiveWeeksSem1?: number;
+  effectiveWeeksSem2?: number;
 }
 
 export interface CreateLearningObjectiveInput {
@@ -77,12 +108,16 @@ export interface CreateLearningObjectiveInput {
   code?: string | null;
   description: string;
   orderIndex?: number;
+  targetSemester?: number | null;
+  allocatedHours?: number | null;
 }
 
 export interface UpdateLearningObjectiveInput {
   objectiveId: string;
   code?: string | null;
   description: string;
+  targetSemester?: number | null;
+  allocatedHours?: number | null;
 }
 
 export interface ReorderLearningObjectivesInput {
@@ -92,27 +127,50 @@ export interface ReorderLearningObjectivesInput {
 
 export interface CreateAcademicPlanItemInput {
   teachingContextId: string;
+  learningObjectiveId?: string | null;
   planType: AcademicPlanType;
+  category?: PlanItemCategory;
   title: string;
   targetMonth?: number | null;
+  targetSemester?: number;
   allocatedHours?: number | null;
   notes?: string | null;
+  weeklyDistribution?: WeeklyDistributionSlot[] | null;
   orderIndex?: number;
 }
 
 export interface UpdateAcademicPlanItemInput {
   planItemId: string;
-  planType: AcademicPlanType;
+  learningObjectiveId?: string | null;
+  planType?: AcademicPlanType;
+  category?: PlanItemCategory;
   title: string;
   targetMonth?: number | null;
+  targetSemester?: number;
   allocatedHours?: number | null;
   notes?: string | null;
+  weeklyDistribution?: WeeklyDistributionSlot[] | null;
 }
 
 export interface ReorderAcademicPlanItemsInput {
   teachingContextId: string;
   planType: AcademicPlanType;
   orderedPlanItemIds: string[];
+}
+
+export interface BulkSaveAcademicPlanInput {
+  teachingContextId: string;
+  planType: AcademicPlanType;
+  targetSemester: number;
+  items: Array<{
+    id?: string;
+    learningObjectiveId?: string | null;
+    category?: PlanItemCategory;
+    title: string;
+    allocatedHours: number;
+    notes?: string | null;
+    weeklyDistribution?: WeeklyDistributionSlot[] | null;
+  }>;
 }
 
 export interface LinkSessionObjectivesInput {

@@ -1,0 +1,22 @@
+{
+  "name": "Klassa — Ruang Kerja Cerdas Guru",
+  "short_name": "Klassa",
+  "description": "Ruang kerja terpadu untuk guru Indonesia: administrasi tuntas otomatis, mengajar jadi berkelas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F6F8F8",
+  "theme_color": "#0F766E",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/svg+xml"
+    }
+  ]
+}

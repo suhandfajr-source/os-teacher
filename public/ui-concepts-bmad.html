@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BMad UI/UX Master Recommendations - 5 Desain Konsep</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            teal: {
+              50: '#F0FDFA',
+              100: '#CCFBF1',
+              200: '#99F6E4',
+              300: '#5EEAD4',
+              400: '#2DD4BF',
+              500: '#14B8A6',
+              600: '#0D9488',
+              700: '#0F766E',
+              800: '#115E59',
+              900: '#134E4A',
+              950: '#042F2E',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.02);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(15,118,110,0.2);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(15,118,110,0.4);
+    }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .tactile-btn {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tactile-btn:active {
+      transform: scale(0.96);
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.88; transform: scale(1.02); }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="bg-[#F6F8F8] text-slate-800 min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- TOP HEADER & BRAND BAR -->
+  <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-700 to-teal-500 flex items-center justify-center text-white shadow-md shadow-teal-700/20">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight text-slate-900">BMAD UI RECOM-ENGINE</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-teal-100 text-teal-800 border border-teal-200">5 Konsep Terpilih</span>
+          </div>
+          <p class="text-xs text-slate-500 hidden sm:block">Rekomendasi Dasar Desain Sistem: Guru (23-45th), Ortu (30-45th), Siswa (SD-SMA)</p>
+        </div>
+      </div>
+
+      <!-- Quick Meta Badges -->
+      <div class="flex items-center gap-2">
+        <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-medium text-slate-600">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>Target Primer: Guru Produktif</span>
+        </div>
+        <a href="#matrix-comparison" class="px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-800 text-xs font-semibold flex items-center gap-1.5 tactile-btn">
+          <i data-lucide="table-2" class="w-3.5 h-3.5"></i>
+          <span>Matriks Evaluasi</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- CONCEPT NAV SWITCHER -->
+    <div class="bg-slate-100/80 border-t border-slate-200 px-4 sm:px-6 lg:px-8 py-2 overflow-x-auto custom-scrollbar">
+      <div class="max-w-7xl mx-auto flex items-center gap-2 min-w-max" id="concept-nav-container">
+        <!-- Buttons rendered via JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-10">
+
+    <!-- USER PERSONA TARGET BANNER -->
+    <section class="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+      <!-- Ambient background circles -->
+      <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <div class="lg:col-span-7 space-y-3">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-300 text-xs font-semibold">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i>
+            <span>Analisis Target Pengguna Multi-Generasi (BMad UX Research)</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
+            5 Arah Konsep UI/UX untuk Ekosistem Guru, Orang Tua, dan Siswa
+          </h1>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Menjembatani kecepatan kerja administratif guru muda & senior (23–45 th), transparansi santun untuk orang tua (30–45 th), dan kemudahan akses bagi siswa (SD–SMA) tanpa beban kognitif berlebih.
+          </p>
+        </div>
+
+        <div class="lg:col-span-5 grid grid-cols-3 gap-3">
+          <!-- Persona 1 -->
+          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/15 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="w-8 h-8 rounded-xl bg-teal-500/30 flex items-center justify-center text-teal-300 font-bold text-sm">P1</span>
+              <i data-lucide="graduation-cap" class="w-4 h-4 text-teal-300"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white">Guru (23-45 th)</h4>
+              <p class="text-[10px] text-teal-200/80 mt-0.5">Utama: Presensi cepat &lt; 5s, Buku Nilai, PROTA/PROSEM.</p>
+            </div>
+          </div>
+          <!-- Persona 2 -->
+          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/15 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="w-8 h-8 rounded-xl bg-amber-500/30 flex items-center justify-center text-amber-300 font-bold text-sm">P2</span>
+              <i data-lucide="home" class="w-4 h-4 text-amber-300"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white">Ortu (30-45 th)</h4>
+              <p class="text-[10px] text-amber-200/80 mt-0.5">Sekunder: Rekap kehadiran, PR, Lapor Sakit WA.</p>
+            </div>
+          </div>
+          <!-- Persona 3 -->
+          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/15 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+              <span class="w-8 h-8 rounded-xl bg-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-sm">P3</span>
+              <i data-lucide="sparkle" class="w-4 h-4 text-indigo-300"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white">Siswa (SD-SMA)</h4>
+              <p class="text-[10px] text-indigo-200/80 mt-0.5">Tersier: Jadwal kelas, Kuis seru, Tugas gamifikasi.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTIVE CONCEPT DISPLAY CONTAINER -->
+    <section id="concept-view-root" class="space-y-8">
+      <!-- Dynamic content injected by JavaScript -->
+    </section>
+
+    <!-- COMPREHENSIVE BENCHMARK COMPARISON TABLE -->
+    <section id="matrix-comparison" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="p-2 rounded-xl bg-teal-50 text-teal-700">
+              <i data-lucide="scales" class="w-5 h-5"></i>
+            </span>
+            <h2 class="text-xl font-bold text-slate-900">Matriks Komparasi 5 Konsep UI BMad</h2>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">Evaluasi komprehensif berdasarkan Kecepatan Kerja, Kelelahan Mata, Kemudahan Belajar, dan Kesiapan Produksi.</p>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i> Standar BMad Architecture
+        </span>
+      </div>
+
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+              <th class="p-3.5 rounded-l-xl">Nama Konsep</th>
+              <th class="p-3.5">Filosofi Inti</th>
+              <th class="p-3.5">Kelebihan Guru (23-45)</th>
+              <th class="p-3.5">Kelebihan Ortu (30-45)</th>
+              <th class="p-3.5">Kelebihan Siswa</th>
+              <th class="p-3.5 text-center">Tingkat Friksi</th>
+              <th class="p-3.5 text-center rounded-r-xl">Rekomendasi BMad</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            <tr class="hover:bg-teal-50/40 transition-colors">
+              <td class="p-3.5 font-bold text-teal-800 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs">1</span>
+                Modern Edu-OS & Command Center
+              </td>
+              <td class="p-3.5">Linear & Raycast Style, keyboard-first, ultra-dense, instant toggles.</td>
+              <td class="p-3.5 font-medium text-emerald-700">Presensi &lt; 5 detik, short-cut keyboard, zero click-wasting.</td>
+              <td class="p-3.5">Timeline riwayat kehadiran ringkas dan akurat.</td>
+              <td class="p-3.5">Daftar agenda to-the-point tanpa distraksi.</td>
+              <td class="p-3.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold text-[11px]">Sangat Rendah</span></td>
+              <td class="p-3.5 text-center"><span class="px-2.5 py-1 rounded-full bg-teal-700 text-white font-bold text-[10px] shadow-xs">Sangat Direkomendasikan</span></td>
+            </tr>
+
+            <tr class="hover:bg-amber-50/40 transition-colors">
+              <td class="p-3.5 font-bold text-amber-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">2</span>
+                Warm Humanist & Bento Grid
+              </td>
+              <td class="p-3.5">Apple/Notion aesthetic, kartu asimetris organik, visual storytelling.</td>
+              <td class="p-3.5">Rasa nyaman, anti-stres, visual ringkasan kelas estetis.</td>
+              <td class="p-3.5 font-medium text-emerald-700">Paling disukai orang tua: infografis ramah & santun.</td>
+              <td class="p-3.5">Kartu aktivitas visual ramah anak SD-SMP.</td>
+              <td class="p-3.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold text-[11px]">Rendah</span></td>
+              <td class="p-3.5 text-center"><span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-bold text-[10px]">Cocok utk Elementary</span></td>
+            </tr>
+
+            <tr class="hover:bg-indigo-50/40 transition-colors">
+              <td class="p-3.5 font-bold text-indigo-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">3</span>
+                Focus Flow & Live Mode Shifter
+              </td>
+              <td class="p-3.5">Duolingo/Zen Flow, Mode 1 Live Jumbo Buttons vs Mode 2 Review.</td>
+              <td class="p-3.5 font-medium text-emerald-700">Sentuhan 1-tangan di HP saat mengajar di depan kelas.</td>
+              <td class="p-3.5">Status real-time sesi kelas anak sedang aktif/selesai.</td>
+              <td class="p-3.5 font-medium text-emerald-700">Gamifikasi quest tugas & streak belajar tinggi.</td>
+              <td class="p-3.5 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold text-[11px]">Sangat Rendah</span></td>
+              <td class="p-3.5 text-center"><span class="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[10px]">Unggul di Kelas Nyata</span></td>
+            </tr>
+
+            <tr class="hover:bg-teal-50/40 transition-colors">
+              <td class="p-3.5 font-bold text-emerald-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">4</span>
+                Tri-Persona Adaptive Portal
+              </td>
+              <td class="p-3.5">1 Platform, 3 Tampilan Terpersonalisasi (Cockpit, Parent Feed, Student Quest).</td>
+              <td class="p-3.5">Fokus penuh pada tugas mengajar tanpa tercampur UI murid.</td>
+              <td class="p-3.5 font-medium text-emerald-700">Feed seperti WhatsApp/Instagram: 1-klik izin sakit & lapor.</td>
+              <td class="p-3.5">Dashboard misi dan peringkat pengerjaan tugas.</td>
+              <td class="p-3.5 text-center"><span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-semibold text-[11px]">Sedang (Butuh Auth Rapi)</span></td>
+              <td class="p-3.5 text-center"><span class="px-2.5 py-1 rounded-full bg-emerald-600 text-white font-bold text-[10px] shadow-xs">Paling Holistik</span></td>
+            </tr>
+
+            <tr class="hover:bg-purple-50/40 transition-colors">
+              <td class="p-3.5 font-bold text-purple-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">5</span>
+                Smart AI Co-Pilot & Fluid Glass
+              </td>
+              <td class="p-3.5">Perplexity/Arc style, AI prompt bar melayang, auto-summary cerdas.</td>
+              <td class="p-3.5 font-medium text-purple-700">Generate jurnal & soal ujian instan dengan prompt alami.</td>
+              <td class="p-3.5">Rangkuman AI perkembangan mingguan anak bahasa santun.</td>
+              <td class="p-3.5 font-medium text-purple-700">AI Tutor pembantu latihan soal step-by-step.</td>
+              <td class="p-3.5 text-center"><span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-semibold text-[11px]">Rendah</span></td>
+              <td class="p-3.5 text-center"><span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 font-bold text-[10px]">Masa Depan EdTech</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BMAD TEAM VERDICT & SYNTHESIS -->
+    <section class="bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-8 text-white space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300">
+          <i data-lucide="award" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Sintesis & Rekomendasi Utama Tim BMad (The Winning Hybrid)</h3>
+          <p class="text-xs text-teal-200/80">Kombinasi terbaik untuk diadopsi pada project Anda</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+          <span class="font-bold text-teal-300 flex items-center gap-1.5">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i> 1. Sally (UX & Visual)
+          </span>
+          <p class="text-slate-300 leading-relaxed">
+            Gunakan **Konsep 1 (Edu-OS)** sebagai pondasi Guru + sentuhan **Konsep 3 (Live Mode Shifter)**. Kanvas *Soft Pearl-Mint (#F6F8F8)* wajib dipertahankan untuk mengeliminasi kelelahan mata (*Zero Eye Fatigue*).
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+          <span class="font-bold text-amber-300 flex items-center gap-1.5">
+            <i data-lucide="briefcase" class="w-3.5 h-3.5"></i> 2. Mary (Analyst)
+          </span>
+          <p class="text-slate-300 leading-relaxed">
+            Adopsi **Konsep 4 (Tri-Persona Portal)** untuk membedakan konteks: Guru butuh buku nilai & Prosem, Ortu hanya butuh kartu WhatsApp-style feed, Siswa butuh kuis & status tugas.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+          <span class="font-bold text-indigo-300 flex items-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i> 3. Winston (Architect)
+          </span>
+          <p class="text-slate-300 leading-relaxed">
+            Gunakan arsitektur komponen modular (4 Ruang Kerja Terpadu) dengan Server Side Aggregation agar load time &lt; 200ms di koneksi sekolah yang bervariasi.
+          </p>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-1.5">
+          <span class="font-bold text-emerald-300 flex items-center gap-1.5">
+            <i data-lucide="code-2" class="w-3.5 h-3.5"></i> 4. Amelia (Developer)
+          </span>
+          <p class="text-slate-300 leading-relaxed">
+            Integrasikan **Konsep 5 (AI Co-pilot Bar)** secara bertahap pada draf jurnal mengajar dan kalkulator distribusi jam PROSEM otomatis via Gemini API.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-800">BMad Master UI Engine</span>
+        <span>•</span>
+        <span>Generated for Educational Excellence</span>
+      </div>
+      <p>Target Generasi: Guru 23-45 th • Ortu 30-45 th • Siswa SD-SMA</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT ENGINE: INTERACTIVE CONCEPTS DATA & RENDERING -->
+  <script>
+    // 5 DETAILED CONCEPTS DEFINITIONS
+    const CONCEPTS = [
+      {
+        id: "concept-1",
+        title: "Konsep 1: Modern Edu-OS & Command Center",
+        badge: "Inspirasi: Linear / Notion / Raycast",
+        badgeColor: "bg-teal-100 text-teal-800 border-teal-200",
+        tagline: "Prioritas Tertinggi: Kecepatan Eksekusi Guru, Beban Nol & Presensi Kilat",
+        heroColor: "from-teal-900 via-teal-800 to-slate-900",
+        primaryColor: "#0F766E",
+        bgCanvas: "#F6F8F8",
+        description: "Dirancang khusus untuk guru produktif modern (usia 23-45 tahun) yang menyukai efisiensi ala keyboard shortcuts, tata letak padat berdensitas tinggi, dan eliminasi klik berulang. Menggunakan palet Deep Pine Teal & Soft Mint Canvas yang sejuk di mata seharian.",
+        personasFit: {
+          guru: "Presensi 1-klik 'Tandai Hadir Semua', pill toggle [H][S][I][A][T] instan, auto-open catatan alasan.",
+          ortu: "Feed rekap kehadiran harian dengan status visual bersih dan pesan ringkas guru.",
+          siswa: "Daftar to-do list tugas mingguan dengan deadline presisi."
+        },
+        designTokens: {
+          palette: [
+            { name: "Deep Teal (Primary)", hex: "#0F766E" },
+            { name: "Soft Mint (Highlight)", hex: "#CCFBF1" },
+            { name: "Pearl Slate (Canvas)", hex: "#F6F8F8" },
+            { name: "Crisp Card (White)", hex: "#FFFFFF" },
+            { name: "Text Slate", hex: "#0F172A" }
+          ],
+          typography: "Plus Jakarta Sans (Geometris, angka tabular rapi untuk nilai/jadwal)",
+          radius: "rounded-2xl (16px) untuk card, rounded-full untuk pill tombol",
+          shadows: "shadow-2xs (0 1px 2px rgba(0,0,0,0.03))"
+        },
+        previewHTML: `
+          <!-- MOCKUP UI KONSEP 1 -->
+          <div class="bg-[#F6F8F8] p-4 sm:p-6 rounded-3xl border border-slate-200 space-y-6">
+            <!-- Command Bar Header Mockup -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center font-bold text-sm">
+                  8A
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-slate-900 text-sm">Matematika • Kelas VIII-A</h3>
+                    <span class="px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 text-[10px] font-semibold">Sesi 12/16 Aktif</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Materi: Teorema Pythagoras & Pola Bilangan • Ruang Lab 2</p>
+                </div>
+              </div>
+
+              <!-- Quick Command Action -->
+              <div class="flex items-center gap-2">
+                <button onclick="alert('Membuka Command Palette (Ctrl+K)...')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 tactile-btn">
+                  <i data-lucide="command" class="w-3.5 h-3.5"></i>
+                  <span>Cari Siswa/Materi (Ctrl+K)</span>
+                </button>
+                <button class="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-xs tactile-btn flex items-center gap-1.5">
+                  <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                  <span>Kunci Sesi Selesai</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2-COLUMN WORKSPACE GRID -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              
+              <!-- LEFT: Fast Attendance Pill Panel (Mode 1 Guru) -->
+              <div class="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <i data-lucide="user-check" class="w-4 h-4 text-teal-600"></i>
+                      Presensi Siswa Cepat (Live Classroom)
+                    </h4>
+                    <p class="text-[11px] text-slate-500">Target waktu presensi &lt; 10 detik dengan toggle kapsul</p>
+                  </div>
+                  <button id="btn-mark-all" onclick="markAllPresent()" class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold tactile-btn flex items-center gap-1">
+                    <i data-lucide="check" class="w-3 h-3"></i>
+                    Semua Hadir
+                  </button>
+                </div>
+
+                <!-- Live Counter Badges -->
+                <div class="grid grid-cols-5 gap-2 text-center text-xs">
+                  <div class="p-2 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <span class="block text-[10px] text-emerald-700 font-semibold">Hadir</span>
+                    <span id="counter-h" class="text-base font-extrabold text-emerald-800">32</span>
+                  </div>
+                  <div class="p-2 rounded-xl bg-amber-50 border border-amber-100">
+                    <span class="block text-[10px] text-amber-700 font-semibold">Sakit</span>
+                    <span id="counter-s" class="text-base font-extrabold text-amber-800">1</span>
+                  </div>
+                  <div class="p-2 rounded-xl bg-sky-50 border border-sky-100">
+                    <span class="block text-[10px] text-sky-700 font-semibold">Izin</span>
+                    <span id="counter-i" class="text-base font-extrabold text-sky-800">1</span>
+                  </div>
+                  <div class="p-2 rounded-xl bg-rose-50 border border-rose-100">
+                    <span class="block text-[10px] text-rose-700 font-semibold">Alpa</span>
+                    <span id="counter-a" class="text-base font-extrabold text-rose-800">0</span>
+                  </div>
+                  <div class="p-2 rounded-xl bg-purple-50 border border-purple-100">
+                    <span class="block text-[10px] text-purple-700 font-semibold">Telat</span>
+                    <span id="counter-t" class="text-base font-extrabold text-purple-800">0</span>
+                  </div>
+                </div>
+
+                <!-- Interactive Student List Demo -->
+                <div class="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar" id="demo-student-list">
+                  <!-- Student 1 -->
+                  <div class="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50/50 border border-slate-200/80 flex items-center justify-between gap-2 transition-colors">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">1</span>
+                      <div class="truncate">
+                        <h5 class="text-xs font-bold text-slate-900 truncate">Ahmad Fauzi Pratama</h5>
+                        <p class="text-[10px] text-slate-500">NIS: 20240801</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <button onclick="setStudentStatus(this, 'H')" class="student-pill active w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs tactile-btn">H</button>
+                      <button onclick="setStudentStatus(this, 'S')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">S</button>
+                      <button onclick="setStudentStatus(this, 'I')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+                      <button onclick="setStudentStatus(this, 'A')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+                    </div>
+                  </div>
+
+                  <!-- Student 2 -->
+                  <div class="p-2.5 rounded-xl bg-slate-50 hover:bg-teal-50/50 border border-slate-200/80 flex items-center justify-between gap-2 transition-colors">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">2</span>
+                      <div class="truncate">
+                        <h5 class="text-xs font-bold text-slate-900 truncate">Bella Anindita Putri</h5>
+                        <p class="text-[10px] text-slate-500">NIS: 20240802</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <button onclick="setStudentStatus(this, 'H')" class="student-pill active w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs tactile-btn">H</button>
+                      <button onclick="setStudentStatus(this, 'S')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">S</button>
+                      <button onclick="setStudentStatus(this, 'I')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+                      <button onclick="setStudentStatus(this, 'A')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+                    </div>
+                  </div>
+
+                  <!-- Student 3 -->
+                  <div class="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between gap-2 transition-colors">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                      <span class="w-6 h-6 rounded-full bg-amber-200 text-amber-800 font-bold text-[10px] flex items-center justify-center">3</span>
+                      <div class="truncate">
+                        <h5 class="text-xs font-bold text-slate-900 truncate">Dimas Aditya Kurnia</h5>
+                        <p class="text-[10px] text-amber-700 font-medium">Surat dokter terlampir via WA Ortu</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <button onclick="setStudentStatus(this, 'H')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">H</button>
+                      <button onclick="setStudentStatus(this, 'S')" class="student-pill active w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs tactile-btn">S</button>
+                      <button onclick="setStudentStatus(this, 'I')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+                      <button onclick="setStudentStatus(this, 'A')" class="student-pill w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT: AI Journal Co-Pilot & Quick Notes -->
+              <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600"></i>
+                      Draf Jurnal Otomatis (AI)
+                    </h4>
+                    <span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">Smart Assist</span>
+                  </div>
+
+                  <div class="space-y-3 mt-3">
+                    <div>
+                      <label class="text-[11px] font-bold text-slate-700 block mb-1">Topik Aktual Pembelajaran</label>
+                      <input type="text" value="Pembuktian Teorema Pythagoras dengan Puzzle Geometri" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-teal-600 font-medium">
+                    </div>
+                    <div>
+                      <label class="text-[11px] font-bold text-slate-700 block mb-1">Catatan Aktivitas Kelas</label>
+                      <textarea rows="3" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-teal-600">Siswa aktif melakukan eksplorasi kelompok membuktikan a² + b² = c² menggunakan puzzle karton. 2 siswa butuh bimbingan remedial perkalian kuadrat.</textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <button class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 tactile-btn">
+                    <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                    <span>Rapikan via AI</span>
+                  </button>
+                  <button class="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold tactile-btn shadow-xs">
+                    Simpan Jurnal
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "concept-2",
+        title: "Konsep 2: Warm Bento Grid & Humanist Story",
+        badge: "Inspirasi: Apple Edu / Airbnb / Bento UI",
+        badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
+        tagline: "Prioritas: Kenyamanan Visual Emosional, Ramah Orang Tua, dan Anti-Kaku",
+        heroColor: "from-amber-900 via-stone-800 to-emerald-950",
+        primaryColor: "#15803D",
+        bgCanvas: "#FBFBFA",
+        description: "Menggabungkan arsitektur Bento Grid asimetris dengan nuansa hangat ramah manusia (Warm Terracotta, Linen, dan Forest Green). Mengedepankan infografis pencapaian belajar visual yang mudah dicerna oleh orang tua usia 30-45 tahun saat membuka HP.",
+        personasFit: {
+          guru: "Tampilan kartu modular yang membedakan jadwal mengajar, antrean koreksi, dan progres modul.",
+          ortu: "Feed harian santun berbentuk cerita (Story/Card) yang menampilkan foto aktivitas & pesan guru.",
+          siswa: "Visualisasi badge 'Bintang Pekanan' yang menyenangkan tanpa tekanan angka merah kaku."
+        },
+        designTokens: {
+          palette: [
+            { name: "Forest Emerald", hex: "#15803D" },
+            { name: "Warm Amber", hex: "#D97706" },
+            { name: "Crisp Linen (Canvas)", hex: "#FBFBFA" },
+            { name: "Soft Sand (Surface)", hex: "#F3F2EE" },
+            { name: "Warm Charcoal", hex: "#292524" }
+          ],
+          typography: "Plus Jakarta Sans Rounded & Playful Accents",
+          radius: "rounded-3xl (24px) untuk Bento cards",
+          shadows: "shadow-sm dengan warm ambient tone"
+        },
+        previewHTML: `
+          <!-- MOCKUP UI KONSEP 2 (BENTO GRID WARM) -->
+          <div class="bg-[#FBFBFA] p-4 sm:p-6 rounded-3xl border border-stone-200 space-y-5">
+            <!-- Bento Asymmetric Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+              
+              <!-- Bento Card 1: Warm Hero (Span 7) -->
+              <div class="md:col-span-7 bg-gradient-to-br from-[#FAF8F5] to-[#F3EEEA] p-5 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col justify-between space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                    Kelas Sedang Aktif
+                  </span>
+                  <span class="text-xs text-stone-500 font-medium">Hari ini, 08:30 - 10:00 WIB</span>
+                </div>
+                <div>
+                  <h3 class="text-xl font-extrabold text-stone-900">IPA Fisika • Kelas VII-C</h3>
+                  <p class="text-xs text-stone-600 mt-1">Eksplorasi Praktikum: Pengukuran Suhu dan Pemuaian Zat Logam</p>
+                </div>
+                <div class="flex items-center justify-between pt-3 border-t border-stone-200/60">
+                  <div class="flex -space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-white">AF</div>
+                    <div class="w-8 h-8 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-white">BP</div>
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-white">DK</div>
+                    <div class="w-8 h-8 rounded-full bg-stone-200 text-stone-700 font-bold text-xs flex items-center justify-center ring-2 ring-white">+29</div>
+                  </div>
+                  <button class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-xs font-bold shadow-xs tactile-btn flex items-center gap-1.5">
+                    <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                    Buka Lembar Sesi
+                  </button>
+                </div>
+              </div>
+
+              <!-- Bento Card 2: Parent Friendly Metric (Span 5) -->
+              <div class="md:col-span-5 bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col justify-between space-y-3">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-bold text-stone-900 text-xs flex items-center gap-1.5">
+                    <i data-lucide="heart" class="w-4 h-4 text-rose-500 fill-current"></i>
+                    Rapor Kehadiran & Kebahagiaan
+                  </h4>
+                  <span class="text-[10px] bg-stone-100 px-2 py-0.5 rounded-full text-stone-600 font-semibold">Bulan Ini</span>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div class="relative w-16 h-16 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path class="text-stone-100" stroke-width="3.8" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                      <path class="text-emerald-600" stroke-dasharray="98, 100" stroke-width="3.8" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <span class="absolute font-extrabold text-xs text-stone-800">98%</span>
+                  </div>
+                  <div>
+                    <h5 class="text-xs font-bold text-stone-800">31 dari 32 Hadir Penuh</h5>
+                    <p class="text-[11px] text-stone-500 mt-0.5">Tingkat kepuasan & partisipasi kelas sangat baik.</p>
+                  </div>
+                </div>
+                <div class="p-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 flex items-center gap-2">
+                  <i data-lucide="message-circle" class="w-4 h-4 text-amber-700 shrink-0"></i>
+                  <span>1 Surat Izin Orang Tua diverifikasi (Sakit flu).</span>
+                </div>
+              </div>
+
+              <!-- Bento Card 3: Student Milestone Card (Span 12) -->
+              <div class="md:col-span-12 bg-white p-4 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                    <i data-lucide="trophy" class="w-5 h-5"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-stone-900">Pekan Ketuntasan Tugas Terbimbing</h4>
+                    <p class="text-[11px] text-stone-500">28 siswa telah menyelesaikan kuis interaktif bab fluida statis.</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <button class="flex-1 sm:flex-initial px-3.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold tactile-btn">
+                    Lihat Papan Skor
+                  </button>
+                  <button class="flex-1 sm:flex-initial px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold tactile-btn">
+                    Kirim Pesan ke Ortu
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "concept-3",
+        title: "Konsep 3: Focus Flow & Live Mode Shifter",
+        badge: "Inspirasi: Duolingo / Headspace / Dynamic Island",
+        badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
+        tagline: "Prioritas: Mode-Shifting Adaptif (Mode 1 Sesi Kelas vs Mode 2 Evaluasi)",
+        heroColor: "from-indigo-950 via-slate-900 to-indigo-900",
+        primaryColor: "#4F46E5",
+        bgCanvas: "#F8FAFC",
+        description: "Dirancang dengan sakelar mode dinamis: Saat guru berada di dalam kelas, antarmuka bertransformasi menjadi **Mode 1 (Live Focus)** dengan tombol ekstra besar (56px touch target), counter realtime, dan tombol kunci cepat. Saat di luar kelas, antarmuka berubah menjadi **Mode 2 (Deep Review)**.",
+        personasFit: {
+          guru: "Tombol presensi jumbo yang mudah ditekan dengan satu jempol sambil berjalan di antara lorong meja siswa.",
+          ortu: "Status live streaming aktivitas ('Anak Anda sedang mengikuti ujian matematika').",
+          siswa: "Tampilan kuis layar penuh bebas distraksi dengan timer interaktif yang memicu motivasi."
+        },
+        designTokens: {
+          palette: [
+            { name: "Focus Indigo", hex: "#4F46E5" },
+            { name: "Live Teal", hex: "#0D9488" },
+            { name: "Lavender Canvas", hex: "#F8FAFC" },
+            { name: "Dark Cockpit", hex: "#0F172A" }
+          ],
+          typography: "Plus Jakarta Sans Bold & Big Accent Numbers",
+          radius: "rounded-3xl (24px) dan Jumbo Buttons",
+          shadows: "shadow-md dengan subtle glow effect"
+        },
+        previewHTML: `
+          <!-- MOCKUP UI KONSEP 3 (LIVE MODE SHIFTER) -->
+          <div class="bg-slate-900 text-white p-5 sm:p-7 rounded-3xl border border-slate-800 space-y-5 relative overflow-hidden shadow-xl">
+            <!-- Dynamic Top Floating Island -->
+            <div class="flex items-center justify-between bg-slate-800/80 backdrop-blur-md p-3.5 rounded-2xl border border-slate-700/80">
+              <div class="flex items-center gap-3">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <div>
+                  <h4 class="font-extrabold text-xs text-white">LIVE TEACHING MODE (SESI SEDANG BERJALAN)</h4>
+                  <p class="text-[10px] text-slate-400">Durasi Berjalan: 34:12 Menit • 34 Siswa Terdaftar</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold tactile-btn flex items-center gap-1">
+                  <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                  <span>Selesaikan & Kunci Sesi</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- JUMBO ATTENDANCE PILL CONTROLLER -->
+            <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/60 space-y-4">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-medium">Siswa Terpilih Saat Ini (Urutan No. 12):</span>
+                <span class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold">1-Thumb Quick Tap</span>
+              </div>
+
+              <!-- Big Student Hero Profile -->
+              <div class="bg-slate-900 p-4 rounded-2xl border border-indigo-500/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center font-extrabold text-lg text-white">
+                    MR
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-base text-white">Muhammad Rizky Pratama</h3>
+                    <p class="text-xs text-slate-400">NISN: 008761234 • Status Saat Ini: <span class="text-emerald-400 font-bold">Hadir</span></p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold border border-slate-700 tactile-btn">
+                    Siswa Sebelumnya
+                  </button>
+                  <button class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold tactile-btn">
+                    Siswa Berikutnya
+                  </button>
+                </div>
+              </div>
+
+              <!-- Jumbo Tactile Buttons Grid -->
+              <div class="grid grid-cols-4 gap-3">
+                <button class="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-extrabold text-sm flex flex-col items-center justify-center gap-1 shadow-lg shadow-emerald-900/40 ring-2 ring-emerald-400 tactile-btn">
+                  <span class="text-lg">✅</span>
+                  <span>HADIR (H)</span>
+                </button>
+                <button class="p-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 tactile-btn">
+                  <span class="text-lg">🤒</span>
+                  <span>SAKIT (S)</span>
+                </button>
+                <button class="p-3 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 tactile-btn">
+                  <span class="text-lg">📩</span>
+                  <span>IZIN (I)</span>
+                </button>
+                <button class="p-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-2xl font-bold text-sm flex flex-col items-center justify-center gap-1 tactile-btn">
+                  <span class="text-lg">❌</span>
+                  <span>ALPA (A)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "concept-4",
+        title: "Konsep 4: Tri-Persona Adaptive Portal",
+        badge: "Inspirasi: Super-App Pendidikan Terintegrasi",
+        badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        tagline: "Prioritas: 3 Antarmuka Terisolasi Khusus Guru, Orang Tua, dan Siswa",
+        heroColor: "from-emerald-950 via-teal-900 to-slate-900",
+        primaryColor: "#047857",
+        bgCanvas: "#F6F8F8",
+        description: "Menyediakan pengalaman yang dipersonalisasi penuh sesuai hak akses pengguna. Guru disajikan kokpit profesional, orang tua mendapatkan kartu ringkas bergaya WhatsApp feed untuk pantau putra-putri mereka, dan siswa memiliki 'Papan Misi Belajar' yang interaktif.",
+        personasFit: {
+          guru: "Workspace 4 Pilar (Mengajar, Nilai, Siswa, Administrasi) dengan buku nilai matriks penuh.",
+          ortu: "Portal WhatsApp-style: 1-klik unduh rekap nilai, 1-klik kirim izin sakit langsung ke wali kelas.",
+          siswa: "Papan quest tugas, pengingat deadline, dan leaderboard kuis sehat."
+        },
+        designTokens: {
+          palette: [
+            { name: "Deep Emerald", hex: "#047857" },
+            { name: "Navy Slate", hex: "#1E293B" },
+            { name: "Mint Light", hex: "#ECFDF5" },
+            { name: "Pearl Clean", hex: "#F8FAFC" }
+          ],
+          typography: "Plus Jakarta Sans Responsive Hierarchy",
+          radius: "rounded-2xl (16px)",
+          shadows: "shadow-xs clean cards"
+        },
+        previewHTML: `
+          <!-- MOCKUP UI KONSEP 4 (TRI-PERSONA SWITCHER) -->
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 space-y-6 shadow-xs">
+            <!-- Persona Interactive Tab Switcher in Mockup -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pilih Mode Tampilan Pengguna:</span>
+                <div class="flex items-center gap-2 mt-1" id="sub-role-tabs">
+                  <button onclick="switchRoleView('teacher')" class="role-btn active px-3 py-1.5 rounded-xl bg-teal-700 text-white font-bold text-xs tactile-btn">
+                    👨‍🏫 Tampilan Guru (Cockpit)
+                  </button>
+                  <button onclick="switchRoleView('parent')" class="role-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs tactile-btn">
+                    👨‍👩‍👦 Tampilan Orang Tua (Feed)
+                  </button>
+                  <button onclick="switchRoleView('student')" class="role-btn px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs tactile-btn">
+                    🎒 Tampilan Siswa (Quest)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- DYNAMIC ROLE CONTENT CONTAINER -->
+            <div id="role-view-content" class="min-h-[220px]">
+              <!-- Injected by switchRoleView JS (Default: Teacher) -->
+              <div class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-100">
+                    <span class="text-xs font-bold text-teal-900">Agenda Hari Ini</span>
+                    <p class="text-lg font-extrabold text-teal-800 mt-1">3 Sesi Mengajar</p>
+                    <span class="text-[10px] text-teal-700">Kelas VII-A, VIII-B, IX-C</span>
+                  </div>
+                  <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
+                    <span class="text-xs font-bold text-amber-900">Koreksi Tertunda</span>
+                    <p class="text-lg font-extrabold text-amber-800 mt-1">14 Tugas Masuk</p>
+                    <span class="text-[10px] text-amber-700">Tugas 2: Aljabar Linier</span>
+                  </div>
+                  <div class="p-3.5 rounded-2xl bg-sky-50 border border-sky-100">
+                    <span class="text-xs font-bold text-sky-900">Dokumen PROSEM</span>
+                    <p class="text-lg font-extrabold text-sky-800 mt-1">100% Seimbang</p>
+                    <span class="text-[10px] text-sky-700">Siap Ekspor Excel/Word</span>
+                  </div>
+                </div>
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                  <span class="text-slate-600 font-medium">Buku Nilai Terkunci: Nilai Sumatif Tengah Semester (STS) siap dipublikasikan ke Orang Tua.</span>
+                  <button class="px-3 py-1.5 bg-teal-700 text-white rounded-xl font-bold tactile-btn">Buka Buku Nilai</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: "concept-5",
+        title: "Konsep 5: Smart AI Co-Pilot & Fluid Glass",
+        badge: "Inspirasi: Perplexity / Arc / Future EdTech",
+        badgeColor: "bg-purple-100 text-purple-800 border-purple-200",
+        tagline: "Prioritas: Otomatisasi AI di Setiap Sudut, Efek Glass Halus, dan Smart Summary",
+        heroColor: "from-purple-950 via-slate-900 to-indigo-950",
+        primaryColor: "#8B5CF6",
+        bgCanvas: "#FDFBF7",
+        description: "Menghadirkan paradigma modern di mana asisten kecerdasan buatan (Gemini AI Co-pilot) tersemat di bilah melayang bawah (*Omnibar*). Guru cukup mengetik instruksi singkat untuk merancang soal ujian, menganalisis siswa yang butuh bimbingan khusus, atau membagikan draf pesan santun ke orang tua.",
+        personasFit: {
+          guru: "AI Prompt Omnibar ('Susun kisi-kisi soal 10 pilihan ganda tentang Teorema Pythagoras').",
+          ortu: "Pesan ringkasan AI mingguan dengan bahasa santun, solutif, dan ramah orang tua.",
+          siswa: "AI Learning Buddy yang memberi petunjuk bertahap saat mengerjakan tugas sulit."
+        },
+        designTokens: {
+          palette: [
+            { name: "Electric Violet", hex: "#8B5CF6" },
+            { name: "Aurora Teal", hex: "#0D9488" },
+            { name: "Frosted Glass Surface", hex: "rgba(255,255,255,0.85)" },
+            { name: "Cosmic Charcoal", hex: "#0F172A" }
+          ],
+          typography: "Plus Jakarta Sans with Modern Glow Highlights",
+          radius: "rounded-3xl (24px) with Backdrop Blur",
+          shadows: "shadow-lg with purple/teal ambient glow"
+        },
+        previewHTML: `
+          <!-- MOCKUP UI KONSEP 5 (AI CO-PILOT FLUID GLASS) -->
+          <div class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 text-white p-5 sm:p-7 rounded-3xl border border-purple-500/30 space-y-6 relative overflow-hidden shadow-2xl">
+            <!-- Glow circles -->
+            <div class="absolute right-0 top-0 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between border-b border-white/10 pb-4 relative z-10">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-purple-600/30">
+                  <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    AI TEACHER CO-PILOT STUDIO
+                    <span class="px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-300 text-[10px] font-semibold border border-purple-400/30">Gemini 2.5 Flash</span>
+                  </h3>
+                  <p class="text-[11px] text-purple-200/70">Otomatisasi Kurikulum, Rekap Nilai, & Komunikasi Tri-Partit</p>
+                </div>
+              </div>
+              <button class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 tactile-btn">
+                Riwayat AI
+              </button>
+            </div>
+
+            <!-- Smart Suggestion Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
+              <div class="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                <span class="text-[10px] text-purple-300 font-bold uppercase block">1-Klik Analisis Siswa</span>
+                <p class="text-xs font-semibold text-white mt-1">"3 Siswa Teridentifikasi Butuh Remedial Pythagoras"</p>
+                <span class="text-[10px] text-slate-400 mt-2 block">Dibuat otomatis dari hasil kuis pekan lalu</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                <span class="text-[10px] text-teal-300 font-bold uppercase block">Pesan Otomatis Ortu</span>
+                <p class="text-xs font-semibold text-white mt-1">"Susun draf apresiasi untuk 10 siswa berprestasi"</p>
+                <span class="text-[10px] text-slate-400 mt-2 block">Siap dikirim via WhatsApp Portal</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer">
+                <span class="text-[10px] text-indigo-300 font-bold uppercase block">Distribusi PROSEM</span>
+                <p class="text-xs font-semibold text-white mt-1">"Sinkronkan Bab 4 ke Alokasi Pekan Efektif Oktober"</p>
+                <span class="text-[10px] text-slate-400 mt-2 block">Kalkulasi 4 JP per pekan otomatis</span>
+              </div>
+            </div>
+
+            <!-- FLOATING OMNIBAR PROMPT INPUT -->
+            <div class="p-2 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center gap-2 shadow-2xl relative z-10">
+              <div class="p-2 rounded-xl bg-purple-600 text-white">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+              </div>
+              <input type="text" placeholder="Ketik instruksi atau pertanyaan AI... (contoh: 'Buatkan soal esai remedial 5 butir dengan rubrik')" class="flex-1 bg-transparent border-none text-xs text-white placeholder-slate-400 focus:outline-none px-2 font-medium">
+              <button class="px-4 py-2 bg-gradient-to-r from-purple-600 to-teal-500 hover:from-purple-700 hover:to-teal-600 text-white rounded-xl text-xs font-bold shadow-md tactile-btn flex items-center gap-1.5">
+                <span>Eksekusi</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    let currentConceptIndex = 0;
+
+    // RENDER NAVIGATION BUTTONS
+    function renderNav() {
+      const container = document.getElementById('concept-nav-container');
+      container.innerHTML = CONCEPTS.map((concept, index) => {
+        const isActive = index === currentConceptIndex;
+        return `
+          <button 
+            onclick="selectConcept(${index})" 
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all tactile-btn ${
+              isActive 
+                ? 'bg-teal-700 text-white shadow-sm shadow-teal-700/30 ring-2 ring-teal-500/50' 
+                : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+            }"
+          >
+            <span class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] ${
+              isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+            }">${index + 1}</span>
+            <span>${concept.title.split(':')[0]}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    // RENDER ACTIVE CONCEPT
+    function renderConceptView() {
+      const concept = CONCEPTS[currentConceptIndex];
+      const root = document.getElementById('concept-view-root');
+
+      root.innerHTML = `
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8 animate-fadeIn">
+          
+          <!-- Concept Header & Details -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+            <div class="space-y-1.5 max-w-3xl">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${concept.badgeColor}">
+                  ${concept.badge}
+                </span>
+                <span class="text-xs text-slate-500 font-semibold">• Konsep #${currentConceptIndex + 1}</span>
+              </div>
+              <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">${concept.title}</h2>
+              <p class="text-xs font-bold text-teal-800">${concept.tagline}</p>
+              <p class="text-xs text-slate-600 leading-relaxed mt-2">${concept.description}</p>
+            </div>
+
+            <!-- Target Persona Value Chips -->
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col gap-2 min-w-[280px]">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Kesesuaian Target Pengguna:</span>
+              <div class="text-[11px] text-slate-700 space-y-1">
+                <div class="flex items-start gap-1.5"><strong class="text-teal-700 shrink-0">👨‍🏫 Guru:</strong> <span>${concept.personasFit.guru}</span></div>
+                <div class="flex items-start gap-1.5"><strong class="text-amber-700 shrink-0">👨‍👩‍👦 Ortu:</strong> <span>${concept.personasFit.ortu}</span></div>
+                <div class="flex items-start gap-1.5"><strong class="text-indigo-700 shrink-0">🎒 Siswa:</strong> <span>${concept.personasFit.siswa}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DESIGN SYSTEM TOKENS ACCORDION / BADGES -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Palet Warna Utama</span>
+              <div class="flex items-center gap-1.5 mt-1.5">
+                ${concept.designTokens.palette.map(color => `
+                  <div class="group relative cursor-pointer">
+                    <div class="w-6 h-6 rounded-lg border border-slate-300 shadow-2xs" style="background-color: ${color.hex}"></div>
+                    <div class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded shadow-md whitespace-nowrap z-20">
+                      ${color.name}: ${color.hex}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Tipografi</span>
+              <p class="text-xs font-semibold text-slate-800 mt-1">${concept.designTokens.typography}</p>
+            </div>
+
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Geometri Sudut</span>
+              <p class="text-xs font-semibold text-slate-800 mt-1">${concept.designTokens.radius}</p>
+            </div>
+
+            <div>
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Kedalaman Visual</span>
+              <p class="text-xs font-semibold text-slate-800 mt-1">${concept.designTokens.shadows}</p>
+            </div>
+          </div>
+
+          <!-- INTERACTIVE LIVE PREVIEW CONTAINER -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                <i data-lucide="layout" class="w-4 h-4 text-teal-700"></i>
+                Visualisasi Komponen Langsung (Live Interactive Preview)
+              </span>
+              <span class="text-[10px] text-slate-500 font-medium">Bisa dicoba langsung di browser</span>
+            </div>
+
+            ${concept.previewHTML}
+          </div>
+
+        </div>
+      `;
+
+      lucide.createIcons();
+    }
+
+    function selectConcept(index) {
+      currentConceptIndex = index;
+      renderNav();
+      renderConceptView();
+    }
+
+    // INTERACTIVE DEMO ACTIONS (Presensi Demo Konsep 1)
+    function setStudentStatus(btn, status) {
+      const parentRow = btn.closest('.flex');
+      parentRow.querySelectorAll('.student-pill').forEach(b => {
+        b.classList.remove('active', 'bg-emerald-600', 'bg-amber-500', 'bg-sky-600', 'bg-rose-600', 'text-white');
+        b.classList.add('bg-slate-200', 'text-slate-700');
+      });
+
+      btn.classList.remove('bg-slate-200', 'text-slate-700');
+      btn.classList.add('active', 'text-white');
+      if (status === 'H') btn.classList.add('bg-emerald-600');
+      if (status === 'S') btn.classList.add('bg-amber-500');
+      if (status === 'I') btn.classList.add('bg-sky-600');
+      if (status === 'A') btn.classList.add('bg-rose-600');
+
+      updateLiveCounters();
+    }
+
+    function markAllPresent() {
+      document.querySelectorAll('#demo-student-list .student-pill:nth-child(1)').forEach(btn => {
+        setStudentStatus(btn, 'H');
+      });
+      alert('✅ Semua 32 siswa ditandai HADIR dalam 1 detik!');
+    }
+
+    function updateLiveCounters() {
+      // Mock counter updates
+      let hCount = document.querySelectorAll('#demo-student-list .student-pill.active.bg-emerald-600').length + 30;
+      let sCount = document.querySelectorAll('#demo-student-list .student-pill.active.bg-amber-500').length;
+      let iCount = document.querySelectorAll('#demo-student-list .student-pill.active.bg-sky-600').length;
+      let aCount = document.querySelectorAll('#demo-student-list .student-pill.active.bg-rose-600').length;
+
+      const elH = document.getElementById('counter-h');
+      const elS = document.getElementById('counter-s');
+      const elI = document.getElementById('counter-i');
+      const elA = document.getElementById('counter-a');
+
+      if (elH) elH.innerText = hCount;
+      if (elS) elS.innerText = sCount;
+      if (elI) elI.innerText = iCount;
+      if (elA) elA.innerText = aCount;
+    }
+
+    // ROLE SWITCHER FOR CONCEPT 4
+    function switchRoleView(role) {
+      const container = document.getElementById('role-view-content');
+      document.querySelectorAll('#sub-role-tabs .role-btn').forEach(btn => {
+        btn.classList.remove('bg-teal-700', 'text-white');
+        btn.classList.add('bg-slate-100', 'text-slate-700');
+      });
+
+      event.currentTarget.classList.remove('bg-slate-100', 'text-slate-700');
+      event.currentTarget.classList.add('bg-teal-700', 'text-white');
+
+      if (role === 'teacher') {
+        container.innerHTML = `
+          <div class="space-y-4 animate-fadeIn">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-100">
+                <span class="text-xs font-bold text-teal-900">Agenda Hari Ini</span>
+                <p class="text-lg font-extrabold text-teal-800 mt-1">3 Sesi Mengajar</p>
+                <span class="text-[10px] text-teal-700">Kelas VII-A, VIII-B, IX-C</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
+                <span class="text-xs font-bold text-amber-900">Koreksi Tertunda</span>
+                <p class="text-lg font-extrabold text-amber-800 mt-1">14 Tugas Masuk</p>
+                <span class="text-[10px] text-amber-700">Tugas 2: Aljabar Linier</span>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-sky-50 border border-sky-100">
+                <span class="text-xs font-bold text-sky-900">Dokumen PROSEM</span>
+                <p class="text-lg font-extrabold text-sky-800 mt-1">100% Seimbang</p>
+                <span class="text-[10px] text-sky-700">Siap Ekspor Excel/Word</span>
+              </div>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+              <span class="text-slate-600 font-medium">Buku Nilai Terkunci: Nilai Sumatif Tengah Semester (STS) siap dipublikasikan ke Orang Tua.</span>
+              <button class="px-3 py-1.5 bg-teal-700 text-white rounded-xl font-bold tactile-btn">Buka Buku Nilai</button>
+            </div>
+          </div>
+        `;
+      } else if (role === 'parent') {
+        container.innerHTML = `
+          <div class="space-y-3 animate-fadeIn">
+            <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-sm">
+                  AF
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-slate-900">Ananda Ahmad Fauzi Pratama (Kelas VIII-A)</h4>
+                  <p class="text-[11px] text-emerald-700 font-semibold">✅ Status Hari Ini: Hadir Tepat Waktu (07:15 WIB)</p>
+                </div>
+              </div>
+              <button onclick="alert('Membuka WhatsApp Form Lapor Izin/Sakit...')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 tactile-btn">
+                <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                Lapor Izin ke Wali Kelas
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div class="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-1.5">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">Nilai Terakhir</span>
+                <p class="text-sm font-bold text-slate-800">Matematika Kuis 3: <span class="text-emerald-700 font-extrabold">92 / 100</span> (Tuntas)</p>
+                <p class="text-[11px] text-slate-500">Catatan Guru: "Ahmad sangat aktif dalam penalaran rumus."</p>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-1.5">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">PR & Tugas Rumah</span>
+                <p class="text-sm font-bold text-amber-800">IPA Bab 4: Pengamatan Suhu</p>
+                <p class="text-[11px] text-slate-500">Tenggat Waktu: Besok Pagi, 07:00 WIB</p>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (role === 'student') {
+        container.innerHTML = `
+          <div class="space-y-3 animate-fadeIn">
+            <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">🔥</span>
+                <div>
+                  <h4 class="font-extrabold text-xs text-indigo-950">Streak Belajar: 5 Hari Berturut-turut!</h4>
+                  <p class="text-[11px] text-indigo-700 font-medium">Selesaikan 1 kuis hari ini untuk mempertahankan badge 'Juara Rajin'.</p>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-indigo-600 text-white font-bold text-xs">150 Poin XP</span>
+            </div>
+
+            <div class="space-y-2">
+              <div class="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 font-bold text-[10px] flex items-center justify-center">1</span>
+                  <div>
+                    <h5 class="font-bold text-slate-900">Kuis Cepat: Teorema Pythagoras</h5>
+                    <p class="text-[10px] text-slate-500">5 Soal Pilihan Ganda • Estimasi 5 Menit</p>
+                  </div>
+                </div>
+                <button class="px-3 py-1 bg-teal-700 text-white rounded-lg font-bold text-xs tactile-btn">Mulai Kuis</button>
+              </div>
+
+              <div class="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center">✓</span>
+                  <div>
+                    <h5 class="font-bold text-slate-400 line-through">Unggah Foto Tugas IPA Pemuaian</h5>
+                    <p class="text-[10px] text-emerald-600 font-medium">Telah Dikumpulkan (Nilai: 95)</p>
+                  </div>
+                </div>
+                <span class="text-[11px] text-slate-400 font-semibold">Selesai</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    // INITIALIZE ON LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      renderNav();
+      renderConceptView();
+    });
+  </script>
+</body>
+</html>

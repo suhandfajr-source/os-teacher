@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
-import KelasTabs from "../KelasTabs";
+
 import { TeacherParentAccessManager } from "./TeacherParentAccessManager";
 import { getTeacherParentAccessList, getTeacherParentInvitationList } from "@/modules/parent/parent.service";
 
@@ -42,14 +42,12 @@ export default async function TeacherParentAccessPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Manajemen Akses Orang Tua</h1>
-        <p className="text-muted-foreground text-sm">
-          Kelola tautan undangan dan hak akses orang tua untuk memantau kehadiran dan hasil pembelajaran siswa.
+      <div className="flex flex-col gap-1 pb-1 border-b">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900">Akses & Undangan Akun Orang Tua</h2>
+        <p className="text-muted-foreground text-xs">
+          Kelola tautan undangan dan hak akses portal orang tua untuk memantau kehadiran dan hasil pembelajaran siswa.
         </p>
       </div>
-
-      <KelasTabs teachingContextId={teachingContextId} />
 
       <TeacherParentAccessManager
         teachingContextId={teachingContextId}

@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  if (!authContext?.profile?.onboardingCompleted) {
+  if (!authContext?.profile?.onboardingCompleted || !authContext?.activeSchoolId) {
     redirect("/onboarding");
   }
 
@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden pb-[60px] md:pb-0">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-muted/20">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F6F8F8]">
           {children}
         </main>
       </div>

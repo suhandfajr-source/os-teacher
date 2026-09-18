@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Knowledge & Executive Brief | AI Teacher Assistant (Teacher OS)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --primary-border: #bfdbfe;
+      
+      --accent: #059669;
+      --accent-light: #ecfdf5;
+      --accent-border: #a7f3d0;
+      
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --purple-border: #ddd6fe;
+
+      --amber: #d97706;
+      --amber-light: #fffbeb;
+      --amber-border: #fde68a;
+
+      --rose: #e11d48;
+      --rose-light: #fff1f2;
+      --rose-border: #fecdd3;
+
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-300: #cbd5e1;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+      --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+
+      --radius-sm: 6px;
+      --radius: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--slate-800);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      padding: 0;
+    }
+
+    /* Top Banner / Header */
+    header.hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
+      color: white;
+      padding: 60px 24px 70px 24px;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    header.hero::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(0, 0, 0, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    header.hero::after {
+      content: "";
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .hero-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 10;
+    }
+
+    .badge-hero {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #93c5fd;
+      margin-bottom: 20px;
+    }
+
+    .badge-hero span.dot {
+      width: 8px;
+      height: 8px;
+      background-color: #34d399;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 8px #34d399;
+    }
+
+    h1.hero-title {
+      font-size: 2.75rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+      margin-bottom: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.hero-subtitle {
+      font-size: 1.15rem;
+      color: #94a3b8;
+      max-width: 820px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+      font-weight: 400;
+    }
+
+    .hero-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .hero-meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-meta-item .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .hero-meta-item .value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-top: 2px;
+    }
+
+    /* Layout Structure */
+    .layout-wrapper {
+      max-width: 1240px;
+      margin: -30px auto 60px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 32px;
+      position: relative;
+      z-index: 20;
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      position: sticky;
+      top: 24px;
+      height: fit-content;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    aside.sidebar h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--slate-400);
+      font-weight: 700;
+      margin-bottom: 12px;
+      padding-left: 8px;
+    }
+
+    aside.sidebar nav ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    aside.sidebar nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--slate-600);
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease-in-out;
+    }
+
+    aside.sidebar nav a:hover {
+      background-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    aside.sidebar nav a.active {
+      background-color: var(--primary-light);
+      color: var(--primary-dark);
+      font-weight: 700;
+      border-left: 3px solid var(--primary);
+    }
+
+    /* Main Content Area */
+    main.content {
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+      min-width: 0;
+    }
+
+    /* Section Cards */
+    section.doc-section {
+      background: var(--bg-card);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 36px 40px;
+      box-shadow: var(--shadow-sm);
+      scroll-margin-top: 30px;
+    }
+
+    .section-header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--slate-100);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .section-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    h2.section-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+    }
+
+    p.section-desc {
+      font-size: 0.95rem;
+      color: var(--slate-500);
+    }
+
+    h3.sub-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin: 28px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h4.nested-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--slate-700);
+      margin: 20px 0 8px 0;
+    }
+
+    p, li {
+      font-size: 0.925rem;
+      color: var(--slate-600);
+      line-height: 1.7;
+    }
+
+    p {
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 16px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    strong {
+      color: var(--slate-800);
+      font-weight: 600;
+    }
+
+    /* Quotes / Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      margin: 20px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-left: 4px solid;
+    }
+
+    .callout-primary {
+      background-color: var(--primary-light);
+      border-left-color: var(--primary);
+    }
+    .callout-primary .callout-title { color: var(--primary-dark); }
+
+    .callout-accent {
+      background-color: var(--accent-light);
+      border-left-color: var(--accent);
+    }
+    .callout-accent .callout-title { color: var(--accent); }
+
+    .callout-amber {
+      background-color: var(--amber-light);
+      border-left-color: var(--amber);
+    }
+    .callout-amber .callout-title { color: var(--amber); }
+
+    .callout-purple {
+      background-color: var(--purple-light);
+      border-left-color: var(--purple);
+    }
+    .callout-purple .callout-title { color: var(--purple); }
+
+    .callout-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .callout-body {
+      font-size: 0.875rem;
+      color: var(--slate-700);
+    }
+
+    /* Grids & Cards inside Sections */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .feature-card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.2s ease;
+    }
+
+    .feature-card:hover {
+      border-color: var(--slate-300);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+    }
+
+    .bg-blue-badge { background: #dbeafe; color: #1d4ed8; }
+    .bg-emerald-badge { background: #d1fae5; color: #047857; }
+    .bg-purple-badge { background: #ede9fe; color: #6d28d9; }
+    .bg-amber-badge { background: #fef3c7; color: #b45309; }
+    .bg-rose-badge { background: #ffe4e6; color: #be123c; }
+
+    .feature-card h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin-bottom: 6px;
+    }
+
+    .feature-card p {
+      font-size: 0.85rem;
+      color: var(--slate-600);
+      margin-bottom: 0;
+      line-height: 1.55;
+    }
+
+    /* Diagram / ASCII Box Style */
+    .workflow-box {
+      background: var(--slate-900);
+      color: #e2e8f0;
+      padding: 24px;
+      border-radius: var(--radius);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.825rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin: 20px 0;
+      border: 1px solid var(--slate-700);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .workflow-box .highlight {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .workflow-box .accent {
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    .workflow-box .warning {
+      color: #facc15;
+      font-weight: 600;
+    }
+
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto;
+      margin: 20px 0;
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius);
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    table.data-table th {
+      background: var(--slate-100);
+      color: var(--slate-800);
+      font-weight: 700;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--slate-200);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    table.data-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--slate-200);
+      color: var(--slate-700);
+      vertical-align: top;
+    }
+
+    table.data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background-color: var(--slate-50);
+    }
+
+    /* Pill Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-blue { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .badge-emerald { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .badge-purple { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
+    .badge-amber { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-gray { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .badge-rose { background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; }
+
+    /* Comparison matrix */
+    .vs-matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .vs-card {
+      border-radius: var(--radius);
+      padding: 24px;
+      border: 1px solid;
+    }
+
+    .vs-card.traditional {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .vs-card.our-product {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      position: relative;
+    }
+
+    .vs-card h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .vs-card.traditional h4 { color: #64748b; }
+    .vs-card.our-product h4 { color: #1d4ed8; }
+
+    .vs-card ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+
+    .vs-card li {
+      padding: 6px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.875rem;
+    }
+
+    /* Footer */
+    footer.doc-footer {
+      max-width: 1240px;
+      margin: 40px auto;
+      padding: 24px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--slate-400);
+      border-top: 1px solid var(--slate-200);
+    }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .layout-wrapper {
+        grid-template-columns: 1fr;
+      }
+      aside.sidebar {
+        display: none;
+      }
+      .grid-4, .grid-3, .grid-2, .vs-matrix {
+        grid-template-columns: 1fr;
+      }
+      h1.hero-title {
+        font-size: 2.1rem;
+      }
+      section.doc-section {
+        padding: 24px 20px;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 12mm 12mm 15mm 12mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #1e293b !important;
+        font-size: 9.5pt;
+        line-height: 1.5;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      header.hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%) !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        padding: 32px 24px 28px 24px !important;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+      .badge-hero {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: #93c5fd !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      h1.hero-title {
+        font-size: 2rem !important;
+        color: #ffffff !important;
+        background: none !important;
+        -webkit-text-fill-color: #ffffff !important;
+      }
+      p.hero-subtitle {
+        font-size: 0.95rem !important;
+        color: #cbd5e1 !important;
+        margin-bottom: 16px !important;
+      }
+      .hero-meta-grid {
+        padding-top: 14px !important;
+      }
+      .hero-meta-item .value {
+        color: #ffffff !important;
+      }
+      aside.sidebar {
+        display: none !important;
+      }
+      .layout-wrapper {
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+      }
+      main.content {
+        gap: 16px !important;
+      }
+      section.doc-section {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        padding: 20px 24px !important;
+        margin-bottom: 16px !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .section-header {
+        margin-bottom: 14px !important;
+        padding-bottom: 10px !important;
+      }
+      h2.section-title {
+        font-size: 1.35rem !important;
+      }
+      h3.sub-title {
+        font-size: 1.05rem !important;
+        margin: 18px 0 8px 0 !important;
+      }
+      .feature-card, .vs-card, .callout, .workflow-box, .table-responsive, table.data-table {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .feature-card {
+        padding: 14px 16px !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+      .feature-card p, p, li {
+        font-size: 8.5pt !important;
+        line-height: 1.45 !important;
+      }
+      .workflow-box {
+        background: #0f172a !important;
+        color: #e2e8f0 !important;
+        padding: 14px 18px !important;
+        font-size: 7.5pt !important;
+        line-height: 1.45 !important;
+      }
+      table.data-table th, table.data-table td {
+        padding: 8px 10px !important;
+        font-size: 8pt !important;
+      }
+      .badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        padding: 2px 6px !important;
+        font-size: 7pt !important;
+      }
+      .grid-2, .grid-3, .grid-4, .vs-matrix {
+        gap: 12px !important;
+        margin: 12px 0 !important;
+      }
+      footer.doc-footer {
+        margin-top: 20px !important;
+        padding: 14px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO BANNER -->
+  <header class="hero">
+    <div class="hero-container">
+      <div class="badge-hero">
+        <span class="dot"></span> Official Product Knowledge & Owner's Brief
+      </div>
+      <h1 class="hero-title">AI Teacher Assistant (Teacher OS)</h1>
+      <p class="hero-subtitle">
+        Sistem Operasi Kerja Guru Terintegrasi yang mengotomatisasi beban administrasi, mengoptimalkan persiapan mengajar berbasis AI, mengorganisir data penilaian, serta memantau perkembangan siswa secara 360° tanpa menambah beban guru.
+      </p>
+
+      <div class="hero-meta-grid">
+        <div class="hero-meta-item">
+          <span class="label">Klasifikasi Produk</span>
+          <span class="value">Teacher-First Productivity OS</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="label">Pengguna Utama (Primary)</span>
+          <span class="value">Guru Kelas & Guru Mapel</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="label">Pengguna Pendukung</span>
+          <span class="value">Orang Tua / Wali & Siswa</span>
+        </div>
+        <div class="hero-meta-item">
+          <span class="label">Fondasi Filosofi</span>
+          <span class="value">AI Assists, Teacher Decides</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT -->
+  <div class="layout-wrapper">
+    
+    <!-- STICKY SIDEBAR -->
+    <aside class="sidebar">
+      <h3>Daftar Isi Dokumen</h3>
+      <nav>
+        <ul>
+          <li><a href="#executive-summary">1. Ringkasan Eksekutif</a></li>
+          <li><a href="#vision-philosophy">2. Visi, Misi & Filosofi</a></li>
+          <li><a href="#problem-market">3. Problem Statement (20 Pain Points)</a></li>
+          <li><a href="#target-users">4. Target Persona & Stakeholder</a></li>
+          <li><a href="#mental-models">5. Arsitektur Mental: 2 Core Modes</a></li>
+          <li><a href="#core-workspaces">6. 4 Ruang Kerja Kelas Terpadu</a></li>
+          <li><a href="#feature-deep-dive">7. Fitur Utama & Modul (Deep Dive)</a></li>
+          <li><a href="#ai-capabilities">8. AI Content Studio & PPT Engine</a></li>
+          <li><a href="#quiz-online">9. Quiz Online & CBT Engine</a></li>
+          <li><a href="#student-360">10. Student 360 & Monitoring</a></li>
+          <li><a href="#parent-portal">11. Portal Orang Tua & Keamanan</a></li>
+          <li><a href="#data-import">12. Mid-Semester Onboarding</a></li>
+          <li><a href="#tech-architecture">13. Arsitektur Teknis & Keamanan</a></li>
+          <li><a href="#before-after-matrix">14. Analisis Komparasi: Sebelum vs Sesudah</a></li>
+          <li><a href="#competitive-advantage">15. Keunggulan Kompetitif (USP)</a></li>
+          <li><a href="#product-faq">16. Product FAQ & FAQ Penjualan</a></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- CONTENT BODY -->
+    <main class="content">
+
+      <!-- 1. EXECUTIVE SUMMARY -->
+      <section id="executive-summary" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 01</span>
+          <h2 class="section-title">Ringkasan Eksekutif Produk</h2>
+          <p class="section-desc">Apa itu AI Teacher Assistant dan mengapa produk ini diciptakan?</p>
+        </div>
+
+        <p>
+          <strong>AI Teacher Assistant (Teacher OS)</strong> adalah platform produktivitas kerja berbasis web yang dirancang khusus untuk guru (<em>teacher-first</em>). Produk ini memadukan kekuatan manajemen data kelas yang rapi dengan kecerdasan buatan (<em>Generative AI</em>) guna memangkas pekerjaan administratif yang menyita waktu hingga <strong>70% - 85%</strong>.
+        </p>
+
+        <div class="callout callout-primary">
+          <div class="callout-title">💡 Nilai Inti bagi Sekolah dan Guru</div>
+          <div class="callout-body">
+            Kami <strong>bukan</strong> Sistem Informasi Manajemen Sekolah (ERP/SIS) yang kaku dan birokratis, serta <strong>bukan</strong> LMS generik yang membingungkan. Kami adalah <em>kokpit kerja harian guru</em> yang membuat guru kembali fokus pada esensi profesinya: mendidik, mengajar, dan membimbing siswa.
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="feature-card">
+            <div class="feature-icon-badge bg-blue-badge">⚡</div>
+            <h4>Presensi & Jurnal 2 Menit</h4>
+            <p>Sesi mengajar live dirancang tuntas dalam hitungan menit saat guru berdiri di depan kelas.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon-badge bg-purple-badge">🤖</div>
+            <h4>Studio Konten AI 6-in-1</h4>
+            <p>Otomasi pembuatan Modul Ajar RPP, Kisi-Kisi, Soal HOTS/LOTS, LKPD, Slide PPT visual, dan Rubrik.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon-badge bg-emerald-badge">📊</div>
+            <h4>Buku Nilai & Student 360°</h4>
+            <p>Kalkulasi nilai otomatis, deteksi siswa butuh remedial, dan histori perkembangan holistik.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. VISION & PHILOSOPHY -->
+      <section id="vision-philosophy" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 02</span>
+          <h2 class="section-title">Visi, Misi & Filosofi Produk</h2>
+          <p class="section-desc">Prinsip dasar yang menjadi pegangan mutlak dalam rancang bangun produk.</p>
+        </div>
+
+        <h3 class="sub-title">Prinsip Desain Non-Nego (Non-Negotiable Principles)</h3>
+        
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 30%;">Prinsip</th>
+                <th>Makna Operasional dalam Produk</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Input Once, Use Everywhere</strong></td>
+                <td>Data yang sudah dimasukkan (misal topik pertemuan atau presensi) otomatis mengisi jurnal, rekap absen, dan laporan rapor tanpa input ulang.</td>
+              </tr>
+              <tr>
+                <td><strong>2. AI Assists, Teacher Decides</strong></td>
+                <td>AI bertindak sebagai asisten draft pertama (co-pilot). Guru selalu memegang kendali penuh untuk meninjau, mengedit, dan mengesahkan keputusan.</td>
+              </tr>
+              <tr>
+                <td><strong>3. Minimum Usable Context</strong></td>
+                <td>Aplikasi bisa langsung digunakan hanya dengan <em>Sekolah + Guru + Mapel + Kelas + Siswa</em>. Kurikulum mendalam (CP/TP/Prota/Prosem) adalah pengayaan opsional.</td>
+              </tr>
+              <tr>
+                <td><strong>4. Start Anytime, Grow the Context</strong></td>
+                <td>Guru bisa mulai di tengah semester tanpa harus mengulang input data dari awal tahun ajaran lewat fitur <em>Mid-Semester Onboarding</em>.</td>
+              </tr>
+              <tr>
+                <td><strong>5. Automate Admin First</strong></td>
+                <td>Otomatisasi hal repetitif yang membosankan terlebih dahulu sebelum mencoba mengotomatisasi intuisi pedagogis guru.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-amber">
+          <div class="callout-title">⚖️ Keputusan Strategis Penilaian V1</div>
+          <div class="callout-body">
+            Pada versi 1, koreksi essay dan keputusan nilai akhir tetap berada di tangan guru. AI membantu membuat kisi-kisi, variasi soal, dan kunci jawaban, sedangkan sistem melakukan validasi, kalkulasi bobot statistik, deteksi ambang KKTP, dan pembentukan laporan.
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. PROBLEM STATEMENT -->
+      <section id="problem-market" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 03</span>
+          <h2 class="section-title">Problem Statement: 20 Masalah Guru</h2>
+          <p class="section-desc">Riset mendalam kami mengidentifikasi 20 friksi nyata guru yang terbagi ke dalam 5 klaster besar.</p>
+        </div>
+
+        <p>Berdasarkan wawancara lapangan, guru di Indonesia menghabiskan hingga <strong>40-60% jam kerja</strong> mereka hanya untuk urusan administratif di atas kertas dan file spreadsheet yang tercerai-berai.</p>
+
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4 style="color: #2563eb;">Klaster A: Administrasi Rutin</h4>
+            <ul>
+              <li>Absensi siswa butuh rekap manual berulang.</li>
+              <li>Input nilai banyak komponen & hitungan manual.</li>
+              <li>Jurnal mengajar meminta data yang sudah ada di RPP.</li>
+              <li>Administrasi rapor menyita waktu berminggu-minggu.</li>
+              <li>Permintaan laporan pimpinan butuh rekap mendadak.</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4 style="color: #7c3aed;">Klaster B: Perangkat Pembelajaran</h4>
+            <ul>
+              <li>RPP / Modul Ajar formatnya repetitif tapi dibuat manual dari nol.</li>
+              <li>Pembuatan PPT, LKPD & Worksheet butuh waktu berjam-jam.</li>
+              <li>Kesulitan mencari metode diferensiasi yang cocok.</li>
+              <li>Materi pembelajaran tahun lalu hilang/sulit dicari.</li>
+              <li>Pembagian waktu Prota & Prosem dihitung manual.</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4 style="color: #059669;">Klaster C: Assessment & Evaluasi</h4>
+            <ul>
+              <li>Kisi-kisi soal dibuat manual tanpa matriks taksonomi.</li>
+              <li>Membuat variasi soal latihan & ulangan memakan waktu.</li>
+              <li>Tracking siswa yang belum tuntas & ujian remedial rumit.</li>
+              <li>Sulit memetakan materi mana yang belum dikuasai kelas.</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4 style="color: #d97706;">Klaster D: Monitoring & Komunikasi</h4>
+            <ul>
+              <li>Catatan perilaku siswa tercecer di notes pribadi.</li>
+              <li>Perkembangan siswa sulit dilihat secara komprehensif.</li>
+              <li>Tracking pengumpulan tugas manual di buku catatan.</li>
+              <li>Komunikasi capaian ke orang tua berulang dan membebani.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. TARGET USERS -->
+      <section id="target-users" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 04</span>
+          <h2 class="section-title">Target Persona & Stakeholder</h2>
+          <p class="section-desc">Siapa saja yang berinteraksi dengan Teacher OS dan apa perannya?</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="feature-card" style="border-top: 4px solid var(--primary);">
+            <span class="badge badge-blue" style="width: fit-content; margin-bottom: 8px;">Primary User</span>
+            <h4>Guru Mata Pelajaran / Kelas</h4>
+            <p>Pemilik workspace pengajaran. Mengelola absensi harian, jurnal, asesmen, input nilai, pembuatan konten ajar AI, dan monitoring siswa.</p>
+          </div>
+          <div class="feature-card" style="border-top: 4px solid var(--accent);">
+            <span class="badge badge-emerald" style="width: fit-content; margin-bottom: 8px;">Secondary User</span>
+            <h4>Orang Tua / Wali Siswa</h4>
+            <p>Mendapat transparansi kehadiran dan perkembangan anak melalui link portal terisolasi tanpa bisa melihat data privat guru atau siswa lain.</p>
+          </div>
+          <div class="feature-card" style="border-top: 4px solid var(--purple);">
+            <span class="badge badge-purple" style="width: fit-content; margin-bottom: 8px;">Student Participant</span>
+            <h4>Siswa (Peserta Didik)</h4>
+            <p>Mengerjakan Quiz Online ringan langsung lewat browser ponsel/laptop via tautan token tanpa perlu akun yang rumit.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. MENTAL MODELS (2 MODES) -->
+      <section id="mental-models" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 05</span>
+          <h2 class="section-title">Arsitektur Mental: Dua Dunia Guru</h2>
+          <p class="section-desc">Mendesain antarmuka berdasarkan konteks psikologis dan waktu kerja guru di lapangan.</p>
+        </div>
+
+        <p>
+          Kebanyakan aplikasi gagal karena memaksa guru mengoperasikan dashboard yang rumit saat sedang mengajar di kelas. Teacher OS memecah pengalaman menjadi <strong>2 mode terpisah</strong>:
+        </p>
+
+        <div class="workflow-box">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ PETA DUA DUNIA PENGALAMAN GURU (THE TWO CORE MODES)                                    │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│ ⚡ <span class="highlight">MODE 1: LIVE TEACHING SESSION</span> (/kelas/[id]/pertemuan/[sessionId])                │
+│ • Konteks: Guru sedang berdiri di depan kelas (Waktu terbatas 2-5 menit).             │
+│ • Tata Letak: Sticky Bar + Jurnal Ringkas + Presensi Cepat (Pill Toggles H/S/I/A/T)    │
+│                                                                                        │
+│                                        ▲                                               │
+│                                        │ (Dipicu dari Tombol "Mulai Sesi Mengajar")    │
+│                                        ▼                                               │
+│                                                                                        │
+│ 🏛️ <span class="accent">MODE 2: CLASS WORKSPACE & REVIEW</span> (/kelas/[id])                                   │
+│ • Konteks: Guru sedang di meja kerja, ruang guru, atau rumah saat santai.              │
+│ • Tata Letak: 4 Ruang Kerja Terpadu (Mengajar, Nilai, Siswa & Ortu, Administrasi).    │
+│                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+        </div>
+
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>⚡ Mode 1: Live Teaching Session</h4>
+            <p>Ergonomis untuk layar tablet maupun laptop. Menyediakan tombol instan <em>"Tandai Semua Hadir"</em>, toggle status presensi per siswa sekali klik, dan auto-generate draf jurnal ajar dengan bantuan AI.</p>
+          </div>
+          <div class="feature-card">
+            <h4>🏛️ Mode 2: Class Workspace</h4>
+            <p>Pusat kendali komprehensif untuk merekap data semester, mengolah buku nilai berbobot, mengorganisir materi ajar, mengekspor laporan, serta memantau kesehatan akademik kelas.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 4 CORE WORKSPACES -->
+      <section id="core-workspaces" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 06</span>
+          <h2 class="section-title">4 Ruang Kerja Terpadu Kelas</h2>
+          <p class="section-desc">Menggantikan puluhan menu yang membingungkan menjadi 4 pilar fungsional yang ergonomis.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="feature-card" style="background: white; border: 1px solid var(--primary-border);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.3rem;">📖</span>
+              <h4 style="color: var(--primary);">1. Ruang Mengajar</h4>
+            </div>
+            <p><strong>Fokus:</strong> Pelaksanaan dan linimasa aktivitas belajar mengajar.</p>
+            <ul style="margin-top: 10px; font-size: 0.85rem;">
+              <li>Linimasa sesi mengajar pertemuan 1 s/d pertemuan 16.</li>
+              <li>Rekap presensi kumulatif kehadiran siswa (Hadir, Sakit, Izin, Alpa, Terlambat).</li>
+              <li>Buku Jurnal Guru harian terpadu dengan catatan refleksi kelas.</li>
+            </ul>
+          </div>
+
+          <div class="feature-card" style="background: white; border: 1px solid var(--accent-border);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.3rem;">🎯</span>
+              <h4 style="color: var(--accent);">2. Nilai & Evaluasi</h4>
+            </div>
+            <p><strong>Fokus:</strong> Rekam jejak asesmen, tugas, dan formula nilai.</p>
+            <ul style="margin-top: 10px; font-size: 0.85rem;">
+              <li>Matriks Buku Nilai berjalan dengan sticky header & nama siswa.</li>
+              <li>Pengaturan kebijakan bobot (Tugas 20%, Formatif 30%, Sumatif 50%).</li>
+              <li>Pelacak antrean remedial dan batas ketuntasan KKTP per materi.</li>
+            </ul>
+          </div>
+
+          <div class="feature-card" style="background: white; border: 1px solid var(--purple-border);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.3rem;">👥</span>
+              <h4 style="color: var(--purple);">3. Siswa & Komunikasi</h4>
+            </div>
+            <p><strong>Fokus:</strong> Manajemen data siswa dan keterlibatan wali murid.</p>
+            <ul style="margin-top: 10px; font-size: 0.85rem;">
+              <li>Roster siswa pintar dilengkapi indikator kehadiran & rata-rata nilai.</li>
+              <li>Log monitoring catatan khusus (privat vs butuh tindak lanjut).</li>
+              <li>Manajemen token undangan dan akses portal orang tua/wali murid.</li>
+            </ul>
+          </div>
+
+          <div class="feature-card" style="background: white; border: 1px solid var(--amber-border);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.3rem;">📑</span>
+              <h4 style="color: var(--amber);">4. Administrasi & Rapor</h4>
+            </div>
+            <p><strong>Fokus:</strong> Pemenuhan kurikulum, pelaporan resmi, dan sinkronisasi data.</p>
+            <ul style="margin-top: 10px; font-size: 0.85rem;">
+              <li>Pemetaan Capaian Pembelajaran (CP) dan Tujuan Pembelajaran (TP).</li>
+              <li>Pusat cetak & ekspor rekap rapor (Excel berformat, PDF, dan Word).</li>
+              <li>Wizard Impor Data semesteran dari file spreadsheet Dapodik/Excel.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. FEATURE DEEP DIVE -->
+      <section id="feature-deep-dive" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 07</span>
+          <h2 class="section-title">Fitur Utama & Modul (Deep Dive)</h2>
+          <p class="section-desc">Rincian kapabilitas operasional yang siap pakai di dalam Teacher OS.</p>
+        </div>
+
+        <h3 class="sub-title">1. Teaching Schedule & Daily Stream Engine</h3>
+        <p>
+          Sistem jadwal cerdas yang memetakan jam mengajar mingguan guru, mendukung sekolah 5 hari maupun 6 hari kerja, dan menyajikan <strong>Daily Stream</strong> di beranda utama.
+        </p>
+        <div class="grid-3">
+          <div class="feature-card">
+            <h4>Deteksi Anti-Bentrok</h4>
+            <p>Mencegah tabrakan jadwal mengajar pada jam dan hari yang sama antar kelas secara instan saat input.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Linimasa Jam-demi-Jam</h4>
+            <p>Menampilkan status sesi: <em>Waktunya Mengajar, Sedang Berlangsung,</em> atau <em>Selesai</em> secara real-time.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Empty State Produktif</h4>
+            <p>Jika hari ini tidak ada jadwal mengajar, beranda menyajikan rekomendasi (Buat Kuis, Siapkan Modul Ajar).</p>
+          </div>
+        </div>
+
+        <h3 class="sub-title">2. Buku Nilai & Engine Pembobotan Fleksibel</h3>
+        <p>
+          Guru dapat menyesuaikan struktur penilaian sesuai kebijakan kurikulum sekolah (Kurikulum Merdeka maupun K13) dengan formula pembobotan dinamis:
+        </p>
+        <div class="workflow-box">
+<span class="highlight">Nilai Akhir Siswa</span> = (Σ (Nilai Kategori x Bobot Kategori)) / Total Bobot Aktif
+Contoh:
+- Tugas & PR          : 20%
+- Ulangan Harian (TP) : 30%
+- Asesmen Sumatif Akhir: 50%
+<span class="accent">Status Otomatis</span>: Jika Nilai Akhir &lt; KKTP (misal 75) ──► <span class="warning">Flag Butuh Remedial</span>
+        </div>
+      </section>
+
+      <!-- 8. AI CONTENT STUDIO & PPT ENGINE -->
+      <section id="ai-capabilities" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 08</span>
+          <h2 class="section-title">AI Content Studio & Adaptive PPT Generator</h2>
+          <p class="section-desc">Generator konten pedagogis kontekstual yang menghemat waktu persiapan ajar dari berhari-hari menjadi hitungan menit.</p>
+        </div>
+
+        <h3 class="sub-title">Generator 6-in-1 Berbasis Kurikulum Indonesia</h3>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Tipe Konten</th>
+                <th>Output yang Dihasilkan AI</th>
+                <th>Format Rekomendasi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Modul Ajar / RPP</strong></td>
+                <td>Struktur lengkap CP, TP, Model Pembelajaran (PBL/PjBL), langkah kegiatan inti, dan alokasi waktu.</td>
+                <td><span class="badge badge-blue">DOCX (Word)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Bank Soal & Kisi-Kisi</strong></td>
+                <td>Distribusi Taksonomi Bloom (LOTS/HOTS), kunci jawaban, opsi PG, pembahasan, dan rubrik essay.</td>
+                <td><span class="badge badge-emerald">XLSX / Quiz</span></td>
+              </tr>
+              <tr>
+                <td><strong>LKPD (Lembar Kerja)</strong></td>
+                <td>Aktivitas praktikum, studi kasus, stimulus fenomena, instruksi terstruktur, dan ruang isian siswa.</td>
+                <td><span class="badge badge-blue">DOCX (Word)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Slide Presentasi Visual</strong></td>
+                <td>Presentasi modern, layout bervariasi, visual non-monoton, poin ringkas, dan catatan guru (Speaker Notes).</td>
+                <td><span class="badge badge-rose">PPTX (PowerPoint)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Bahan Bacaan & Ringkasan</strong></td>
+                <td>Materi ajar berdiferensiasi (Kesiapan Dasar vs Pengayaan), analogi sederhana, dan glosarium istilah.</td>
+                <td><span class="badge badge-blue">DOCX (Word)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Rubrik Asesmen Autentik</strong></td>
+                <td>Kriteria penilaian deskriptif 4 level: Perlu Bimbingan, Cukup, Cakap, dan Mahir.</td>
+                <td><span class="badge badge-purple">DOCX (Word)</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub-title">Keunggulan Adaptive PPT Generation Engine V1</h3>
+        <p>
+          Bukan sekadar memindahkan teks paragraf ke dalam slide! Engine PPT kami menerapkan visual hierarchy modern:
+        </p>
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>🎨 Desain Beragam & Non-Monoton</h4>
+            <p>Mendukung layout Hero Intro, Perbandingan 2 Kolom, Grid Konsep 3 Kotak, Stat/Highlight, dan Tahapan Proses (Timeline).</p>
+          </div>
+          <div class="feature-card">
+            <h4>🎙️ Speaker Notes Otomatis</h4>
+            <p>Setiap slide dilengkapi catatan narasi bagi guru sehingga guru siap membawakan materi di depan kelas secara percaya diri.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. QUIZ ONLINE & CBT ENGINE -->
+      <section id="quiz-online" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 09</span>
+          <h2 class="section-title">Quiz Online & CBT Light Engine</h2>
+          <p class="section-desc">Platform ujian digital berbasis web tanpa instalasi aplikasi, aman, dan langsung terkoneksi ke buku nilai.</p>
+        </div>
+
+        <div class="workflow-box">
+<span class="highlight">ALUR KUIS DIGITAL 1-KLIK</span>
+1. Guru membuat kuis (Manual atau digenerate AI dalam 10 detik)
+2. Guru membagikan tautan: <span class="accent">domain.com/q/[shareToken]</span>
+3. Siswa memasukkan PIN (Classroom PIN atau PIN Individu per siswa)
+4. Soal & Opsi diacak otomatis (Fisher-Yates Shuffle Engine)
+5. Siswa menyelesaikan ujian ──► Nilai PG dihitung otomatis secara instan
+6. Guru mengonversi hasil kuis menjadi <span class="warning">Komponen Penilaian Kelas</span> dalam 1 klik!
+        </div>
+
+        <div class="grid-3">
+          <div class="feature-card">
+            <div class="feature-icon-badge bg-blue-badge">🔒</div>
+            <h4>Anti-Joki & Proteksi PIN</h4>
+            <p>Mendukung mode PIN Kelas maupun PIN Unik per siswa untuk memastikan hanya murid terdaftar yang bisa mengerjakan.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon-badge bg-emerald-badge">🔀</div>
+            <h4>Fisher-Yates Randomizer</h4>
+            <p>Urutan soal dan pilihan ganda diacak berbeda untuk setiap siswa, meminimalisir potensi sontekan antar meja.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon-badge bg-purple-badge">📊</div>
+            <h4>Sinkronisasi ke Buku Nilai</h4>
+            <p>Nilai kuis siswa langsung diekspor ke modul penilaian tanpa perlu guru mengetik ulang nilai satu per satu.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. STUDENT 360 -->
+      <section id="student-360" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 10</span>
+          <h2 class="section-title">Student 360° & Monitoring Holistik</h2>
+          <p class="section-desc">Melihat profil setiap peserta didik secara utuh, bukan sekadar angka nilai ujian.</p>
+        </div>
+
+        <p>
+          Teacher OS menyusun profil <strong>Student 360°</strong> secara dinamis yang dirangkum dari data riil harian tanpa membuat entri ganda:
+        </p>
+
+        <div class="grid-2">
+          <div class="feature-card">
+            <h4>Komponen Data Student 360°</h4>
+            <ul>
+              <li><strong>Persentase Kehadiran:</strong> Tingkat kehadiran, riwayat sakit, izin, dan alpa.</li>
+              <li><strong>Grafik Tren Nilai:</strong> Perkembangan nilai dari tugas awal hingga ujian akhir.</li>
+              <li><strong>Riwayat Remedial:</strong> Catatan kompetensi yang sempat belum tuntas dan hasil perbaikannya.</li>
+              <li><strong>Status Pengumpulan Tugas:</strong> Riwayat tugas selesai tepat waktu vs terlambat.</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>Catatan Perilaku & Early Warning</h4>
+            <ul>
+              <li><strong>Catatan Guru Privat:</strong> Pengamatan personal guru yang hanya bisa dibaca oleh guru bersangkutan.</li>
+              <li><strong>Flag Butuh Tindak Lanjut:</strong> Penanda khusus untuk siswa yang memerlukan perhatian wali kelas/guru BK.</li>
+              <li><strong>Log Resolusi:</strong> Rekam jejak solusi ketika kendala siswa telah terselesaikan.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11. PARENT PORTAL -->
+      <section id="parent-portal" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 11</span>
+          <h2 class="section-title">Portal Orang Tua & Privasi Data</h2>
+          <p class="section-desc">Membangun kolaborasi erat antara sekolah dan rumah dengan keamanan data berlapis.</p>
+        </div>
+
+        <div class="callout callout-purple">
+          <div class="callout-title">🛡️ Arsitektur Keamanan Akses Orang Tua</div>
+          <div class="callout-body">
+            Orang tua <strong>hanya</strong> dapat melihat data anak kandungnya yang telah diverifikasi melalui token undangan. Orang tua tidak dapat mengakses data siswa lain, tidak dapat mengedit nilai guru, dan <strong>tidak memiliki akses</strong> ke catatan privat guru.
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fitur Portal Orang Tua</th>
+                <th>Akses Orang Tua</th>
+                <th>Keterangan Keamanan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Rekap Kehadiran Anak</td>
+                <td><span class="badge badge-emerald">Dapat Melihat</span></td>
+                <td>Melihat status hadir/sakit/izin/alpa harian anak mereka.</td>
+              </tr>
+              <tr>
+                <td>Transparansi Nilai & Tugas</td>
+                <td><span class="badge badge-emerald">Dapat Melihat</span></td>
+                <td>Melihat capaian tugas, ulangan harian, dan feedback resmi guru.</td>
+              </tr>
+              <tr>
+                <td>Catatan Guru Privat / Internal</td>
+                <td><span class="badge badge-rose">DIBLOKIR TOTAL</span></td>
+                <td>Hanya untuk konsumsi internal guru & wali kelas.</td>
+              </tr>
+              <tr>
+                <td>Data Siswa Lain di Kelas</td>
+                <td><span class="badge badge-rose">DIBLOKIR TOTAL</span></td>
+                <td>Isolasi data 100% (Strict Tenant & Student-level boundary).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 12. DATA IMPORT & ONBOARDING -->
+      <section id="data-import" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 12</span>
+          <h2 class="section-title">Mid-Semester Onboarding & Data Import</h2>
+          <p class="section-desc">Solusi cerdas saat sekolah baru mulai mengadopsi aplikasi di tengah tahun ajaran berjalan.</p>
+        </div>
+
+        <p>
+          Kebanyakan software sekolah mengharuskan sekolah mulai dari tanggal 1 Juli (awal tahun ajaran). Jika mengadopsi di bulan Oktober atau Februari, data lama hilang. <strong>Teacher OS memecahkan masalah ini dengan Import Engine berbasis Excel:</strong>
+        </p>
+
+        <div class="grid-3">
+          <div class="feature-card">
+            <h4>1. Impor Roster Siswa</h4>
+            <p>Upload file nama & NIS siswa dari Excel Dapodik. Otomatis membentuk kelas dalam 5 detik.</p>
+          </div>
+          <div class="feature-card">
+            <h4>2. Impor Absensi Historis</h4>
+            <p>Impor rekap absensi bulan-bulan sebelumnya agar statistik kehadiran semester tetap utuh.</p>
+          </div>
+          <div class="feature-card">
+            <h4>3. Impor Nilai Historis</h4>
+            <p>Masukkan nilai tugas atau UTS yang sudah terlanjur dinilai di spreadsheet luar secara instan.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 13. TECHNICAL ARCHITECTURE -->
+      <section id="tech-architecture" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 13</span>
+          <h2 class="section-title">Arsitektur Teknis & Standar Keamanan</h2>
+          <p class="section-desc">Fondasi teknologi modern yang menjamin kecepatan, keandalan, dan perlindungan privasi.</p>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Komponen</th>
+                <th>Teknologi Terpilih</th>
+                <th>Keunggulan untuk Bisnis & Operasional</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Framework Frontend & Backend</strong></td>
+                <td>Next.js 16 (App Router) + TypeScript</td>
+                <td>Performa sangat cepat, SEO-friendly, render sisi server instan, bebas error tipe data.</td>
+              </tr>
+              <tr>
+                <td><strong>Database & ORM</strong></td>
+                <td>PostgreSQL + Prisma ORM</td>
+                <td>Integritas data tinggi, relasional kuat, query efisien untuk jutaan rekaman nilai.</td>
+              </tr>
+              <tr>
+                <td><strong>Authentication & Security</strong></td>
+                <td>Better Auth + Anti-IDOR Token Guard</td>
+                <td>Proteksi sesi aman, enkripsi kata sandi kuat, pencegahan akses silang data antar guru.</td>
+              </tr>
+              <tr>
+                <td><strong>AI Intelligence Engine</strong></td>
+                <td>Google Gemini Pro API + Safe Context Engine</td>
+                <td>Kecepatan inferensi tinggi, pemahaman bahasa Indonesia sangat natural, biaya efisien.</td>
+              </tr>
+              <tr>
+                <td><strong>Document Generation</strong></td>
+                <td>ExcelJS, docx, PptxGenJS</td>
+                <td>Menghasilkan file asli berekstensi .xlsx, .docx, dan .pptx yang dapat diedit bebas oleh guru di Microsoft Office.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 14. BEFORE VS AFTER COMPARISON MATRIX -->
+      <section id="before-after-matrix" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 14 &bull; Impact & ROI Analysis</span>
+          <h2 class="section-title">Analisis Komparasi: Sebelum vs Sesudah</h2>
+          <p class="section-desc">Kuantifikasi penghematan waktu nyata, reduksi beban kognitif, dan peningkatan efisiensi kerja guru harian.</p>
+        </div>
+
+        <p>
+          Berikut adalah tabel perbandingan komprehensif antara metode manual tradisional yang umum dilakukan guru di Indonesia dengan alur kerja modern menggunakan <strong>AI Teacher Assistant (Teacher OS)</strong>:
+        </p>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 22%;">Aktivitas Guru</th>
+                <th style="width: 32%; background: #fee2e2; color: #991b1b;">Sebelum Menggunakan (Metode Manual / Tersebar)</th>
+                <th style="width: 32%; background: #dcfce7; color: #166534;">Sesudah Menggunakan (Teacher OS)</th>
+                <th style="width: 14%; text-align: center;">Efisiensi & Waktu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Presensi Siswa Harian (Per Sesi Kelas)</strong></td>
+                <td>
+                  <strong>10 – 15 Menit</strong><br>
+                  Memanggil nama 36 siswa satu per satu dari kertas absen fisik, mencatat di buku, lalu merekap manual ke spreadsheet bulanan di akhir pekan.
+                </td>
+                <td>
+                  <strong>1 – 2 Menit</strong><br>
+                  Buka sesi mengajar live, klik <em>"Tandai Semua Hadir"</em>, toggle cepat pill <em>[S/I/A/T]</em> bagi siswa yang berhalangan. Rekap kumulatif terupdate otomatis detik itu juga.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 85% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat ~13 menit</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>2. Pengisian Jurnal Mengajar Harian</strong></td>
+                <td>
+                  <strong>15 – 20 Menit</strong><br>
+                  Menulis tangan di buku agenda guru atau mengetik ulang judul materi, tanggal, jam pelajaran, dan refleksi yang formatnya selalu berulang.
+                </td>
+                <td>
+                  <strong>2 – 3 Menit</strong><br>
+                  Topik terencana terisi otomatis dari kalender/jadwal, dan tersedia tombol <em>"✨ Buat Catatan Otomatis via AI"</em> untuk menyusun draf refleksi kelas instan.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 85% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat ~15 menit</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>3. Input Nilai & Kalkulasi Bobot (Per Kelas)</strong></td>
+                <td>
+                  <strong>30 – 45 Menit</strong><br>
+                  Memasukkan nilai satu per satu dari kertas ulangan ke Excel, membuat rumus perkalian bobot manual, menjumlahkan nilai rata-rata tugas dan asesmen.
+                </td>
+                <td>
+                  <strong>5 – 10 Menit</strong> (atau <strong>1 Klik</strong> dari Kuis)<br>
+                  Matriks Buku Nilai responsif dengan formula bobot dinamis (Tugas/Formatif/Sumatif). Nilai akhir dan status kelulusan terhitung otomatis secara real-time.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 75% - 85% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat ~25-35 menit</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>4. Penyusunan Modul Ajar / RPP (Per Topik)</strong></td>
+                <td>
+                  <strong>3 – 6 Jam</strong><br>
+                  Mencari referensi, menyalin CP/TP, merancang apersepsi, kegiatan inti (PBL/PjBL), langkah asesmen, rubrik, dan penutup dari dokumen kosong.
+                </td>
+                <td>
+                  <strong>5 – 10 Menit</strong><br>
+                  Pilih generator Modul Ajar AI, masukkan mata pelajaran & topik. Struktur lengkap berstandar Kurikulum Merdeka selesai instan dan siap unduh format Word (.DOCX).
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 95% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat 3-5 jam</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>5. Pembuatan Slide Presentasi (PPTX)</strong></td>
+                <td>
+                  <strong>2 – 4 Jam</strong><br>
+                  Membuka PowerPoint kosong, mencari template visual, copy-paste materi teks panjang, mengatur ukuran font, dan menyusun catatan penjelasan.
+                </td>
+                <td>
+                  <strong>3 – 5 Menit</strong><br>
+                  Adaptive PPT Engine menghasilkan slide visual modern, tata letak dinamis non-monoton, poin materi ringkas, dan <em>Speaker Notes</em> narasi guru siap tayang.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 95% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat 2-3.5 jam</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>6. Penyusunan LKPD (Lembar Kerja Siswa)</strong></td>
+                <td>
+                  <strong>1.5 – 3 Jam</strong><br>
+                  Membuat skenario masalah kontekstual, instruksi langkah praktikum/studi kasus, tabel pengamatan, dan format isian jawaban murid secara manual.
+                </td>
+                <td>
+                  <strong>3 – 5 Menit</strong><br>
+                  AI Studio menghasilkan LKPD berbasis aktivitas nyata dan fenomena saintifik lengkap dengan instruksi terstruktur dan ruang isian siswa siap cetak.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 95% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat 1.5-2.5 jam</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>7. Pembuatan Kisi-Kisi & Bank Soal (LOTS/HOTS)</strong></td>
+                <td>
+                  <strong>2 – 4 Jam</strong><br>
+                  Menyusun tabel matriks taksonomi Bloom, merumuskan stimulus soal kontekstual, membuat 4-5 opsi pengecoh, serta kunci jawaban dan rubrik essay.
+                </td>
+                <td>
+                  <strong>5 – 8 Menit</strong><br>
+                  AI menyusun kisi-kisi lengkap dengan sebaran level kognitif C1-C6, butir soal PG/Essay berkualitas tinggi, kunci jawaban, dan pembahasan mendalam.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 90% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Hemat 2-3 jam</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>8. Pelaksanaan & Koreksi Kuis (36 Siswa)</strong></td>
+                <td>
+                  <strong>60 – 90 Menit</strong><br>
+                  Mencetak kertas ujian, membagikan, mengawasi ujian fisik, mengumpulkan, mengoreksi satu per satu lembar jawaban siswa dengan pulpen merah.
+                </td>
+                <td>
+                  <strong>0 – 5 Menit Koreksi</strong><br>
+                  Bagikan tautan kuis digital web + PIN kelas. Jawaban PG siswa terkoreksi 100% otomatis saat submit, dan hasil ujian langsung terkonversi ke nilai kelas.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 95% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Koreksi Otomatis</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>9. Pelacakan Remedial & Ketuntasan KKTP</strong></td>
+                <td>
+                  <strong>20 – 30 Menit</strong><br>
+                  Mencari dan menyaring manual nama-nama murid yang nilainya di bawah KKM/KKTP, membuat daftar remedial terpisah, lalu memperbarui nilai pengganti.
+                </td>
+                <td>
+                  <strong>Otomatis / Instan</strong><br>
+                  Sistem otomatis menandai badge <em>"Butuh Remedial"</em> pada siswa di bawah ambang KKTP dan menyediakan form pencatatan riwayat ujian perbaikan.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 100% Otomatis</span><br>
+                  <small style="color: #059669; font-weight: 600;">Zero effort filter</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>10. Pelaporan Rapor & Rekap Semester</strong></td>
+                <td>
+                  <strong>3 – 5 Hari Kerja</strong><br>
+                  Menggabungkan puluhan sheet Excel yang berantakan, menghitung nilai akhir, menyusun kalimat deskripsi capaian kompetensi satu per satu untuk puluhan siswa.
+                </td>
+                <td>
+                  <strong>10 – 15 Menit</strong><br>
+                  Sistem otomatis mengagregasi data satu semester, menghasilkan rekap nilai rapor terformat rapi dan siap diekspor ke Excel / PDF kompatibel e-Rapor.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 95% Lebih Cepat</span><br>
+                  <small style="color: #059669; font-weight: 600;">Bebas lembur akhir semester</small>
+                </td>
+              </tr>
+
+              <tr>
+                <td><strong>11. Komunikasi & Update ke Orang Tua</strong></td>
+                <td>
+                  <strong>2 – 3 Jam / Minggu</strong><br>
+                  Membalas chat WhatsApp orang tua satu per satu yang menanyakan kehadiran, kepatuhan tugas, dan nilai ulangan anak secara berulang.
+                </td>
+                <td>
+                  <strong>0 Jam (Self-Service)</strong><br>
+                  Orang tua dapat memantau kehadiran dan capaian nilai resmi anak mereka secara mandiri dan aman melalui Portal Orang Tua kapan saja.
+                </td>
+                <td style="text-align: center;">
+                  <span class="badge badge-emerald">⚡ 100% Terotomatisasi</span><br>
+                  <small style="color: #059669; font-weight: 600;">Mengeliminasi chat repetitif</small>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout callout-accent" style="margin-top: 24px;">
+          <div class="callout-title" style="font-size: 1.05rem;">📊 Ringkasan Total Penghematan Waktu Guru</div>
+          <div class="callout-body" style="font-size: 0.95rem;">
+            Rata-rata guru menghabiskan <strong>25 – 35 jam per minggu</strong> untuk beban administratif dan persiapan ajar manual. Dengan Teacher OS, waktu tersebut dipangkas menjadi hanya <strong>4 – 6 jam per minggu</strong>.<br>
+            <strong>Hasil:</strong> Penghematan waktu sebesar <strong>&plusmn;80% – 85%</strong> yang dapat dialokasikan langsung untuk pendampingan individual siswa, pengembangan diri, dan kesejahteraan waktu istirahat guru!
+          </div>
+        </div>
+      </section>
+
+      <!-- 15. COMPETITIVE ADVANTAGE -->
+      <section id="competitive-advantage" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 15</span>
+          <h2 class="section-title">Keunggulan Kompetitif (USP Matrix)</h2>
+          <p class="section-desc">Mengapa Teacher OS jauh lebih unggul dibandingkan software sekolah konvensional?</p>
+        </div>
+
+        <div class="vs-matrix">
+          <div class="vs-card traditional">
+            <h4>❌ Software Tradisional (ERP / LMS Biasa)</h4>
+            <ul>
+              <li>⚠️ Dirancang untuk birokrasi pimpinan, bukan kebutuhan nyata guru.</li>
+              <li>⚠️ Input data kaku, butuh puluhan klik hanya untuk mencatat presensi.</li>
+              <li>⚠️ Guru harus membuat perangkat ajar & soal secara manual dari nol.</li>
+              <li>⚠️ Wajib setup dari awal tahun ajaran; tidak bisa diadopsi di tengah jalan.</li>
+              <li>⚠️ Format ekspor terbatas dan seringkali merusak format asli spreadsheet guru.</li>
+            </ul>
+          </div>
+          <div class="vs-card our-product">
+            <h4>✅ AI Teacher Assistant (Teacher OS)</h4>
+            <ul>
+              <li>✨ <strong>Teacher-First Ergonomics:</strong> Didesain dari sudut pandang psikologi kerja guru.</li>
+              <li>✨ <strong>Presensi & Jurnal 2 Menit:</strong> Sticky bar dan tombol toggle cepat.</li>
+              <li>✨ <strong>Studio Konten AI Terintegrasi:</strong> RPP, Soal HOTS, Slide PPTX dalam 1 klik.</li>
+              <li>✨ <strong>Mid-Semester Ready:</strong> Adopsi kapan saja dengan Import Wizard Excel.</li>
+              <li>✨ <strong>Ekspor Office Asli:</strong> File Excel, Word, & PPTX 100% kompatibel dan editable.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 16. FAQ -->
+      <section id="product-faq" class="doc-section">
+        <div class="section-header">
+          <span class="section-tag">Bab 16</span>
+          <h2 class="section-title">Product FAQ & Tanya Jawab Pengenalan</h2>
+          <p class="section-desc">Pertanyaan yang sering diajukan oleh calon pengguna, kepala sekolah, dan investor.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="feature-card">
+            <h4>Q1: Apakah sekolah harus mengganti sistem rapor Dapodik/e-Rapor resmi Kemendikbud?</h4>
+            <p><strong>Jawab:</strong> Tidak perlu. Teacher OS adalah asisten harian guru. Guru menggunakannya untuk proses mengajar harian, dan di akhir semester guru dapat mengekspor rekap nilai dalam format Excel yang siap disalin/diimpor langsung ke aplikasi Dapodik / e-Rapor resmi.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>Q2: Apakah data murid kami aman dan tidak digunakan untuk melatih model AI publik?</h4>
+            <p><strong>Jawab:</strong> Sangat aman. Sistem menerapkan isolasi data multi-tenant ketat. Data pribadi siswa (nama, NIS, alamat) diproteksi dan tidak pernah dibagikan untuk melatih model AI publik tanpa izin.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>Q3: Bagaimana jika guru mengajar lebih dari 1 mata pelajaran atau mengajar di beberapa sekolah?</h4>
+            <p><strong>Jawab:</strong> Sistem mendukung multi-school workspace dan multi-teaching context. Guru dapat berpindah sekolah atau mata pelajaran hanya dalam satu klik melalui profil yang sama.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>Q4: Apakah siswa dan orang tua harus mengunduh aplikasi di Play Store / App Store?</h4>
+            <p><strong>Jawab:</strong> Tidak perlu. Semua portal (Guru, Kuis Siswa, dan Portal Orang Tua) berbasis Web Responsif PWA yang dapat dibuka mulus melalui browser Chrome, Safari, atau Firefox di ponsel pintar tanpa menguras memori perangkat.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="doc-footer">
+    <p><strong>AI Teacher Assistant (Teacher OS)</strong> &copy; 2025. Seluruh Hak Cipta Dilindungi.</p>
+    <p style="margin-top: 4px; font-size: 0.75rem;">Dokumen Spesifikasi & Rangkuman Pengetahuan Produk Resmi (Product Knowledge Master Version 1.0)</p>
+  </footer>
+
+  <script>
+    // Smooth scroll and active link spy
+    document.addEventListener('DOMContentLoaded', () => {
+      const links = document.querySelectorAll('aside.sidebar nav a');
+      const sections = document.querySelectorAll('section.doc-section');
+
+      function updateActiveLink() {
+        let fromTop = window.scrollY + 120;
+        sections.forEach(sec => {
+          if (sec.offsetTop <= fromTop && (sec.offsetTop + sec.offsetHeight) > fromTop) {
+            links.forEach(l => {
+              l.classList.remove('active');
+              if (l.getAttribute('href') === '#' + sec.id) {
+                l.classList.add('active');
+              }
+            });
+          }
+        });
+      }
+
+      window.addEventListener('scroll', updateActiveLink);
+      updateActiveLink();
+    });
+  </script>
+</body>
+</html>

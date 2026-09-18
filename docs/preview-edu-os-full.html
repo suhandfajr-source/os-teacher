@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klassa Edu-OS - Master Interactive Prototype Seluruh Halaman Project</title>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            teal: {
+              50: '#F0FDFA',
+              100: '#CCFBF1',
+              200: '#99F6E4',
+              300: '#5EEAD4',
+              400: '#2DD4BF',
+              500: '#14B8A6',
+              600: '#0D9488',
+              700: '#0F766E',
+              800: '#115E59',
+              900: '#134E4A',
+              950: '#042F2E',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background-color: #F6F8F8;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.02);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(15,118,110,0.25);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(15,118,110,0.45);
+    }
+    .tactile-btn {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tactile-btn:active {
+      transform: scale(0.97);
+    }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.02); }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col custom-scrollbar overflow-x-hidden">
+
+  <!-- ========================================================================= -->
+  <!-- MAIN APPLICATION SHELL (SIDEBAR + TOP COMMAND BAR + PAGE BODY) -->
+  <!-- ========================================================================= -->
+  <div class="flex-1 flex flex-col md:flex-row min-h-screen">
+    
+    <!-- 1. MODERN EDU-OS SIDEBAR -->
+    <aside class="w-full md:w-64 bg-white border-r border-slate-200/90 flex flex-col shrink-0 z-30">
+      
+      <!-- Brand & School Header -->
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-800 via-teal-700 to-teal-500 flex items-center justify-center text-white shadow-md shadow-teal-700/20">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold text-base tracking-tight text-slate-900">KLASSA</span>
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase bg-teal-100 text-teal-800 border border-teal-200">Edu-OS</span>
+            </div>
+            <p class="text-[10px] text-slate-500 font-medium truncate max-w-[130px]">SMPN 1 Nusantara</p>
+          </div>
+        </div>
+
+        <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Quick Command Bar Trigger -->
+      <div class="px-3 pt-3">
+        <button onclick="openCommandModal()" class="w-full px-3 py-2 bg-slate-50 hover:bg-teal-50/70 border border-slate-200 hover:border-teal-300 rounded-xl text-xs text-slate-500 flex items-center justify-between transition-all tactile-btn">
+          <div class="flex items-center gap-2">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span class="font-medium">Cari Cepat...</span>
+          </div>
+          <kbd class="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-[10px] font-mono text-slate-400 shadow-2xs">Ctrl K</kbd>
+        </button>
+      </div>
+
+      <!-- Navigation Menu Groups -->
+      <div class="flex-1 px-3 py-4 space-y-5 overflow-y-auto custom-scrollbar" id="sidebar-menu">
+        
+        <!-- Group 1: Workspace Utama -->
+        <div class="space-y-1">
+          <span class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Workspace Utama</span>
+          <button onclick="navTo('hari-ini')" id="nav-hari-ini" class="sidebar-nav-item active w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all tactile-btn bg-teal-700 text-white shadow-xs">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Hari Ini (Beranda)</span>
+          </button>
+          <button onclick="navTo('kelas-list')" id="nav-kelas-list" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="folders" class="w-4 h-4 text-teal-700"></i>
+            <span>Daftar Kelas Binaan</span>
+          </button>
+          <button onclick="navTo('kelas-detail')" id="nav-kelas-detail" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="book-open-check" class="w-4 h-4 text-teal-700"></i>
+            <span>Kelas VIII-A (Workspace)</span>
+            <span class="ml-auto w-2 h-2 rounded-full bg-emerald-500"></span>
+          </button>
+          <button onclick="navTo('live-session')" id="nav-live-session" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all tactile-btn text-emerald-700 hover:bg-emerald-50">
+            <i data-lucide="play-circle" class="w-4 h-4 text-emerald-600"></i>
+            <span>⚡ Mode 1: Live Sesi</span>
+          </button>
+        </div>
+
+        <!-- Group 2: Akademik & Asesmen -->
+        <div class="space-y-1">
+          <span class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Kurikulum & Asesmen</span>
+          <button onclick="navTo('akademik')" id="nav-akademik" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="calendar-range" class="w-4 h-4 text-teal-700"></i>
+            <span>PROTA & PROSEM Engine</span>
+          </button>
+          <button onclick="navTo('quiz')" id="nav-quiz" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="help-circle" class="w-4 h-4 text-teal-700"></i>
+            <span>Quiz & Ujian Online</span>
+          </button>
+          <button onclick="navTo('assessment')" id="nav-assessment" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="award" class="w-4 h-4 text-teal-700"></i>
+            <span>Buku Nilai & Tugas</span>
+          </button>
+          <button onclick="navTo('aistudio')" id="nav-aistudio" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all tactile-btn text-indigo-700 hover:bg-indigo-50">
+            <i data-lucide="wand-2" class="w-4 h-4 text-indigo-600"></i>
+            <span>AI Studio Generator</span>
+            <span class="ml-auto px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 text-[9px]">AI</span>
+          </button>
+        </div>
+
+        <!-- Group 3: Siswa & Komunikasi -->
+        <div class="space-y-1">
+          <span class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Siswa & Komunikasi</span>
+          <button onclick="navTo('monitoring')" id="nav-monitoring" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="activity" class="w-4 h-4 text-teal-700"></i>
+            <span>Monitoring 360° Siswa</span>
+          </button>
+          <button onclick="navTo('siswa')" id="nav-siswa" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="users" class="w-4 h-4 text-teal-700"></i>
+            <span>Direktori Siswa</span>
+          </button>
+          <button onclick="navTo('parent')" id="nav-parent" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-emerald-700 hover:bg-emerald-50">
+            <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+            <span>Portal Orang Tua (WA)</span>
+          </button>
+        </div>
+
+        <!-- Group 4: Sistem & Laporan -->
+        <div class="space-y-1">
+          <span class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Dokumen & Sistem</span>
+          <button onclick="navTo('laporan')" id="nav-laporan" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-teal-700"></i>
+            <span>Pusat Rekap & Rapor</span>
+          </button>
+          <button onclick="navTo('pengaturan')" id="nav-pengaturan" class="sidebar-nav-item w-full px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all tactile-btn text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+            <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i>
+            <span>Pengaturan Sekolah</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- User Profile Bar -->
+      <div class="p-3 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-xs border border-teal-200 shrink-0">
+            BS
+          </div>
+          <div class="truncate">
+            <h5 class="text-xs font-bold text-slate-900 truncate">Budi Santoso, S.Pd.</h5>
+            <p class="text-[10px] text-teal-700 font-semibold truncate">Wali Kelas VIII-A</p>
+          </div>
+        </div>
+        <button onclick="alert('Keluar dari sesi...')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- 2. CONTENT AREA & TOP APP BAR -->
+    <div class="flex-1 flex flex-col min-w-0">
+      
+      <!-- Top Command Bar -->
+      <header class="h-16 glass-nav border-b border-slate-200/90 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-20">
+        <!-- Breadcrumbs & Quick Page Indicator -->
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="text-xs font-extrabold text-slate-900 tracking-tight" id="page-title-breadcrumb">
+            Beranda Guru (/hari-ini)
+          </span>
+          <span class="text-slate-300 hidden sm:inline">•</span>
+          <span class="text-[11px] text-slate-500 hidden sm:inline">Semester Ganjil 2024/2025</span>
+        </div>
+
+        <!-- Right Quick Action Bar -->
+        <div class="flex items-center gap-2">
+          <button onclick="navTo('live-session')" class="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-xs tactile-btn flex items-center gap-1.5">
+            <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+            <span class="hidden sm:inline">Mulai Sesi Mengajar</span>
+          </button>
+          <button onclick="navTo('aistudio')" class="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">AI Studio</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic Page Container -->
+      <main class="p-4 sm:p-6 lg:p-8 flex-1 space-y-6" id="eduos-page-container">
+        <!-- Injected via JavaScript -->
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- COMMAND PALETTE MODAL (Ctrl + K) -->
+  <!-- ========================================================================= -->
+  <div id="cmd-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-start justify-center pt-20 p-4 hidden">
+    <div class="bg-white w-full max-w-xl rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-fadeIn">
+      <div class="p-3 border-b border-slate-100 flex items-center gap-3">
+        <i data-lucide="search" class="w-4 h-4 text-teal-700"></i>
+        <input type="text" id="cmd-search-input" oninput="filterCommandItems()" placeholder="Ketik nama siswa, kelas, jadwal, atau fitur... (contoh: '8A', 'Ahmad', 'PROSEM')" class="w-full bg-transparent border-none text-xs text-slate-800 placeholder-slate-400 focus:outline-none font-medium">
+        <kbd class="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-500 font-mono">ESC</kbd>
+      </div>
+
+      <div class="p-2 max-h-80 overflow-y-auto custom-scrollbar space-y-1" id="cmd-results-list">
+        <button onclick="navTo('hari-ini'); closeCommandModal();" class="cmd-item w-full p-2.5 rounded-xl hover:bg-teal-50 text-left flex items-center justify-between text-xs text-slate-800 font-semibold transition-colors">
+          <div class="flex items-center gap-2">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-teal-700"></i>
+            <span>Buka Beranda Guru</span>
+          </div>
+          <span class="text-[10px] text-slate-400">/hari-ini</span>
+        </button>
+
+        <button onclick="navTo('kelas-detail'); closeCommandModal();" class="cmd-item w-full p-2.5 rounded-xl hover:bg-teal-50 text-left flex items-center justify-between text-xs text-slate-800 font-semibold transition-colors">
+          <div class="flex items-center gap-2">
+            <i data-lucide="book-open-check" class="w-4 h-4 text-teal-700"></i>
+            <span>Kelas VIII-A (Matematika)</span>
+          </div>
+          <span class="text-[10px] text-slate-400">Workspace 4 Ruang Kerja</span>
+        </button>
+
+        <button onclick="navTo('akademik'); closeCommandModal();" class="cmd-item w-full p-2.5 rounded-xl hover:bg-teal-50 text-left flex items-center justify-between text-xs text-slate-800 font-semibold transition-colors">
+          <div class="flex items-center gap-2">
+            <i data-lucide="calendar-range" class="w-4 h-4 text-teal-700"></i>
+            <span>Perencanaan Kurikulum PROTA & PROSEM</span>
+          </div>
+          <span class="text-[10px] text-slate-400">Matriks Mingguan</span>
+        </button>
+
+        <button onclick="navTo('quiz'); closeCommandModal();" class="cmd-item w-full p-2.5 rounded-xl hover:bg-teal-50 text-left flex items-center justify-between text-xs text-slate-800 font-semibold transition-colors">
+          <div class="flex items-center gap-2">
+            <i data-lucide="help-circle" class="w-4 h-4 text-teal-700"></i>
+            <span>Quiz Online & Live Projector PIN</span>
+          </div>
+          <span class="text-[10px] text-slate-400">Bank Soal & Koreksi</span>
+        </button>
+
+        <button onclick="navTo('parent'); closeCommandModal();" class="cmd-item w-full p-2.5 rounded-xl hover:bg-teal-50 text-left flex items-center justify-between text-xs text-slate-800 font-semibold transition-colors">
+          <div class="flex items-center gap-2">
+            <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+            <span>Portal Orang Tua (WhatsApp Rekap)</span>
+          </div>
+          <span class="text-[10px] text-slate-400">Feed & Surat Sakit</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT MASTER ROUTER & INTERACTIVE COMPONENTS ENGINE -->
+  <!-- ========================================================================= -->
+  <script>
+    let activeRoute = 'hari-ini';
+
+    // ROUTER MAP DEFINITIONS
+    const ROUTE_LABELS = {
+      'hari-ini': 'Beranda Guru (/hari-ini)',
+      'kelas-list': 'Daftar Kelas Binaan (/kelas)',
+      'kelas-detail': 'Workspace Kelas VIII-A (/kelas/8a)',
+      'live-session': 'Mode 1: Live Teaching Session (/kelas/8a/pertemuan/12)',
+      'akademik': 'Kurikulum & PROSEM Engine (/akademik)',
+      'quiz': 'Quiz & Ujian Online (/quiz)',
+      'assessment': 'Buku Nilai & Tugas (/assessment)',
+      'aistudio': 'AI Studio Generator (/ai-studio)',
+      'monitoring': 'Monitoring 360° Siswa (/monitoring)',
+      'siswa': 'Direktori Siswa (/siswa)',
+      'laporan': 'Pusat Rekap & Rapor (/laporan)',
+      'parent': 'Portal Akses Orang Tua (/parent)',
+      'pengaturan': 'Pengaturan Sekolah (/pengaturan)'
+    };
+
+    function navTo(routeId) {
+      activeRoute = routeId;
+
+      // Update breadcrumb
+      document.getElementById('page-title-breadcrumb').innerText = ROUTE_LABELS[routeId] || routeId;
+
+      // Update sidebar active classes
+      document.querySelectorAll('.sidebar-nav-item').forEach(btn => {
+        btn.classList.remove('active', 'bg-teal-700', 'text-white', 'shadow-xs');
+        btn.classList.add('text-slate-600', 'hover:bg-slate-100', 'hover:text-slate-900');
+      });
+
+      const currentNav = document.getElementById('nav-' + routeId);
+      if (currentNav) {
+        currentNav.classList.add('active', 'bg-teal-700', 'text-white', 'shadow-xs');
+        currentNav.classList.remove('text-slate-600', 'hover:bg-slate-100', 'hover:text-slate-900');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      renderCurrentPage();
+    }
+
+    // DISPATCH PAGE RENDERER
+    function renderCurrentPage() {
+      const container = document.getElementById('eduos-page-container');
+
+      if (activeRoute === 'hari-ini') {
+        container.innerHTML = getPageHariIni();
+      } else if (activeRoute === 'kelas-list') {
+        container.innerHTML = getPageKelasList();
+      } else if (activeRoute === 'kelas-detail') {
+        container.innerHTML = getPageKelasDetail();
+      } else if (activeRoute === 'live-session') {
+        container.innerHTML = getPageLiveSession();
+      } else if (activeRoute === 'akademik') {
+        container.innerHTML = getPageAkademik();
+      } else if (activeRoute === 'quiz') {
+        container.innerHTML = getPageQuiz();
+      } else if (activeRoute === 'assessment') {
+        container.innerHTML = getPageAssessment();
+      } else if (activeRoute === 'aistudio') {
+        container.innerHTML = getPageAiStudio();
+      } else if (activeRoute === 'monitoring') {
+        container.innerHTML = getPageMonitoring();
+      } else if (activeRoute === 'siswa') {
+        container.innerHTML = getPageSiswa();
+      } else if (activeRoute === 'laporan') {
+        container.innerHTML = getPageLaporan();
+      } else if (activeRoute === 'parent') {
+        container.innerHTML = getPageParent();
+      } else if (activeRoute === 'pengaturan') {
+        container.innerHTML = getPagePengaturan();
+      }
+
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // PAGE 1: HARI INI (BERANDA GURU)
+    // =========================================================================
+    function getPageHariIni() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <!-- Hero Banner -->
+          <div class="bg-gradient-to-br from-teal-900 via-teal-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div class="space-y-2 max-w-2xl">
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-bold">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                  Kamis, 18 September 2025 • Pekan Efektif Ke-8
+                </span>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-white">Selamat Pagi, Pak Budi! ☕</h1>
+                <p class="text-xs sm:text-sm text-teal-100/90">
+                  Ada <strong class="underline">2 Sesi Mengajar</strong> hari ini dan <strong class="underline text-amber-300">14 Tugas Masuk</strong> yang siap Anda tinjau.
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button onclick="navTo('live-session')" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-md tactile-btn flex items-center gap-2">
+                  <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                  <span>Mulai Sesi Kelas 8A</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Metric Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Jadwal Mengajar</span>
+              <p class="text-2xl font-extrabold text-slate-900">2 Sesi <span class="text-xs font-normal text-slate-500">(4 JP)</span></p>
+              <p class="text-[11px] text-teal-700 font-semibold">Kelas 8A (08:00) & 9B (10:30)</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Kehadiran Siswa</span>
+              <p class="text-2xl font-extrabold text-emerald-700">97.4%</p>
+              <p class="text-[11px] text-emerald-600 font-semibold">31/32 Siswa Hadir Penuh</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Koreksi Tertunda</span>
+              <p class="text-2xl font-extrabold text-amber-700">14 Tugas</p>
+              <p class="text-[11px] text-amber-700 font-semibold">Kuis 3: Teorema Pythagoras</p>
+            </div>
+            <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase">Distribusi PROSEM</span>
+              <p class="text-2xl font-extrabold text-teal-800">100% Valid</p>
+              <p class="text-[11px] text-teal-700 font-semibold">32/32 JP Terencana Sempurna</p>
+            </div>
+          </div>
+
+          <!-- Schedule List -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                <i data-lucide="clock" class="w-4 h-4 text-teal-700"></i>
+                Jadwal Pembelajaran Hari Ini
+              </h3>
+              <span class="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[11px] font-bold">2 Kelas Terjadwal</span>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-teal-50/70 border border-teal-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-teal-700 text-white font-extrabold text-sm flex items-center justify-center">8A</div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-extrabold text-xs text-slate-900">Matematika • Pertemuan #12</h4>
+                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">08:00 - 09:20 WIB</span>
+                  </div>
+                  <p class="text-[11px] text-slate-600 mt-0.5">Materi: Teorema Pythagoras & Pembuktian Luas • Ruang Lab 2</p>
+                </div>
+              </div>
+              <button onclick="navTo('live-session')" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-extrabold tactile-btn flex items-center gap-1.5 shadow-xs">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                <span>Buka Sesi Mengajar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 2: DAFTAR KELAS (/kelas)
+    // =========================================================================
+    function getPageKelasList() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900">Daftar Kelas Binaan Saya</h2>
+              <p class="text-xs text-slate-500">Tahun Ajaran 2024/2025 • Semester Ganjil</p>
+            </div>
+            <button onclick="alert('Membuka wizard tambah kelas baru...')" class="px-3.5 py-2 bg-teal-700 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Tambah Kelas Baru</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div onclick="navTo('kelas-detail')" class="bg-white p-5 rounded-3xl border border-slate-200 hover:border-teal-400 transition-all shadow-2xs cursor-pointer space-y-4 group">
+              <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-2xl bg-teal-100 text-teal-800 font-extrabold text-sm flex items-center justify-center">8A</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[10px] font-bold border border-teal-200">Wali Kelas</span>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-teal-900">Kelas VIII-A (Matematika)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">32 Siswa • 11/16 Pertemuan Tuntas</p>
+              </div>
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-emerald-700 font-bold">97.4% Kehadiran</span>
+                <span class="text-teal-700 font-bold flex items-center gap-1">Buka Ruang Kerja →</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 hover:border-teal-400 transition-all shadow-2xs cursor-pointer space-y-4 group">
+              <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 font-extrabold text-sm flex items-center justify-center">8B</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">Guru Pengampu</span>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-teal-900">Kelas VIII-B (Matematika)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">32 Siswa • 10/16 Pertemuan Tuntas</p>
+              </div>
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-emerald-700 font-bold">95.8% Kehadiran</span>
+                <span class="text-teal-700 font-bold flex items-center gap-1">Buka Ruang Kerja →</span>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 hover:border-teal-400 transition-all shadow-2xs cursor-pointer space-y-4 group">
+              <div class="flex items-center justify-between">
+                <span class="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 font-extrabold text-sm flex items-center justify-center">9A</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">Guru Pengampu</span>
+              </div>
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900 group-hover:text-teal-900">Kelas IX-A (Matematika)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">30 Siswa • 10/16 Pertemuan Tuntas</p>
+              </div>
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-emerald-700 font-bold">98.1% Kehadiran</span>
+                <span class="text-teal-700 font-bold flex items-center gap-1">Buka Ruang Kerja →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 3: WORKSPACE KELAS DETAIL (/kelas/[teachingContextId])
+    // =========================================================================
+    function getPageKelasDetail() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <!-- Class Header -->
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-teal-700 text-white font-extrabold text-base flex items-center justify-center shadow-xs">8A</div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-extrabold text-slate-900">Matematika • Kelas VIII-A</h2>
+                    <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">Fase D SMP</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Wali Kelas: Budi Santoso, S.Pd. • 32 Siswa Terdaftar</p>
+                </div>
+              </div>
+              <button onclick="navTo('live-session')" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-extrabold shadow-xs tactile-btn flex items-center gap-1.5 self-start sm:self-auto">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                <span>⚡ Buka Mode 1 Mengajar</span>
+              </button>
+            </div>
+
+            <!-- 4 Workspaces Navigation -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-teal-50/70 border border-teal-100 rounded-2xl">
+              <button onclick="switchWsTab('mengajar')" id="wtab-mengajar" class="wtab-btn active p-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 bg-teal-700 text-white shadow-xs">
+                <i data-lucide="presentation" class="w-4 h-4"></i>
+                <span>1. Ruang Mengajar</span>
+              </button>
+              <button onclick="switchWsTab('nilai')" id="wtab-nilai" class="wtab-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 text-teal-900 hover:bg-teal-100/60">
+                <i data-lucide="award" class="w-4 h-4 text-teal-700"></i>
+                <span>2. Nilai & Evaluasi</span>
+              </button>
+              <button onclick="switchWsTab('siswa')" id="wtab-siswa" class="wtab-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 text-teal-900 hover:bg-teal-100/60">
+                <i data-lucide="users" class="w-4 h-4 text-teal-700"></i>
+                <span>3. Siswa & Ortu</span>
+              </button>
+              <button onclick="switchWsTab('administrasi')" id="wtab-administrasi" class="wtab-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 text-teal-900 hover:bg-teal-100/60">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-teal-700"></i>
+                <span>4. Administrasi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Dynamic Workspace Sub-View -->
+          <div id="ws-tab-content">
+            <!-- Default: Ruang Mengajar Unified Timeline -->
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 class="font-extrabold text-sm text-slate-900">Linimasa Riwayat Sesi & Jurnal Mengajar</h3>
+                  <p class="text-xs text-slate-500">Materi dan kehadiran terekam otomatis dalam satu baris</p>
+                </div>
+                <span class="text-xs font-bold text-teal-700">11 Sesi Selesai</span>
+              </div>
+
+              <div class="space-y-2.5 text-xs">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-teal-100 text-teal-900 font-extrabold flex items-center justify-center">#11</span>
+                    <div>
+                      <h4 class="font-bold text-slate-900">Pengenalan Sisi Miring Segitiga Siku-Siku</h4>
+                      <p class="text-[11px] text-slate-500">Senin, 15 Sep 2025 • Guru: "Siswa memahami konsep kuadrat hipotenusa."</p>
+                    </div>
+                  </div>
+                  <span class="font-extrabold text-emerald-700">32/32 Hadir</span>
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-xl bg-teal-100 text-teal-900 font-extrabold flex items-center justify-center">#10</span>
+                    <div>
+                      <h4 class="font-bold text-slate-900">Kuis Sumatif Lingkup Materi 2 (Aljabar)</h4>
+                      <p class="text-[11px] text-slate-500">Kamis, 11 Sep 2025 • Ujian Online via Klassa Quiz</p>
+                    </div>
+                  </div>
+                  <span class="font-extrabold text-slate-700">31/32 Hadir (1 Sakit)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function switchWsTab(tabId) {
+      document.querySelectorAll('.wtab-btn').forEach(b => {
+        b.className = "wtab-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 text-teal-900 hover:bg-teal-100/60";
+      });
+      document.getElementById('wtab-' + tabId).className = "wtab-btn active p-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 bg-teal-700 text-white shadow-xs";
+
+      const content = document.getElementById('ws-tab-content');
+      if (tabId === 'mengajar') {
+        content.innerHTML = `
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 animate-fadeIn">
+            <h3 class="font-extrabold text-sm text-slate-900">Linimasa Riwayat Sesi & Jurnal Mengajar</h3>
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl bg-teal-100 text-teal-900 font-extrabold flex items-center justify-center">#11</span>
+                <div>
+                  <h4 class="font-bold text-slate-900">Pengenalan Sisi Miring Segitiga Siku-Siku</h4>
+                  <p class="text-[11px] text-slate-500">Senin, 15 Sep 2025 • Guru: "Siswa memahami konsep kuadrat hipotenusa."</p>
+                </div>
+              </div>
+              <span class="font-extrabold text-emerald-700">32/32 Hadir</span>
+            </div>
+          </div>
+        `;
+      } else if (tabId === 'nilai') {
+        content.innerHTML = `
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 animate-fadeIn">
+            <div class="flex items-center justify-between">
+              <h3 class="font-extrabold text-sm text-slate-900">Matriks Nilai (Freeze Kolom Nama Siswa)</h3>
+              <button onclick="alert('Ekspor Excel...')" class="px-3 py-1.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold">Unduh Excel</button>
+            </div>
+            <div class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl text-xs">
+              <table class="w-full text-left border-collapse">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                  <tr>
+                    <th class="p-3 sticky left-0 bg-slate-50 z-10 w-10 text-center">No</th>
+                    <th class="p-3 sticky left-10 bg-slate-50 z-10 min-w-[180px] shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">Nama Siswa</th>
+                    <th class="p-3 text-center">TP 1</th>
+                    <th class="p-3 text-center">TP 2</th>
+                    <th class="p-3 text-center">Kuis 1</th>
+                    <th class="p-3 text-center font-extrabold text-teal-800 bg-teal-50">Rata-Rata</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-800">
+                  <tr class="hover:bg-teal-50/40">
+                    <td class="p-3 text-center sticky left-0 bg-white z-10 font-bold text-slate-400">1</td>
+                    <td class="p-3 sticky left-10 bg-white z-10 font-bold shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">Ahmad Fauzi Pratama</td>
+                    <td class="p-3 text-center">90</td>
+                    <td class="p-3 text-center">92</td>
+                    <td class="p-3 text-center">95</td>
+                    <td class="p-3 text-center font-bold text-teal-800 bg-teal-50/50">92.3</td>
+                  </tr>
+                  <tr class="hover:bg-teal-50/40">
+                    <td class="p-3 text-center sticky left-0 bg-white z-10 font-bold text-slate-400">2</td>
+                    <td class="p-3 sticky left-10 bg-white z-10 font-bold shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">Bella Anindita Putri</td>
+                    <td class="p-3 text-center">88</td>
+                    <td class="p-3 text-center">86</td>
+                    <td class="p-3 text-center">90</td>
+                    <td class="p-3 text-center font-bold text-teal-800 bg-teal-50/50">88.0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      } else if (tabId === 'siswa') {
+        content.innerHTML = `
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 animate-fadeIn">
+            <h3 class="font-extrabold text-sm text-slate-900">Roster & Portal Orang Tua (WhatsApp)</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <span class="font-bold text-slate-900">Ahmad Fauzi (NIS: 20240801)</span>
+                <p class="text-slate-500">Ibu Siti Rahmawati • +62 812-8899-1234</p>
+                <button onclick="alert('Membuka WhatsApp...')" class="text-emerald-700 font-bold hover:underline flex items-center gap-1 mt-1">💬 Kirim Rekap WhatsApp</button>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                <span class="font-bold text-slate-900">Bella Anindita (NIS: 20240802)</span>
+                <p class="text-slate-500">Bpk. Hendra • +62 813-7744-5566</p>
+                <button onclick="alert('Membuka WhatsApp...')" class="text-emerald-700 font-bold hover:underline flex items-center gap-1 mt-1">💬 Kirim Rekap WhatsApp</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (tabId === 'administrasi') {
+        content.innerHTML = `
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 animate-fadeIn">
+            <div class="flex items-center justify-between">
+              <h3 class="font-extrabold text-sm text-slate-900">Administrasi & Ekspor PROSEM Kelas 8A</h3>
+              <button onclick="alert('Unduh format dinas .xlsx...')" class="px-3.5 py-1.5 bg-emerald-700 text-white rounded-xl text-xs font-bold">Unduh Excel PROSEM</button>
+            </div>
+            <p class="text-xs text-slate-600">Alokasi 32 JP Semester Ganjil terbagi ke 4 Bab Pelajaran. 1-klik ekspor dokumen siap supervisi pengawas.</p>
+          </div>
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // PAGE 4: LIVE TEACHING SESSION (MODE 1 GURU < 10 DETIK)
+    // =========================================================================
+    function getPageLiveSession() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <!-- Top Sticky Bar -->
+          <div class="p-5 rounded-3xl bg-gradient-to-r from-teal-900 to-slate-900 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+              <div>
+                <span class="px-2 py-0.5 rounded bg-teal-800 text-teal-200 text-[10px] font-extrabold uppercase">Mode 1: Live Teaching Session</span>
+                <h2 class="text-lg font-extrabold text-white">Pertemuan #12 • Teorema Pythagoras (Kelas 8A)</h2>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="alert('Presensi & Jurnal Tersimpan, Sesi Dikunci!')" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-extrabold tactile-btn shadow-md flex items-center gap-1.5">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span>Selesaikan & Kunci Sesi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Attendance Pill Toggles -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 class="font-extrabold text-sm text-slate-900">Presensi Cepat Siswa (Touch Targets)</h3>
+                <p class="text-xs text-slate-500">Waktu presensi < 10 detik dengan toggle kapsul</p>
+              </div>
+              <button onclick="alert('Semua 32 siswa ditandai HADIR!')" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold tactile-btn">
+                ✅ Tandai Semua Hadir
+              </button>
+            </div>
+
+            <!-- Student Rows Demo -->
+            <div class="space-y-2">
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-3">
+                  <span class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">1</span>
+                  <div>
+                    <h5 class="text-xs font-bold text-slate-900">Ahmad Fauzi Pratama</h5>
+                    <p class="text-[10px] text-slate-500">NIS: 20240801</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs tactile-btn">H</button>
+                  <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">S</button>
+                  <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+                  <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-3">
+                  <span class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">2</span>
+                  <div>
+                    <h5 class="text-xs font-bold text-slate-900">Bella Anindita Putri</h5>
+                    <p class="text-[10px] text-slate-500">NIS: 20240802</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs tactile-btn">H</button>
+                  <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">S</button>
+                  <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+                  <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Jurnal Input -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <label class="font-bold text-slate-800 block">Topik Materi Aktual (Wajib untuk mengunci sesi)</label>
+              <input type="text" value="Pembuktian Teorema Pythagoras dengan Puzzle Karton Geometri" class="w-full p-2.5 rounded-xl bg-white border border-slate-200 font-medium focus:outline-teal-600">
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 5: AKADEMIK & KURIKULUM PROSEM ENGINE (/akademik)
+    // =========================================================================
+    function getPageAkademik() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900">Perencanaan Kurikulum (CP, TP, PROTA & PROSEM)</h2>
+              <p class="text-xs text-slate-500">Kalkulasi Jam Pelajaran (JP) Otomatis Seimbang • Ekspor Format Resmi Dinas</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="alert('Mengunduh Excel PROSEM bergaris resmi...')" class="px-3.5 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>Unduh Excel (.xlsx)</span>
+              </button>
+              <button onclick="alert('Mengunduh Word PROTA resmi...')" class="px-3.5 py-2 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>Unduh Word (.docx)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-teal-50 border border-teal-100 font-bold text-teal-900">
+              <span>Semester Ganjil 2024/2025: 16 Pekan Efektif × 2 JP = 32 JP Total</span>
+              <span class="text-emerald-700">Status: 100% Seimbang</span>
+            </div>
+
+            <div class="space-y-2">
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-slate-900">Bab 1: Pola Bilangan & Barisan</h4>
+                  <p class="text-[11px] text-slate-500">Alokasi: 8 JP (Juli Pekan 3-4, Agustus Pekan 1-2)</p>
+                </div>
+                <span class="font-bold text-teal-800 bg-teal-50 px-2 py-1 rounded">8 JP</span>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-slate-900">Bab 2: Koordinat Kartesius</h4>
+                  <p class="text-[11px] text-slate-500">Alokasi: 6 JP (Agustus Pekan 3-5)</p>
+                </div>
+                <span class="font-bold text-teal-800 bg-teal-50 px-2 py-1 rounded">6 JP</span>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-slate-900">Bab 3: Relasi dan Fungsi</h4>
+                  <p class="text-[11px] text-slate-500">Alokasi: 8 JP (September Pekan 1-4)</p>
+                </div>
+                <span class="font-bold text-teal-800 bg-teal-50 px-2 py-1 rounded">8 JP</span>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-slate-900">Bab 4: Teorema Pythagoras</h4>
+                  <p class="text-[11px] text-slate-500">Alokasi: 10 JP (Oktober Pekan 1-5)</p>
+                </div>
+                <span class="font-bold text-teal-800 bg-teal-50 px-2 py-1 rounded">10 JP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 6: QUIZ ONLINE (/quiz)
+    // =========================================================================
+    function getPageQuiz() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900">Quiz & Ujian Online</h2>
+              <p class="text-xs text-slate-500">Projector Mode PIN, Autosave Siswa & Analisis Butir Soal</p>
+            </div>
+            <button onclick="alert('Membuat kuis baru...')" class="px-3.5 py-2 bg-teal-700 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Buat Kuis Baru</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">Aktif di Kelas</span>
+                <span class="text-xs font-mono font-bold text-teal-800">PIN Ruangan: #7821</span>
+              </div>
+              <h3 class="font-extrabold text-sm text-slate-900">Kuis 3: Teorema Pythagoras & Triple</h3>
+              <p class="text-xs text-slate-500">Kelas VIII-A • 10 Soal Pilihan Ganda & 2 Esai • Durasi 30 Menit</p>
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-emerald-700 font-bold">31 Siswa Selesai (Rata-rata: 86.4)</span>
+                <button onclick="alert('Membuka Projector Mode...')" class="text-teal-700 font-bold hover:underline">Mode Proyektor →</button>
+              </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold">Draf</span>
+                <span class="text-xs font-mono text-slate-400">Belum Dijadwalkan</span>
+              </div>
+              <h3 class="font-extrabold text-sm text-slate-900">Sumatif Tengah Semester (STS) Matematika</h3>
+              <p class="text-xs text-slate-500">Kelas VIII-A, VIII-B • 25 Soal Campuran</p>
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-medium">Bank Soal Siap</span>
+                <button class="text-teal-700 font-bold hover:underline">Edit Soal →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 7: ASSESSMENT (/assessment)
+    // =========================================================================
+    function getPageAssessment() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900">Buku Nilai & Tugas Siswa</h2>
+              <p class="text-xs text-slate-500">Bobot Formatif, Sumatif (STS/SAS) dan Indikator Ketuntasan KKTP</p>
+            </div>
+            <button onclick="alert('Tambah kolom asesmen baru...')" class="px-3.5 py-2 bg-teal-700 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Tambah Penilaian</span>
+            </button>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+            <h3 class="font-extrabold text-sm text-slate-900">Rekap Antrean Tugas Masuk (14 Tugas Perlu Dinilai)</h3>
+            <div class="space-y-2">
+              <div class="p-3 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
+                <div>
+                  <h4 class="font-bold text-slate-900">Tugas Praktikum 2: Pembuktian Pythagoras</h4>
+                  <p class="text-[11px] text-amber-800">14 siswa mengunggah foto laporan kerja kelompok</p>
+                </div>
+                <button onclick="alert('Membuka lembar penilaian tugas...')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl tactile-btn">
+                  Koreksi Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 8: AI STUDIO (/ai-studio)
+    // =========================================================================
+    function getPageAiStudio() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div class="bg-gradient-to-r from-indigo-950 via-slate-900 to-teal-950 text-white p-6 rounded-3xl border border-indigo-500/30 shadow-xl space-y-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/30 text-indigo-300 text-[10px] font-extrabold uppercase">Gemini 2.5 Flash Engine</span>
+            <h2 class="text-xl font-extrabold">AI Teacher Co-Pilot Studio</h2>
+            <p class="text-xs text-slate-300">Generate RPP, Kuis HOTS, Rubrik, dan Draf WhatsApp ke Orang Tua dalam hitungan detik.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+            <div class="md:col-span-5 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-3 text-xs">
+              <label class="font-bold text-slate-700 block">Topik Pembelajaran</label>
+              <input type="text" value="Teorema Pythagoras: Soal Cerita Kontekstual SMP" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-teal-600">
+
+              <label class="font-bold text-slate-700 block mt-2">Pilih Output</label>
+              <select class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+                <option>5 Soal HOTS + Rubrik</option>
+                <option>Modul Ajar RPP 1 Lembar</option>
+                <option>Draf Pesan WA Apresiasi Ortu</option>
+              </select>
+
+              <button onclick="alert('Draf berhasil digenerate via Gemini!')" class="w-full py-2.5 bg-gradient-to-r from-teal-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white font-extrabold rounded-xl tactile-btn shadow-md flex items-center justify-center gap-2 mt-3">
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                <span>Generate via AI</span>
+              </button>
+            </div>
+
+            <div class="md:col-span-7 bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-3 text-xs font-mono">
+              <div class="flex items-center justify-between font-sans border-b border-slate-100 pb-2">
+                <span class="font-bold text-slate-800">Hasil Draf AI (Siap Ekspor)</span>
+                <button onclick="alert('Disalin!')" class="text-teal-700 font-bold hover:underline">Salin</button>
+              </div>
+              <p class="text-slate-700 font-mono text-[11px] leading-relaxed">
+                [SOAL 1] Sebuah kapal berlayar 12 mil ke utara, lalu 16 mil ke timur. Berapa jarak terdekat dari titik awal?<br>
+                <strong>Kunci Jawaban:</strong> √(12² + 16²) = √(144 + 256) = √400 = 20 mil.
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 9: MONITORING 360° (/monitoring)
+    // =========================================================================
+    function getPageMonitoring() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">Monitoring Perkembangan Siswa 360°</h2>
+            <p class="text-xs text-slate-500">Deteksi Dini Siswa Butuh Remedial, Presensi Kritis & Tindak Lanjut</p>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100">
+                <span class="text-emerald-800 font-bold">29 Siswa Tuntas (90.6%)</span>
+                <p class="text-[11px] text-emerald-600 mt-0.5">Nilai di atas KKTP (≥ 75)</p>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-100">
+                <span class="text-amber-800 font-bold">3 Siswa Butuh Remedial</span>
+                <p class="text-[11px] text-amber-600 mt-0.5">Perlu bimbingan TP 2</p>
+              </div>
+              <div class="p-3.5 rounded-2xl bg-sky-50 border border-sky-100">
+                <span class="text-sky-800 font-bold">100% Terhubung Ortu</span>
+                <p class="text-[11px] text-sky-600 mt-0.5">Portal WhatsApp Aktif</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 10: DIREKTORI SISWA (/siswa)
+    // =========================================================================
+    function getPageSiswa() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">Direktori Siswa Kelas VIII-A</h2>
+            <p class="text-xs text-slate-500">32 Siswa Terdaftar • Data NISN, Kontak Ortu & Rekap Akademik</p>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-3 text-xs">
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center">1</span>
+                <div>
+                  <h4 class="font-bold text-slate-900">Ahmad Fauzi Pratama</h4>
+                  <p class="text-[11px] text-slate-500">NISN: 008761234 • Ibu Siti Rahmawati (+62 812-8899-1234)</p>
+                </div>
+              </div>
+              <span class="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Nilai: 91.4 (Tuntas)</span>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center">2</span>
+                <div>
+                  <h4 class="font-bold text-slate-900">Bella Anindita Putri</h4>
+                  <p class="text-[11px] text-slate-500">NISN: 008761235 • Bpk. Hendra (+62 813-7744-5566)</p>
+                </div>
+              </div>
+              <span class="font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">Nilai: 86.7 (Tuntas)</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 11: PUSAT LAPORAN & RAPOR (/laporan)
+    // =========================================================================
+    function getPageLaporan() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">Pusat Laporan & Ekspor Rapor Dinas</h2>
+            <p class="text-xs text-slate-500">Cetak Rapor Siswa, Buku Nilai Lengkap & Ekspor Format Dapodik</p>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+            <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <div>
+                <h4 class="font-bold text-slate-900">Rekap Nilai Rapor Semester Ganjil (Kelas VIII-A)</h4>
+                <p class="text-[11px] text-slate-500">32 Siswa • Nilai TP, STS, SAS dan Deskripsi Capaian Kompetensi</p>
+              </div>
+              <button onclick="alert('Mengunduh Rapor Lengkap (.xlsx)...')" class="px-4 py-2 bg-teal-700 text-white rounded-xl font-bold tactile-btn">
+                Unduh Excel Rapor
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 12: PORTAL ORANG TUA (/parent)
+    // =========================================================================
+    function getPageParent() {
+      return `
+        <div class="space-y-6 animate-fadeIn max-w-2xl mx-auto">
+          <div class="bg-amber-600 text-white p-6 rounded-3xl shadow-lg space-y-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-amber-500 text-amber-950 text-[10px] font-extrabold uppercase">Portal Akses Orang Tua</span>
+            <h2 class="text-xl font-extrabold">Pantau Belajar: Ahmad Fauzi (8A)</h2>
+            <p class="text-xs text-amber-100">SMP Negeri 1 Nusantara • Wali Kelas: Pak Budi Santoso</p>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 text-xs">
+            <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-between">
+              <div>
+                <span class="text-emerald-900 font-bold">Kehadiran Hari Ini: Hadir Tepat Waktu</span>
+                <p class="text-[11px] text-emerald-700">Kamis, 18 Sep 2025 • Pukul 07:15 WIB</p>
+              </div>
+              <span class="text-xl">✅</span>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <h4 class="font-bold text-slate-900">Perkembangan Nilai Terakhir</h4>
+              <p class="text-slate-600">Kuis 3 Matematika (Pythagoras): <strong class="text-emerald-700 font-extrabold">92 / 100 (Tuntas)</strong></p>
+              <p class="text-[11px] text-slate-500 italic">"Ahmad sangat aktif dalam penalaran rumus puzzle geometri." - Pak Budi</p>
+            </div>
+
+            <button onclick="alert('Membuka formulir lapor sakit WhatsApp ke Wali Kelas...')" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl tactile-btn flex items-center justify-center gap-2">
+              <i data-lucide="message-circle" class="w-4 h-4"></i>
+              <span>Kirim Surat Izin Sakit ke Wali Kelas</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // PAGE 13: PENGATURAN SEKOLAH (/pengaturan)
+    // =========================================================================
+    function getPagePengaturan() {
+      return `
+        <div class="space-y-6 animate-fadeIn">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900">Pengaturan & Konfigurasi Sekolah</h2>
+            <p class="text-xs text-slate-500">Tahun Ajaran, Bobot Penilaian, dan Hak Akses Pengguna</p>
+          </div>
+
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 text-xs max-w-xl">
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Tahun Ajaran & Semester Aktif</label>
+              <input type="text" value="2024/2025 - Semester Ganjil" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+            </div>
+
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Batas Ketuntasan Minimal (KKTP)</label>
+              <input type="number" value="75" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold">
+            </div>
+
+            <button onclick="alert('Pengaturan berhasil disimpan!')" class="px-4 py-2 bg-teal-700 text-white rounded-xl font-bold tactile-btn">
+              Simpan Pengaturan
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // COMMAND PALETTE ENGINE (Ctrl+K)
+    // =========================================================================
+    function openCommandModal() {
+      document.getElementById('cmd-modal').classList.remove('hidden');
+      document.getElementById('cmd-search-input').focus();
+    }
+
+    function closeCommandModal() {
+      document.getElementById('cmd-modal').classList.add('hidden');
+    }
+
+    function filterCommandItems() {
+      const q = document.getElementById('cmd-search-input').value.toLowerCase();
+      document.querySelectorAll('.cmd-item').forEach(item => {
+        const text = item.innerText.toLowerCase();
+        if (text.includes(q)) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+    }
+
+    // SHORTCUT KEYBOARD LISTENER (Ctrl+K or Esc)
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openCommandModal();
+      }
+      if (e.key === 'Escape') {
+        closeCommandModal();
+      }
+    });
+
+    // MOBILE SIDEBAR TOGGLE
+    function toggleMobileSidebar() {
+      const menu = document.getElementById('sidebar-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    // INITIAL LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      navTo('hari-ini');
+    });
+  </script>
+</body>
+</html>

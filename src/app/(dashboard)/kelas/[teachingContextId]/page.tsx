@@ -1,66 +1,136 @@
 import { auth, prisma } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import RosterManager from "./RosterManager";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import RuangMengajarClient, { SessionWithAttendance } from "./RuangMengajarClient";
 
-export default async function KelasDetailPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
+export default async function KelasDetailPage({
+  params,
+}: {
+  params: Promise<{ teachingContextId: string }>;
+}) {
   const session = await auth.api.getSession({
-    headers: await headers()
+    headers: await headers(),
   });
 
   if (!session) redirect("/login");
 
   const { teachingContextId } = await params;
 
-  // We use the authorization helper to verify access and get context details
   let authResult;
   try {
     authResult = await verifyTeachingContextAccess(teachingContextId);
   } catch {
-    redirect("/kelas"); // Redirect if not authorized
+    redirect("/kelas");
   }
 
   const { context } = authResult;
 
-  // Fetch roster
-  const roster = await prisma.classStudent.findMany({
-    where: {
-      classId: context.classId,
-      academicPeriodId: context.academicPeriodId,
-      student: {
-        status: "ACTIVE"
-      }
-    },
+  // 1. Fetch full context info
+  const fullContext = await prisma.teachingContext.findUnique({
+    where: { id: context.id },
     include: {
-      student: true
+      class: true,
+      subject: true,
+      academicPeriod: true,
     },
-    orderBy: {
-      student: { fullName: "asc" }
-    }
   });
 
-  return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      <div>
-        <Link href="/kelas" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Kembali ke Daftar Kelas
-        </Link>
-        <h1 className="text-3xl font-bold tracking-tight">{context.class.name}</h1>
-        <p className="text-muted-foreground mt-2">
-          {context.subject.name} &bull; {context.academicPeriod.year} {context.academicPeriod.semester}
-        </p>
-      </div>
+  if (!fullContext) redirect("/kelas");
 
-      <RosterManager 
-        teachingContextId={teachingContextId} 
-        classId={context.classId}
-        academicPeriodId={context.academicPeriodId}
-        initialRoster={roster} 
-      />
-    </div>
+  // 2. Fetch all sessions with attendance
+  const rawSessions = await prisma.teachingSession.findMany({
+    where: { teachingContextId },
+    orderBy: { date: "desc" },
+    include: {
+      attendanceRecords: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+
+  const sessions: SessionWithAttendance[] = rawSessions.map((s) => ({
+    id: s.id,
+    status: s.status,
+    date: s.date,
+    actualTopic: s.actualTopic,
+    plannedTopic: s.plannedTopic,
+    activitySummary: s.activitySummary,
+    attendanceRecordedAt: s.attendanceRecordedAt,
+    attendanceRecords: s.attendanceRecords.map((r) => ({
+      status: r.status,
+    })),
+  }));
+
+  // 3. Fetch roster
+  const rawRoster = await prisma.classStudent.findMany({
+    where: {
+      classId: fullContext.classId,
+      academicPeriodId: fullContext.academicPeriodId,
+      student: {
+        status: "ACTIVE",
+      },
+    },
+    include: {
+      student: true,
+    },
+    orderBy: {
+      student: { fullName: "asc" },
+    },
+  });
+
+  const roster = rawRoster.map((r) => ({
+    id: r.id,
+    studentId: r.studentId,
+    student: {
+      id: r.student.id,
+      fullName: r.student.fullName,
+      nis: r.student.nis,
+    },
+  }));
+
+  // 4. Calculate metrics
+  const completedCount = sessions.filter((s) => s.status === "COMPLETED").length;
+  const totalSessions = sessions.length;
+  const journalFilledCount = sessions.filter(
+    (s) => s.actualTopic && s.actualTopic.trim().length > 0
+  ).length;
+
+  let totalPresent = 0;
+  let totalRecords = 0;
+  sessions.forEach((s) => {
+    s.attendanceRecords.forEach((r) => {
+      totalRecords++;
+      if (r.status === "PRESENT" || r.status === "LATE") {
+        totalPresent++;
+      }
+    });
+  });
+
+  const avgAttendancePct =
+    totalRecords > 0 ? ((totalPresent / totalRecords) * 100).toFixed(1) : "100";
+
+  return (
+    <RuangMengajarClient
+      teachingContextId={teachingContextId}
+      classId={fullContext.classId}
+      academicPeriodId={fullContext.academicPeriodId}
+      context={{
+        className: fullContext.class.name,
+        subjectName: fullContext.subject.name,
+        academicPeriodYear: fullContext.academicPeriod.year,
+        academicPeriodSemester: fullContext.academicPeriod.semester,
+      }}
+      sessions={sessions}
+      roster={roster}
+      metrics={{
+        completedCount,
+        totalSessions,
+        avgAttendancePct,
+        journalFilledCount,
+      }}
+    />
   );
 }

@@ -1,61 +1,186 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { editTeachingSession, completeTeachingSession } from "@/modules/teaching/teaching.actions";
 import { saveAttendance } from "@/modules/attendance/attendance.actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { id } from "date-fns/locale";
+import { id as localeId } from "date-fns/locale";
 import type { AttendanceStatus } from "@prisma/client";
+import { cn } from "@/lib/utils";
+import {
+  BookOpen,
+  Users,
+  CheckCircle2,
+  Clock,
+  Save,
+  Sparkles,
+  ArrowLeft,
+  Check,
+  Search,
+  Lock,
+  FileText,
+  AlertCircle,
+  MessageSquare
+} from "lucide-react";
 
 type AttendanceData = { status: AttendanceStatus; note: string };
-type SessionData = { id: string; status: string; date: Date | string; actualTopic?: string | null; plannedTopic?: string | null; activitySummary?: string | null; attendanceRecordedAt?: Date | string | null; };
-type ContextData = { id: string; classId: string; subject: { name: string }; class: { name: string } };
-type RosterData = { studentId: string; student: { fullName: string; nis?: string | null } };
-type RecordData = { studentId: string; status: AttendanceStatus; note?: string | null };
+type SessionData = {
+  id: string;
+  status: string;
+  date: Date | string;
+  actualTopic?: string | null;
+  plannedTopic?: string | null;
+  activitySummary?: string | null;
+  attendanceRecordedAt?: Date | string | null;
+};
+type ContextData = {
+  id: string;
+  classId: string;
+  subject: { name: string };
+  class: { name: string };
+};
+type RosterData = {
+  studentId: string;
+  student: { fullName: string; nis?: string | null };
+};
+type RecordData = {
+  studentId: string;
+  status: AttendanceStatus;
+  note?: string | null;
+};
 
-export default function SessionClient({ session, context, roster, attendanceRecords }: { session: SessionData; context: ContextData; roster: RosterData[]; attendanceRecords: RecordData[] }) {
+export default function SessionClient({
+  session,
+  context,
+  roster,
+  attendanceRecords,
+}: {
+  session: SessionData;
+  context: ContextData;
+  roster: RosterData[];
+  attendanceRecords: RecordData[];
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeNoteStudentId, setActiveNoteStudentId] = useState<string | null>(null);
 
   const [actualTopic, setActualTopic] = useState(session.actualTopic || "");
   const [plannedTopic, setPlannedTopic] = useState(session.plannedTopic || "");
   const [activitySummary, setActivitySummary] = useState(session.activitySummary || "");
-  
+  const [recordedAt, setRecordedAt] = useState<Date | string | null>(session.attendanceRecordedAt || null);
+
   // Attendance state
   const [attendance, setAttendance] = useState<Record<string, AttendanceData>>(() => {
     const initialState: Record<string, AttendanceData> = {};
     if (session.attendanceRecordedAt && attendanceRecords) {
       attendanceRecords.forEach((record) => {
-        initialState[record.studentId] = { status: record.status, note: record.note || "" };
+        initialState[record.studentId] = {
+          status: record.status,
+          note: record.note || "",
+        };
       });
     } else {
       roster.forEach((cs) => {
-        initialState[cs.studentId] = { status: "PRESENT", note: "" }; // default to present for first save
+        initialState[cs.studentId] = { status: "PRESENT", note: "" }; // default to present
       });
     }
     return initialState;
   });
 
   const isCompleted = session.status === "COMPLETED";
-  const displayRoster = session.attendanceRecordedAt 
-    ? roster.filter((cs) => attendance[cs.studentId]) // only show snapshotted students
-    : roster; // show all current roster students
+  const displayRoster = recordedAt
+    ? roster.filter((cs) => attendance[cs.studentId]) // only snapshotted students
+    : roster; // show all roster students
+
+  // Attendance stats counters
+  const attendanceStats = useMemo(() => {
+    let present = 0;
+    let sick = 0;
+    let permission = 0;
+    let absent = 0;
+    let late = 0;
+
+    displayRoster.forEach((cs) => {
+      const st = attendance[cs.studentId]?.status || "PRESENT";
+      if (st === "PRESENT") present++;
+      else if (st === "SICK") sick++;
+      else if (st === "PERMISSION") permission++;
+      else if (st === "ABSENT") absent++;
+      else if (st === "LATE") late++;
+    });
+
+    return { present, sick, permission, absent, late, total: displayRoster.length };
+  }, [displayRoster, attendance]);
+
+  // Filtered roster for search
+  const filteredRoster = useMemo(() => {
+    if (!searchQuery.trim()) return displayRoster;
+    const q = searchQuery.toLowerCase();
+    return displayRoster.filter(
+      (cs) =>
+        cs.student.fullName.toLowerCase().includes(q) ||
+        (cs.student.nis && cs.student.nis.toLowerCase().includes(q))
+    );
+  }, [displayRoster, searchQuery]);
+
+  // Bulk action: Mark all present
+  const handleMarkAllPresent = () => {
+    setAttendance((prev) => {
+      const next = { ...prev };
+      displayRoster.forEach((cs) => {
+        next[cs.studentId] = {
+          status: "PRESENT",
+          note: prev[cs.studentId]?.note || "",
+        };
+      });
+      return next;
+    });
+    toast.success("Semua siswa ditandai Hadir");
+  };
+
+  // Change single student status
+  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+    setAttendance((prev) => ({
+      ...prev,
+      [studentId]: {
+        status,
+        note: prev[studentId]?.note || "",
+      },
+    }));
+    // Auto-open note box for sick/permission/absent if empty
+    if (status !== "PRESENT" && !attendance[studentId]?.note) {
+      setActiveNoteStudentId(studentId);
+    }
+  };
+
+  // Change single student note
+  const handleNoteChange = (studentId: string, note: string) => {
+    setAttendance((prev) => ({
+      ...prev,
+      [studentId]: {
+        status: prev[studentId]?.status || "PRESENT",
+        note,
+      },
+    }));
+  };
 
   const handleSaveDetails = async () => {
     try {
       setLoading(true);
       await editTeachingSession(session.id, { actualTopic, plannedTopic, activitySummary });
-      toast.success("Detail sesi berhasil disimpan");
+      toast.success("Detail jurnal berhasil disimpan");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Gagal menyimpan detail");
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan jurnal");
     } finally {
       setLoading(false);
     }
@@ -70,7 +195,8 @@ export default function SessionClient({ session, context, roster, attendanceReco
         note: data.note,
       }));
       await saveAttendance(session.id, records);
-      toast.success("Kehadiran berhasil disimpan");
+      setRecordedAt(new Date());
+      toast.success("Presensi kehadiran berhasil disimpan");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Gagal menyimpan kehadiran");
     } finally {
@@ -80,21 +206,28 @@ export default function SessionClient({ session, context, roster, attendanceReco
 
   const handleCompleteSession = async () => {
     if (!actualTopic.trim()) {
-      toast.error("Topik aktual (Materi yang Diajarkan) harus diisi");
-      return;
-    }
-    if (!session.attendanceRecordedAt) {
-      toast.error("Kehadiran harus disimpan terlebih dahulu");
+      toast.error("Topik aktual (Materi yang Diajarkan) wajib diisi sebelum menyelesaikan sesi!");
       return;
     }
 
     try {
       setLoading(true);
-      // Ensure latest details are saved first
+      // Auto-save attendance if not yet recorded
+      if (!recordedAt) {
+        const records = Object.entries(attendance).map(([studentId, data]) => ({
+          studentId,
+          status: data.status,
+          note: data.note,
+        }));
+        await saveAttendance(session.id, records);
+        setRecordedAt(new Date());
+      }
+
+      // Save latest details first
       await editTeachingSession(session.id, { actualTopic, plannedTopic, activitySummary });
       await completeTeachingSession(session.id);
-      toast.success("Sesi berhasil diselesaikan");
-      router.push("/hari-ini");
+      toast.success("Sesi mengajar berhasil diselesaikan!");
+      router.push(`/kelas/${context.id}`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Gagal menyelesaikan sesi");
     } finally {
@@ -102,134 +235,414 @@ export default function SessionClient({ session, context, roster, attendanceReco
     }
   };
 
+  const handleGenerateAiSummary = () => {
+    if (!actualTopic.trim()) {
+      toast.error("Ketikkan topik materi terlebih dahulu untuk membuat ringkasan.");
+      return;
+    }
+    const templateSummary = `Pembelajaran materi "${actualTopic}" berlangsung secara interaktif. Siswa memahami konsep dasar dan mempraktikkan latihan soal dengan aktif.`;
+    setActivitySummary(templateSummary);
+    toast.success("Draf catatan aktivitas berhasil dibuat!");
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Sesi: {context.subject.name} - {context.class.name}
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            {format(new Date(session.date), "EEEE, dd MMMM yyyy", { locale: id })}
-            {isCompleted && " (Selesai)"}
-          </p>
+    <div className="space-y-6 pb-20 max-w-5xl mx-auto">
+      {/* ─────────────────────────────────────────────────────────────
+          1. STICKY TOP ACTION BAR
+      ───────────────────────────────────────────────────────────── */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-md border-b pb-3 pt-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Link
+                href={`/kelas/${context.id}`}
+                className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+                Kembali ke Kelas
+              </Link>
+              <span className="text-slate-300">•</span>
+              <Badge
+                variant={isCompleted ? "secondary" : "default"}
+                className={cn(
+                  "text-[10px] font-semibold px-2 py-0.5",
+                  isCompleted ? "bg-slate-100 text-slate-700" : "bg-emerald-600 text-white"
+                )}
+              >
+                {isCompleted ? "Sesi Selesai (Terkunci)" : "Sesi Sedang Berlangsung"}
+              </Badge>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <span>{context.subject.name}</span>
+              <span className="text-muted-foreground font-normal text-lg">— {context.class.name}</span>
+            </h1>
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+              <Clock className="h-3.5 w-3.5 text-primary" />
+              {format(new Date(session.date), "EEEE, dd MMMM yyyy", { locale: localeId })}
+            </p>
+          </div>
+
+          {/* Quick Header Actions */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleSaveDetails}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              Simpan Draf
+            </Button>
+
+            {!isCompleted && (
+              <Button
+                onClick={handleCompleteSession}
+                disabled={loading}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                Selesaikan & Kunci Sesi
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Left Col: Details */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Jurnal Mengajar</CardTitle>
-              <CardDescription>Isi detail materi yang diajarkan pada sesi ini</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Rencana Topik</Label>
-                <Input 
-                  value={plannedTopic} 
-                  onChange={(e) => setPlannedTopic(e.target.value)} 
-                  placeholder="Misal: Bab 1 Pendahuluan"
-                />
+      {/* ─────────────────────────────────────────────────────────────
+          2. KARTU ATAS: JURNAL & MATERI HARI INI
+      ───────────────────────────────────────────────────────────── */}
+      <Card className="border shadow-xs">
+        <CardHeader className="pb-3 pt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center">
+                <BookOpen className="w-4 h-4" />
               </div>
-              <div className="space-y-2">
-                <Label>Topik Aktual (Wajib) <span className="text-red-500">*</span></Label>
-                <Input 
-                  value={actualTopic} 
-                  onChange={(e) => setActualTopic(e.target.value)} 
-                  placeholder="Materi yang benar-benar diajarkan hari ini"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Ringkasan Kegiatan (Opsional)</Label>
-                <Textarea 
-                  value={activitySummary} 
-                  onChange={(e) => setActivitySummary(e.target.value)} 
-                  rows={4}
-                  placeholder="Catatan aktivitas selama sesi berlangsung..."
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveDetails} disabled={loading} variant="secondary" className="w-full">
-                Simpan Jurnal
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          {!isCompleted && (
-            <Card className="border-red-200">
-              <CardHeader>
-                <CardTitle className="text-red-800">Selesaikan Sesi</CardTitle>
-                <CardDescription>
-                  Sesi yang sudah selesai tidak dapat diedit absensinya tanpa izin khusus.
+              <div>
+                <CardTitle className="text-base font-semibold">1. Jurnal & Materi Pembelajaran</CardTitle>
+                <CardDescription className="text-xs">
+                  Catat topik materi yang diajarkan dan ringkasan aktivitas siswa hari ini.
                 </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={handleCompleteSession} disabled={loading} className="w-full bg-red-600 hover:bg-red-700 text-white">
-                  Akhiri & Selesaikan Sesi
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
+            </div>
+            {actualTopic.trim() && (
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] hidden sm:flex items-center gap-1">
+                <Check className="h-3 w-3" /> Topik Terisi
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
 
-        {/* Right Col: Attendance */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Absensi Siswa</CardTitle>
-              <CardDescription>
-                {session.attendanceRecordedAt 
-                  ? `Absensi terkunci (disimpan pada ${format(new Date(session.attendanceRecordedAt), "HH:mm")})`
-                  : "Catat kehadiran siswa untuk sesi ini. Menyimpan akan mengunci daftar siswa."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {displayRoster.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Tidak ada siswa yang terdaftar untuk absensi.</p>
-                )}
-                {displayRoster.map((cs) => {
-                  const sId = cs.studentId;
-                  const currentStatus = attendance[sId]?.status || "PRESENT";
-                  return (
-                    <div key={sId} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50/50">
-                      <div>
-                        <p className="font-medium">{cs.student.fullName}</p>
-                        <p className="text-xs text-muted-foreground">{cs.student.nis || "No NIS"}</p>
+        <CardContent className="space-y-4 pt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="actualTopic" className="text-xs font-semibold">
+                Topik Aktual yang Diajarkan <span className="text-rose-500">* (Wajib)</span>
+              </Label>
+              <Input
+                id="actualTopic"
+                value={actualTopic}
+                onChange={(e) => setActualTopic(e.target.value)}
+                placeholder="Contoh: Teorema Pythagoras - Menghitung Sisi Miring"
+                className="text-sm font-medium"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="plannedTopic" className="text-xs font-medium text-muted-foreground">
+                Rencana Topik (Opsional / Rujukan)
+              </Label>
+              <Input
+                id="plannedTopic"
+                value={plannedTopic}
+                onChange={(e) => setPlannedTopic(e.target.value)}
+                placeholder="Contoh: Bab 3 - Geometri Segitiga"
+                className="text-sm text-muted-foreground"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="activitySummary" className="text-xs font-medium text-muted-foreground">
+                Ringkasan Aktivitas / Refleksi Mengajar (Opsional)
+              </Label>
+              <button
+                type="button"
+                onClick={handleGenerateAiSummary}
+                className="text-[11px] font-semibold text-purple-700 hover:text-purple-800 flex items-center gap-1 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded transition-colors"
+              >
+                <Sparkles className="h-3 w-3 text-purple-600" />
+                Buat Draf via AI
+              </button>
+            </div>
+            <Textarea
+              id="activitySummary"
+              value={activitySummary}
+              onChange={(e) => setActivitySummary(e.target.value)}
+              rows={3}
+              placeholder="Contoh: Siswa aktif berdiskusi dalam 4 kelompok, 2 kelompok maju presentasi menyelesaikan LKPD 1."
+              className="text-sm"
+            />
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex justify-end border-t pt-3 pb-3 bg-muted/20">
+          <Button onClick={handleSaveDetails} disabled={loading} variant="secondary" size="sm" className="text-xs">
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Simpan Jurnal Mengajar
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* ─────────────────────────────────────────────────────────────
+          3. KARTU BAWAH: PRESENSI CEPAT SISWA (QUICK ATTENDANCE)
+      ───────────────────────────────────────────────────────────── */}
+      <Card className="border shadow-xs">
+        <CardHeader className="pb-3 pt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">
+                  2. Presensi Siswa ({attendanceStats.total} Siswa)
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {recordedAt ? (
+                    <span className="text-emerald-700 font-medium flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Presensi tersimpan & terkunci pada{" "}
+                      {format(new Date(recordedAt), "HH:mm, dd MMM yyyy", { locale: localeId })}
+                    </span>
+                  ) : (
+                    "Ketuk status kehadiran tiap siswa. Menyimpan presensi akan mengunci daftar hadir sesi ini."
+                  )}
+                </CardDescription>
+              </div>
+            </div>
+
+            {/* Quick Action: Mark All Present */}
+            {!isCompleted && (
+              <Button
+                type="button"
+                onClick={handleMarkAllPresent}
+                variant="outline"
+                size="sm"
+                className="text-xs font-semibold text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/80 shrink-0 self-start sm:self-auto"
+              >
+                <Check className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
+                Tandai Semua Hadir
+              </Button>
+            )}
+          </div>
+
+          {/* Status Counter Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-3 border-t mt-2">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-900 text-xs">
+              <span className="font-medium">🟢 Hadir:</span>
+              <span className="font-bold text-sm">{attendanceStats.present}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/80 border border-amber-100 text-amber-900 text-xs">
+              <span className="font-medium">🟡 Sakit:</span>
+              <span className="font-bold text-sm">{attendanceStats.sick}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/80 border border-blue-100 text-blue-900 text-xs">
+              <span className="font-medium">🔵 Izin:</span>
+              <span className="font-bold text-sm">{attendanceStats.permission}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-900 text-xs">
+              <span className="font-medium">🔴 Alpa:</span>
+              <span className="font-bold text-sm">{attendanceStats.absent}</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50/80 border border-purple-100 text-purple-900 text-xs col-span-2 sm:col-span-1">
+              <span className="font-medium">🟣 Terlambat:</span>
+              <span className="font-bold text-sm">{attendanceStats.late}</span>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-3 pt-0">
+          {/* Quick Search */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari nama atau NIS siswa..."
+              className="pl-8 h-9 text-xs"
+            />
+          </div>
+
+          {/* Roster List */}
+          {filteredRoster.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground text-xs">
+              Tidak ada siswa yang cocok dengan pencarian &quot;{searchQuery}&quot;.
+            </div>
+          ) : (
+            <div className="divide-y border rounded-lg bg-card overflow-hidden">
+              {filteredRoster.map((cs, idx) => {
+                const sId = cs.studentId;
+                const currentStatus = attendance[sId]?.status || "PRESENT";
+                const currentNote = attendance[sId]?.note || "";
+                const isNoteOpen = activeNoteStudentId === sId || currentNote.trim().length > 0;
+
+                return (
+                  <div
+                    key={sId}
+                    className={cn(
+                      "p-3 flex flex-col gap-2 transition-colors",
+                      idx % 2 === 0 ? "bg-background" : "bg-muted/10",
+                      currentStatus !== "PRESENT" && "bg-amber-50/20"
+                    )}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      {/* Student Info */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-5 text-xs text-muted-foreground font-mono">{idx + 1}.</span>
+                        <div className="truncate">
+                          <p className="font-semibold text-xs sm:text-sm text-foreground truncate">
+                            {cs.student.fullName}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground font-mono">
+                            NIS: {cs.student.nis || "—"}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex gap-2 w-1/3">
-                        <Select 
-                          value={currentStatus} 
-                          onValueChange={(val) => setAttendance(prev => ({...prev, [sId]: { ...prev[sId], status: val as AttendanceStatus, note: prev[sId]?.note || "" }}))}
+
+                      {/* Status Pill Toggles + Note Button */}
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                        <div className="inline-flex rounded-lg bg-muted/60 p-0.5 border text-xs">
+                          {/* H - Hadir */}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(sId, "PRESENT")}
+                            className={cn(
+                              "px-2.5 py-1 rounded-md font-semibold text-xs transition-all",
+                              currentStatus === "PRESENT"
+                                ? "bg-emerald-600 text-white shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            )}
+                            title="Hadir"
+                          >
+                            H
+                          </button>
+
+                          {/* S - Sakit */}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(sId, "SICK")}
+                            className={cn(
+                              "px-2.5 py-1 rounded-md font-semibold text-xs transition-all",
+                              currentStatus === "SICK"
+                                ? "bg-amber-500 text-white shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            )}
+                            title="Sakit"
+                          >
+                            S
+                          </button>
+
+                          {/* I - Izin */}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(sId, "PERMISSION")}
+                            className={cn(
+                              "px-2.5 py-1 rounded-md font-semibold text-xs transition-all",
+                              currentStatus === "PERMISSION"
+                                ? "bg-blue-600 text-white shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            )}
+                            title="Izin"
+                          >
+                            I
+                          </button>
+
+                          {/* A - Alpa */}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(sId, "ABSENT")}
+                            className={cn(
+                              "px-2.5 py-1 rounded-md font-semibold text-xs transition-all",
+                              currentStatus === "ABSENT"
+                                ? "bg-rose-600 text-white shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            )}
+                            title="Alpa (Tanpa Keterangan)"
+                          >
+                            A
+                          </button>
+
+                          {/* T - Terlambat */}
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(sId, "LATE")}
+                            className={cn(
+                              "px-2.5 py-1 rounded-md font-semibold text-xs transition-all",
+                              currentStatus === "LATE"
+                                ? "bg-purple-600 text-white shadow-xs"
+                                : "text-muted-foreground hover:text-foreground hover:bg-background/80"
+                            )}
+                            title="Terlambat"
+                          >
+                            T
+                          </button>
+                        </div>
+
+                        {/* Note Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={() => setActiveNoteStudentId(isNoteOpen ? null : sId)}
+                          className={cn(
+                            "p-1.5 rounded-md border text-xs transition-colors",
+                            currentNote.trim().length > 0
+                              ? "bg-amber-50 border-amber-300 text-amber-700 font-semibold"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          )}
+                          title="Tambah Catatan"
                         >
-                          <SelectTrigger className="bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PRESENT">Hadir</SelectItem>
-                            <SelectItem value="SICK">Sakit</SelectItem>
-                            <SelectItem value="PERMISSION">Izin</SelectItem>
-                            <SelectItem value="ABSENT">Alpa</SelectItem>
-                            <SelectItem value="LATE">Terlambat</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveAttendance} disabled={loading} className="w-full">
-                Simpan Absensi
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
+
+                    {/* Note Input (Appears when active or has note) */}
+                    {isNoteOpen && (
+                      <div className="pt-1.5 pl-7 pr-1">
+                        <Input
+                          value={currentNote}
+                          onChange={(e) => handleNoteChange(sId, e.target.value)}
+                          placeholder="Catatan siswa (misal: Sakit demam, Izin acara keluarga, Terlambat 15 menit)..."
+                          className="h-8 text-xs bg-background"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t pt-3 pb-3 bg-muted/20">
+          <p className="text-xs text-muted-foreground">
+            Total {attendanceStats.total} siswa terdaftar di sesi ini.
+          </p>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleSaveAttendance}
+              disabled={loading}
+              className="w-full sm:w-auto bg-primary text-xs font-semibold"
+            >
+              <Save className="h-3.5 w-3.5 mr-1.5" />
+              Simpan Presensi Siswa
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

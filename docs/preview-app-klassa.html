@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klassa OS Teacher - Preview Interaktif Beranda, AI Studio & Workspace Kelas</title>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            teal: {
+              50: '#F0FDFA',
+              100: '#CCFBF1',
+              200: '#99F6E4',
+              300: '#5EEAD4',
+              400: '#2DD4BF',
+              500: '#14B8A6',
+              600: '#0D9488',
+              700: '#0F766E',
+              800: '#115E59',
+              900: '#134E4A',
+              950: '#042F2E',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background-color: #F6F8F8;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.02);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(15,118,110,0.25);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(15,118,110,0.45);
+    }
+    .tactile-btn {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tactile-btn:active {
+      transform: scale(0.97);
+    }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      background-color: inherit;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(1.03); }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2.5s infinite ease-in-out;
+    }
+    @keyframes shimmer {
+      100% { transform: translateX(100%); }
+    }
+    .shimmer-effect {
+      position: relative;
+      overflow: hidden;
+    }
+    .shimmer-effect::after {
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      transform: translateX(-100%);
+      background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.2) 20%, rgba(255,255,255,0.5) 60%, rgba(255,255,255,0));
+      animation: shimmer 2s infinite;
+      content: '';
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col custom-scrollbar">
+
+  <!-- TOP APP BAR & PAGE SWITCHER -->
+  <header class="sticky top-0 z-50 glass-nav border-b border-slate-200/90 shadow-2xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="h-16 flex items-center justify-between gap-4">
+        
+        <!-- Brand Logo & School Context -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-800 via-teal-700 to-teal-500 flex items-center justify-center text-white shadow-md shadow-teal-700/20">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-base tracking-tight text-slate-900">KLASSA</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide uppercase bg-teal-100 text-teal-800 border border-teal-200">OS Teacher v3</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium">SMP Negeri 1 Nusantara • Semester Ganjil 2024/2025</p>
+          </div>
+        </div>
+
+        <!-- 3 PRIMARY PREVIEW TABS SWITCHER -->
+        <nav class="flex items-center bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 max-w-fit overflow-x-auto custom-scrollbar">
+          <button onclick="switchMainView('beranda')" id="nav-btn-beranda" class="main-nav-btn active px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all tactile-btn bg-teal-700 text-white shadow-xs">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>1. Beranda Guru</span>
+          </button>
+          <button onclick="switchMainView('aistudio')" id="nav-btn-aistudio" class="main-nav-btn px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all tactile-btn text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+            <i data-lucide="wand-2" class="w-4 h-4 text-indigo-600"></i>
+            <span>2. AI Studio Generator</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-bold uppercase">Gemini</span>
+          </button>
+          <button onclick="switchMainView('kelas')" id="nav-btn-kelas" class="main-nav-btn px-3.5 sm:px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all tactile-btn text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+            <i data-lucide="book-open-check" class="w-4 h-4 text-teal-700"></i>
+            <span>3. Workspace Kelas (VIII-A)</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          </button>
+        </nav>
+
+        <!-- User Profile Pill -->
+        <div class="hidden md:flex items-center gap-2.5 pl-3 border-l border-slate-200">
+          <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-800 font-bold flex items-center justify-center text-xs border border-teal-200">
+            BS
+          </div>
+          <div class="text-right">
+            <h4 class="text-xs font-bold text-slate-800">Budi Santoso, S.Pd.</h4>
+            <p class="text-[10px] text-teal-700 font-semibold">Guru Matematika & Wali 8A</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN DYNAMIC CONTENT CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 flex-1 w-full space-y-8">
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: BERANDA GURU (/hari-ini) -->
+    <!-- ========================================================================= -->
+    <section id="view-beranda" class="space-y-6 animate-fadeIn">
+      
+      <!-- HERO WELCOME BANNER (Tactile & Energetic) -->
+      <div class="bg-gradient-to-br from-teal-900 via-teal-800 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
+        <div class="absolute right-0 top-0 w-80 h-80 bg-teal-400/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div class="space-y-2 max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-bold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Kamis, 18 September 2025 • Pekan Efektif Ke-8</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-snug">
+              Selamat Pagi, Pak Budi! ☕
+            </h1>
+            <p class="text-xs sm:text-sm text-teal-100/90 leading-relaxed">
+              Hari ini ada <strong class="text-white underline decoration-teal-400">2 Sesi Mengajar</strong> dan <strong class="text-white underline decoration-amber-400">14 Tugas Siswa</strong> yang menunggu evaluasi Anda. Semua sistem siap!
+            </p>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button onclick="switchMainView('kelas')" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-950/30 flex items-center gap-2 tactile-btn">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span>Mulai Sesi Mengajar 8A</span>
+            </button>
+            <button onclick="switchMainView('aistudio')" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs rounded-xl flex items-center gap-2 tactile-btn">
+              <i data-lucide="sparkles" class="w-4 h-4 text-teal-300"></i>
+              <span>AI Rancang Soal</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 KEY METRIC CARDS (Zero Fatigue Colors) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1 -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2 hover:border-teal-300 transition-colors">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sesi Hari Ini</span>
+            <span class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-slate-900">2 Kelas</span>
+            <span class="text-[11px] font-semibold text-emerald-600">4 Jam Pelajaran (JP)</span>
+          </div>
+          <p class="text-[11px] text-slate-500">Kelas VIII-A (08:00) & Kelas IX-B (10:30)</p>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2 hover:border-teal-300 transition-colors">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kehadiran Siswa</span>
+            <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-slate-900">96.8%</span>
+            <span class="text-[11px] font-semibold text-emerald-600">↑ 1.2% pekan ini</span>
+          </div>
+          <p class="text-[11px] text-slate-500">Rata-rata 5 kelas binaan matematika</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2 hover:border-teal-300 transition-colors">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Antrean Koreksi</span>
+            <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+              <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-slate-900">14 Tugas</span>
+            <span class="text-[11px] font-semibold text-amber-700">Perlu Penilaian</span>
+          </div>
+          <p class="text-[11px] text-slate-500">Kuis 3: Teorema Pythagoras (VIII-A)</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2 hover:border-teal-300 transition-colors">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kurikulum PROSEM</span>
+            <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-extrabold text-emerald-700">100% Valid</span>
+            <span class="text-[11px] font-semibold text-teal-700">32/32 JP</span>
+          </div>
+          <p class="text-[11px] text-slate-500">Matriks mingguan siap ekspor Excel dinas</p>
+        </div>
+      </div>
+
+      <!-- 2-COLUMN MAIN CONTENT (Schedule & Class Directory) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT: SCHEDULE TIMELINE (Live Action) -->
+        <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="clock" class="w-4 h-4 text-teal-700"></i>
+                Jadwal Mengajar Hari Ini (18 Sep 2025)
+              </h3>
+              <p class="text-xs text-slate-500">Klik 'Mulai Sesi' untuk membuka mode presensi cepat 10 detik</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 text-[11px] font-bold">2 Sesi Terjadwal</span>
+          </div>
+
+          <!-- Schedule Item 1 (Active Sesi 8A) -->
+          <div class="p-4 rounded-2xl bg-teal-50/70 border-2 border-teal-500/40 space-y-3 relative overflow-hidden">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-teal-700 text-white font-extrabold text-base flex flex-col items-center justify-center shadow-xs">
+                  <span>8A</span>
+                  <span class="text-[9px] font-normal uppercase opacity-80">Ruang 2</span>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-extrabold text-sm text-slate-900">Matematika • Pertemuan #12</h4>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold animate-pulse">Sesi Siap Dibuka</span>
+                  </div>
+                  <p class="text-xs text-slate-600 font-medium mt-0.5">Topik Rencana: Pembuktian Teorema Pythagoras dengan Puzzle Luas</p>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-teal-900 bg-white px-2.5 py-1 rounded-xl border border-teal-200 shrink-0">
+                08:00 - 09:20 WIB
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-teal-200/60">
+              <div class="flex items-center gap-2 text-xs text-slate-600">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-teal-700"></i>
+                <span>32 Siswa Terdaftar (1 Izin Dokter)</span>
+              </div>
+              <button onclick="switchMainView('kelas')" class="px-4 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-extrabold shadow-xs tactile-btn flex items-center gap-1.5">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                <span>Mulai Sesi Mengajar</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Schedule Item 2 (Next Sesi 9B) -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-slate-200 text-slate-700 font-extrabold text-base flex flex-col items-center justify-center">
+                  <span>9B</span>
+                  <span class="text-[9px] font-normal uppercase opacity-70">Lab 1</span>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm text-slate-800">Matematika • Pertemuan #10</h4>
+                  <p class="text-xs text-slate-500 mt-0.5">Topik Rencana: Transformasi Geometri (Translasi & Refleksi)</p>
+                </div>
+              </div>
+              <span class="text-xs font-medium text-slate-500 bg-white px-2.5 py-1 rounded-xl border border-slate-200 shrink-0">
+                10:30 - 11:50 WIB
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-200/60">
+              <span class="text-xs text-slate-500">30 Siswa • Sesi ke-2 hari ini</span>
+              <button class="px-3.5 py-1.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn">
+                Lihat Silabus
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: CLASS DIRECTORY & QUICK AI ACTION -->
+        <div class="lg:col-span-5 space-y-5">
+          
+          <!-- Class Card Grid -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-2xs space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                <i data-lucide="folders" class="w-4 h-4 text-teal-700"></i>
+                Daftar Kelas Binaan Saya
+              </h3>
+              <a href="#" class="text-xs font-bold text-teal-700 hover:underline">Semua Kelas (5)</a>
+            </div>
+
+            <div class="space-y-2">
+              <!-- Item 1 -->
+              <div onclick="switchMainView('kelas')" class="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/70 border border-slate-200 hover:border-teal-300 transition-all cursor-pointer flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-800 font-extrabold text-xs flex items-center justify-center">8A</div>
+                  <div>
+                    <h5 class="text-xs font-bold text-slate-900 group-hover:text-teal-900">Kelas VIII-A (Wali Kelas)</h5>
+                    <p class="text-[11px] text-slate-500">32 Siswa • Matematika Fase D</p>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-teal-700 transition-transform group-hover:translate-x-0.5"></i>
+              </div>
+
+              <!-- Item 2 -->
+              <div class="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/70 border border-slate-200 hover:border-teal-300 transition-all cursor-pointer flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">8B</div>
+                  <div>
+                    <h5 class="text-xs font-bold text-slate-900 group-hover:text-teal-900">Kelas VIII-B</h5>
+                    <p class="text-[11px] text-slate-500">32 Siswa • Matematika Fase D</p>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-teal-700"></i>
+              </div>
+
+              <!-- Item 3 -->
+              <div class="p-3 rounded-2xl bg-slate-50 hover:bg-teal-50/70 border border-slate-200 hover:border-teal-300 transition-all cursor-pointer flex items-center justify-between group">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 font-extrabold text-xs flex items-center justify-center">9A</div>
+                  <div>
+                    <h5 class="text-xs font-bold text-slate-900 group-hover:text-teal-900">Kelas IX-A</h5>
+                    <p class="text-[11px] text-slate-500">30 Siswa • Matematika Fase D</p>
+                  </div>
+                </div>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-teal-700"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Studio Promo Widget -->
+          <div class="p-5 rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white border border-indigo-500/30 space-y-3 relative overflow-hidden shadow-md">
+            <div class="flex items-center gap-2 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+              <i data-lucide="wand-2" class="w-4 h-4"></i>
+              <span>AI Co-Pilot Asisten Guru</span>
+            </div>
+            <h4 class="font-extrabold text-sm leading-snug">Butuh Soal Kuis atau Modul Ajar Cepat?</h4>
+            <p class="text-xs text-indigo-200/80 leading-relaxed">
+              Generate 5–10 butir soal pilihan ganda & esai HOTS berstandar kurikulum nasional dalam 5 detik.
+            </p>
+            <button onclick="switchMainView('aistudio')" class="w-full py-2 bg-gradient-to-r from-teal-500 to-indigo-500 hover:from-teal-600 hover:to-indigo-600 text-white rounded-xl text-xs font-extrabold tactile-btn shadow-md flex items-center justify-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>Buka AI Studio Generator</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: AI STUDIO GENERATOR (/ai-studio) -->
+    <!-- ========================================================================= -->
+    <section id="view-aistudio" class="space-y-6 hidden animate-fadeIn">
+      
+      <!-- AI STUDIO HEADER -->
+      <div class="bg-gradient-to-r from-indigo-950 via-slate-900 to-teal-950 text-white p-6 sm:p-8 rounded-3xl border border-indigo-500/30 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="space-y-2 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Gemini 2.5 Flash Structured Engine</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            AI Studio: Pusat Otomatisasi Guru
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-300">
+            Rancang Modul Ajar RPP, Generator Kuis & Ujian, Rubrik Penilaian, serta Draf Pesan Santun ke Orang Tua hanya dengan instruksi sederhana.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button class="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold border border-white/20 tactile-btn flex items-center gap-1.5">
+            <i data-lucide="history" class="w-4 h-4"></i>
+            <span>Riwayat Draf (18)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- AI GENERATOR INTERACTION GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT: PROMPT BUILDER & CONTROLS (Span 5) -->
+        <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-teal-700"></i>
+              Pengaturan Generator AI
+            </h3>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 font-bold">Template Siap Pakai</span>
+          </div>
+
+          <!-- Template Presets Selector -->
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1.5">Pilih Modul AI yang Diinginkan:</label>
+            <div class="grid grid-cols-2 gap-2" id="ai-preset-container">
+              <button onclick="selectAiPreset('quiz')" class="ai-preset-btn active p-2.5 rounded-xl border border-teal-600 bg-teal-50 text-teal-900 font-extrabold text-xs text-left flex items-center gap-2 tactile-btn">
+                <i data-lucide="help-circle" class="w-4 h-4 text-teal-700"></i>
+                <span>Kuis & Soal HOTS</span>
+              </button>
+              <button onclick="selectAiPreset('rpp')" class="ai-preset-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center gap-2 tactile-btn">
+                <i data-lucide="file-text" class="w-4 h-4 text-indigo-700"></i>
+                <span>Modul Ajar / RPP</span>
+              </button>
+              <button onclick="selectAiPreset('remedial')" class="ai-preset-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center gap-2 tactile-btn">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-amber-700"></i>
+                <span>Analisis Remedial</span>
+              </button>
+              <button onclick="selectAiPreset('parent-wa')" class="ai-preset-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs text-left flex items-center gap-2 tactile-btn">
+                <i data-lucide="message-circle" class="w-4 h-4 text-emerald-700"></i>
+                <span>Draf Pesan Ortu</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Form Fields -->
+          <div class="space-y-3 text-xs">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">Mata Pelajaran</label>
+                <select id="ai-subject" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-teal-600">
+                  <option>Matematika</option>
+                  <option>IPA Fisika / Biologi</option>
+                  <option>Bahasa Indonesia</option>
+                  <option>Bahasa Inggris</option>
+                </select>
+              </div>
+              <div>
+                <label class="font-bold text-slate-700 block mb-1">Fase / Tingkat</label>
+                <select id="ai-phase" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-teal-600">
+                  <option>Fase D (Kelas 7-9 SMP)</option>
+                  <option>Fase E (Kelas 10 SMA)</option>
+                  <option>Fase F (Kelas 11-12 SMA)</option>
+                  <option>Fase C (Kelas 5-6 SD)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Topik Materi & Tujuan Pembelajaran (TP)</label>
+              <input type="text" id="ai-topic" value="Teorema Pythagoras: Menghitung Sisi Miring dan Aplikasi Kontekstual" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-teal-600">
+            </div>
+
+            <div>
+              <label class="font-bold text-slate-700 block mb-1">Instruksi Khusus / Prompt Tambahan (Opsional)</label>
+              <textarea rows="3" id="ai-custom-prompt" placeholder="Contoh: Buatkan 3 soal pilihan ganda bertingkat penalaran C4 dan 2 soal esai cerita kehidupan sehari-hari lengkap dengan kunci & pembahasan." class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-teal-600"></textarea>
+            </div>
+          </div>
+
+          <!-- Generate Action Button -->
+          <button onclick="triggerAiGenerate()" id="btn-generate-ai" class="w-full py-3 bg-gradient-to-r from-teal-600 via-teal-500 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white rounded-2xl font-extrabold text-xs shadow-md shadow-teal-900/20 tactile-btn flex items-center justify-center gap-2 shimmer-effect">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>Mulai Generate via AI (Instan)</span>
+          </button>
+        </div>
+
+        <!-- RIGHT: LIVE GENERATED PREVIEW & EXPORT ACTIONS (Span 7) -->
+        <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <h3 class="font-extrabold text-sm text-slate-900">Hasil Draf AI (Siap Ekspor)</h3>
+              </div>
+              
+              <div class="flex items-center gap-1.5">
+                <button onclick="copyAiOutput()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold tactile-btn flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span>Salin</span>
+                </button>
+                <button onclick="alert('Mengekspor berkas resmi docx ke komputer...')" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-lg text-xs font-bold tactile-btn flex items-center gap-1">
+                  <i data-lucide="file-down" class="w-3 h-3"></i>
+                  <span>Unduh Word (.docx)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Preview Card Box -->
+            <div id="ai-output-box" class="p-4 sm:p-5 rounded-2xl bg-[#F6F8F8] border border-slate-200 font-mono text-xs text-slate-800 space-y-4 max-h-[420px] overflow-y-auto custom-scrollbar">
+              
+              <!-- Sample Content -->
+              <div class="space-y-3 font-sans">
+                <div class="p-3 bg-white rounded-xl border border-teal-200 shadow-2xs">
+                  <h4 class="font-extrabold text-teal-900 text-xs uppercase tracking-wide">KISI-KISI & SOAL KUIS: TEOREMA PYTHAGORAS (FASE D - SMP)</h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5">Disusun otomatis berdasarkan CP/TP Kurikulum Merdeka</p>
+                </div>
+
+                <!-- Soal 1 -->
+                <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-900">Soal No. 1 (Pilihan Ganda - Penalaran C4)</span>
+                    <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">Bobot: 20 Poin</span>
+                  </div>
+                  <p class="text-xs text-slate-700">Sebuah tangga yang panjangnya 5 meter disandarkan pada dinding rumah. Jika jarak ujung bawah tangga ke dinding adalah 3 meter, berapakah tinggi dinding yang dicapai tangga tersebut?</p>
+                  <div class="grid grid-cols-2 gap-1 text-[11px] text-slate-600 pl-2">
+                    <span>A. 3,5 meter</span>
+                    <span class="font-bold text-emerald-700">B. 4,0 meter (Kunci Jawaban)</span>
+                    <span>C. 4,5 meter</span>
+                    <span>D. 5,8 meter</span>
+                  </div>
+                  <div class="p-2 bg-teal-50 rounded-lg text-[10px] text-teal-900 mt-1">
+                    <strong>💡 Pembahasan:</strong> Berdasarkan rumus Pythagoras: t = √(5² - 3²) = √(25 - 9) = √16 = 4 meter.
+                  </div>
+                </div>
+
+                <!-- Soal 2 -->
+                <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-900">Soal No. 2 (Esai Studi Kasus Kontekstual)</span>
+                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-[10px] font-bold">Bobot: 30 Poin</span>
+                  </div>
+                  <p class="text-xs text-slate-700">Dua buah kapal berangkat dari pelabuhan yang sama. Kapal A berlayar ke arah utara sejauh 12 mil, sedangkan Kapal B berlayar ke arah timur sejauh 16 mil. Hitunglah jarak terdekat antara kedua kapal tersebut saat berhenti dan jelaskan alur perhitungannya!</p>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Bottom Footer Action -->
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span class="text-slate-500 font-medium">Model: Google Gemini 2.5 Flash • Latensi: 0.8s</span>
+            <button onclick="alert('Soal berhasil ditambahkan ke Bank Soal Kelas 8A!')" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Simpan ke Bank Soal Kelas 8A</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- VIEW 3: PROJECT WORKSPACE KELAS (/kelas/[teachingContextId]) -->
+    <!-- ========================================================================= -->
+    <section id="view-kelas" class="space-y-6 hidden animate-fadeIn">
+      
+      <!-- CLASS CONTEXT HEADER (Consistent Unified Header) -->
+      <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <button onclick="switchMainView('beranda')" class="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center tactile-btn border border-slate-200">
+              <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div>
+              <div class="flex items-center gap-2.5">
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Matematika • Kelas VIII-A</h1>
+                <span class="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold">Fase D SMP</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Tahun Ajaran 2024/2025 • Semester Ganjil • 32 Siswa Terdaftar</p>
+            </div>
+          </div>
+
+          <!-- Top Action Sesi -->
+          <div class="flex items-center gap-2">
+            <button onclick="openLiveSessionModal()" class="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl text-xs font-extrabold shadow-md tactile-btn flex items-center gap-2">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span>Buka Sesi Mengajar Langsung</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 WORKSPACES TAB NAVIGATION (KelasTabs.tsx Level 1 & Level 2) -->
+        <div class="bg-teal-50/70 border border-teal-100 p-1.5 rounded-2xl">
+          <!-- Level 1 (4 Primary Tabs) -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+            <button onclick="switchWorkspace('mengajar')" id="ws-btn-mengajar" class="ws-btn active p-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-all tactile-btn bg-teal-700 text-white shadow-xs">
+              <i data-lucide="presentation" class="w-4 h-4"></i>
+              <span>1. Ruang Mengajar</span>
+            </button>
+            <button onclick="switchWorkspace('nilai')" id="ws-btn-nilai" class="ws-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all tactile-btn text-teal-900 hover:bg-teal-100/60">
+              <i data-lucide="award" class="w-4 h-4 text-teal-700"></i>
+              <span>2. Nilai & Evaluasi</span>
+            </button>
+            <button onclick="switchWorkspace('siswa')" id="ws-btn-siswa" class="ws-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all tactile-btn text-teal-900 hover:bg-teal-100/60">
+              <i data-lucide="users" class="w-4 h-4 text-teal-700"></i>
+              <span>3. Siswa & Ortu</span>
+            </button>
+            <button onclick="switchWorkspace('administrasi')" id="ws-btn-administrasi" class="ws-btn p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all tactile-btn text-teal-900 hover:bg-teal-100/60">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-teal-700"></i>
+              <span>4. Administrasi & Rapor</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- WORKSPACE 1: RUANG MENGAJAR (Unified Timeline & Hero) -->
+      <div id="ws-content-mengajar" class="space-y-6">
+        
+        <!-- Hero Sesi Aktif -->
+        <div class="p-5 rounded-3xl bg-gradient-to-r from-teal-900 via-teal-800 to-slate-900 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 text-[10px] font-extrabold border border-emerald-400/30 uppercase">Sesi Terjadwal Berikutnya</span>
+            <h3 class="text-base sm:text-lg font-extrabold text-white">Pertemuan #12: Pembuktian Teorema Pythagoras</h3>
+            <p class="text-xs text-teal-100/80">Kamis, 18 Sep 2025 • Jam Ke-1 s.d 2 (08:00 - 09:20 WIB)</p>
+          </div>
+          <button onclick="openLiveSessionModal()" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-extrabold tactile-btn shadow-md flex items-center gap-2 shrink-0">
+            <i data-lucide="play-circle" class="w-4 h-4"></i>
+            <span>Mulai Pertemuan Sekarang</span>
+          </button>
+        </div>
+
+        <!-- 3 Unified Metrics -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Pertemuan Terlaksana</span>
+            <p class="text-xl font-extrabold text-slate-900">11 <span class="text-xs font-normal text-slate-500">/ 16 Sesi (68%)</span></p>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+              <div class="bg-teal-600 h-full w-[68%] rounded-full"></div>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Rata-rata Kehadiran</span>
+            <p class="text-xl font-extrabold text-emerald-700">97.4% <span class="text-xs font-normal text-emerald-600">(31/32 Hadir)</span></p>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+              <div class="bg-emerald-500 h-full w-[97%] rounded-full"></div>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-1">
+            <span class="text-[10px] font-bold text-slate-500 uppercase">Keterisian Jurnal Materi</span>
+            <p class="text-xl font-extrabold text-teal-800">11 <span class="text-xs font-normal text-slate-500">/ 11 Terisi (100%)</span></p>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+              <div class="bg-teal-700 h-full w-[100%] rounded-full"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unified Timeline (Pertemuan + Materi + Presensi dalam 1 Baris) -->
+        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                <i data-lucide="list-ordered" class="w-4 h-4 text-teal-700"></i>
+                Linimasa Riwayat Mengajar & Jurnal Terpadu
+              </h3>
+              <p class="text-xs text-slate-500">Semua materi dan rekap kehadiran terekam otomatis dalam satu baris</p>
+            </div>
+            <button class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Unduh Rekap Jurnal</span>
+            </button>
+          </div>
+
+          <!-- Timeline Rows -->
+          <div class="space-y-3">
+            <!-- Row 11 -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 hover:bg-teal-50/50 border border-slate-200 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-900 font-extrabold text-xs flex items-center justify-center shrink-0">#11</div>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h5 class="font-bold text-xs text-slate-900">Pengenalan Sisi Miring Segitiga Siku-Siku</h5>
+                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Selesai & Terkunci</span>
+                  </div>
+                  <p class="text-[11px] text-slate-500 mt-0.5">Senin, 15 Sep 2025 • Guru mencatat: "Siswa memahami konsep kuadrat hipotenusa."</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 shrink-0 self-end md:self-auto">
+                <div class="text-right text-[11px]">
+                  <span class="font-extrabold text-emerald-700">32/32 Hadir</span>
+                  <span class="text-slate-400 block text-[10px]">H:32 S:0 I:0 A:0</span>
+                </div>
+                <button class="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn">
+                  Lihat Sesi
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 10 -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 hover:bg-teal-50/50 border border-slate-200 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-900 font-extrabold text-xs flex items-center justify-center shrink-0">#10</div>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h5 class="font-bold text-xs text-slate-900">Kuis Sumatif Lingkup Materi 2 (Aljabar)</h5>
+                    <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">Selesai & Terkunci</span>
+                  </div>
+                  <p class="text-[11px] text-slate-500 mt-0.5">Kamis, 11 Sep 2025 • Ujian online via portal Klassa (Rata-rata kelas: 86.4)</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 shrink-0 self-end md:self-auto">
+                <div class="text-right text-[11px]">
+                  <span class="font-extrabold text-slate-800">31/32 Hadir</span>
+                  <span class="text-amber-600 block text-[10px]">1 Siswa Sakit (Dimas A.)</span>
+                </div>
+                <button class="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn">
+                  Lihat Sesi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- WORKSPACE 2: NILAI & EVALUASI (Sticky Student Column Matrix) -->
+      <div id="ws-content-nilai" class="space-y-6 hidden">
+        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="table" class="w-4 h-4 text-teal-700"></i>
+                Matriks Buku Nilai Terpadu (Freeze Kolom Nama Siswa)
+              </h3>
+              <p class="text-xs text-slate-500">Kolom nama siswa tetap terkunci di kiri saat tabel digulir ke kanan</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="px-3 py-1.5 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span>Ekspor Excel</span>
+              </button>
+              <button class="px-3 py-1.5 bg-teal-700 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Tambah Penilaian</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- FREEZE COLUMN TABLE CONTAINER -->
+          <div class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-2xl">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
+                  <th class="p-3 w-10 text-center sticky left-0 bg-slate-50 z-20">No</th>
+                  <th class="p-3 min-w-[190px] sticky left-10 bg-slate-50 z-20 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">Nama Siswa</th>
+                  <th class="p-3 text-center min-w-[80px]">TP 1 (20%)</th>
+                  <th class="p-3 text-center min-w-[80px]">TP 2 (20%)</th>
+                  <th class="p-3 text-center min-w-[80px]">Kuis 1 (15%)</th>
+                  <th class="p-3 text-center min-w-[80px]">Kuis 2 (15%)</th>
+                  <th class="p-3 text-center min-w-[90px]">STS (30%)</th>
+                  <th class="p-3 text-center min-w-[90px] bg-teal-50/70 font-extrabold text-teal-900">Rata-Rata</th>
+                  <th class="p-3 text-center min-w-[100px]">Status KKTP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-800">
+                <!-- Row 1 -->
+                <tr class="hover:bg-teal-50/40 transition-colors">
+                  <td class="p-3 text-center font-bold text-slate-400 sticky left-0 bg-white z-10">1</td>
+                  <td class="p-3 font-bold text-slate-900 sticky left-10 bg-white z-10 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">
+                    Ahmad Fauzi Pratama
+                    <span class="text-[10px] text-slate-400 block font-normal">NIS: 20240801</span>
+                  </td>
+                  <td class="p-3 text-center">88</td>
+                  <td class="p-3 text-center">92</td>
+                  <td class="p-3 text-center">90</td>
+                  <td class="p-3 text-center">95</td>
+                  <td class="p-3 text-center font-bold">92</td>
+                  <td class="p-3 text-center font-extrabold text-teal-800 bg-teal-50/50">91.4</td>
+                  <td class="p-3 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Tuntas (A)</span></td>
+                </tr>
+
+                <!-- Row 2 -->
+                <tr class="hover:bg-teal-50/40 transition-colors">
+                  <td class="p-3 text-center font-bold text-slate-400 sticky left-0 bg-white z-10">2</td>
+                  <td class="p-3 font-bold text-slate-900 sticky left-10 bg-white z-10 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">
+                    Bella Anindita Putri
+                    <span class="text-[10px] text-slate-400 block font-normal">NIS: 20240802</span>
+                  </td>
+                  <td class="p-3 text-center">85</td>
+                  <td class="p-3 text-center">88</td>
+                  <td class="p-3 text-center">84</td>
+                  <td class="p-3 text-center">86</td>
+                  <td class="p-3 text-center font-bold">88</td>
+                  <td class="p-3 text-center font-extrabold text-teal-800 bg-teal-50/50">86.7</td>
+                  <td class="p-3 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Tuntas (B)</span></td>
+                </tr>
+
+                <!-- Row 3 (Remedial Alert) -->
+                <tr class="hover:bg-amber-50/40 transition-colors bg-amber-50/20">
+                  <td class="p-3 text-center font-bold text-slate-400 sticky left-0 bg-white z-10">3</td>
+                  <td class="p-3 font-bold text-slate-900 sticky left-10 bg-white z-10 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">
+                    Dimas Aditya Kurnia
+                    <span class="text-[10px] text-amber-700 block font-semibold">Butuh Remedial TP 2</span>
+                  </td>
+                  <td class="p-3 text-center">78</td>
+                  <td class="p-3 text-center text-rose-600 font-bold">65</td>
+                  <td class="p-3 text-center">72</td>
+                  <td class="p-3 text-center">75</td>
+                  <td class="p-3 text-center font-bold">70</td>
+                  <td class="p-3 text-center font-extrabold text-amber-800 bg-amber-50/50">71.2</td>
+                  <td class="p-3 text-center"><span class="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded-full text-[10px]">Remedial KKTP</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE 3: SISWA & ORTU (WhatsApp Integration & Roster) -->
+      <div id="ws-content-siswa" class="space-y-6 hidden">
+        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="message-square" class="w-4 h-4 text-emerald-600"></i>
+                Manajemen Komunikasi & Portal Orang Tua
+              </h3>
+              <p class="text-xs text-slate-500">Kirim token akses mandiri atau ringkasan rapor via WhatsApp 1-klik</p>
+            </div>
+            <button onclick="alert('Mengirim draf rekap presensi pekanan ke 32 nomor WhatsApp orang tua...')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>Kirim Broadcast Rekap Pekanan</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">Ahmad Fauzi Pratama</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">Terhubung Ortu</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Ibu Siti Rahmawati • +62 812-8899-1234</p>
+              <button class="w-full py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn flex items-center justify-center gap-1.5">
+                <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>Chat WhatsApp</span>
+              </button>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">Bella Anindita Putri</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">Terhubung Ortu</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Bpk. Hendra Gunawan • +62 813-7744-5566</p>
+              <button class="w-full py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn flex items-center justify-center gap-1.5">
+                <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>Chat WhatsApp</span>
+              </button>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">Dimas Aditya Kurnia</span>
+                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">Token Belum Aktif</span>
+              </div>
+              <p class="text-[11px] text-amber-800 font-medium">Kirim undangan token portal via SMS/WA</p>
+              <button onclick="alert('Token akses ortu dikirim!')" class="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold tactile-btn">
+                Kirim Token Akses
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WORKSPACE 4: ADMINISTRASI & PROSEM MATRIX -->
+      <div id="ws-content-administrasi" class="space-y-6 hidden">
+        <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                <i data-lucide="calendar-range" class="w-4 h-4 text-teal-700"></i>
+                Program Semester (PROSEM) Matriks Mingguan Resmi Dinas
+              </h3>
+              <p class="text-xs text-slate-500">Kalkulasi JP otomatis seimbang • 1-Klik Unduh Excel bergaris & Word</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="alert('Mengunduh Berkas PROSEM Resmi Format Dinas (.xlsx)...')" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5 shadow-xs">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span>Unduh Excel PROSEM (.xlsx)</span>
+              </button>
+              <button onclick="alert('Mengunduh Berkas PROTA Resmi Format Dinas (.docx)...')" class="px-3.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold tactile-btn flex items-center gap-1.5">
+                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                <span>Unduh Word PROTA (.docx)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Matriks Preview Box -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+            <div class="flex items-center justify-between font-bold text-slate-800">
+              <span>Distribusi Pekan Efektif Semester Ganjil (Juli - Desember 2024):</span>
+              <span class="text-emerald-700">Status: 32 JP Terpenuhi Sempurna (100%)</span>
+            </div>
+            <p class="text-[11px] text-slate-500">Bab 1: Pola Bilangan (8 JP) • Bab 2: Bidang Kartesius (6 JP) • Bab 3: Relasi & Fungsi (8 JP) • Bab 4: Teorema Pythagoras (10 JP).</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: LIVE CLASSROOM TEACHING SESSION (Mode 1 Guru - 10 Detik Presensi) -->
+  <!-- ========================================================================= -->
+  <div id="live-session-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden animate-fadeIn">
+    <div class="bg-white w-full max-w-3xl rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Sticky Modal Header -->
+      <div class="p-4 sm:p-5 bg-gradient-to-r from-teal-900 to-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+          <div>
+            <h3 class="font-extrabold text-sm sm:text-base text-white">⚡ MODE 1: LIVE TEACHING SESSION (8A)</h3>
+            <p class="text-[10px] sm:text-xs text-teal-200/80">Pertemuan #12 • Teorema Pythagoras & Puzzle Luas</p>
+          </div>
+        </div>
+        <button onclick="closeLiveSessionModal()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center tactile-btn">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body (Fast Attendance & Journal) -->
+      <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+        
+        <!-- Bar Aksi Kilat & Live Counters -->
+        <div class="bg-teal-50/70 p-4 rounded-2xl border border-teal-200 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 class="font-extrabold text-xs text-teal-950">Presensi Cepat Siswa (Touch Targets)</h4>
+            <p class="text-[11px] text-teal-800">Tekan tombol untuk menandai semua siswa hadir dalam 1 klik</p>
+          </div>
+          <button onclick="modalMarkAllHadir()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl tactile-btn flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="check-check" class="w-4 h-4"></i>
+            <span>✅ Tandai Semua Hadir</span>
+          </button>
+        </div>
+
+        <!-- Student Attendance Interactive List -->
+        <div class="space-y-2">
+          <!-- Student 1 -->
+          <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">1</span>
+              <div>
+                <h5 class="text-xs font-bold text-slate-900">Ahmad Fauzi Pratama</h5>
+                <p class="text-[10px] text-slate-500">NIS: 20240801</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs tactile-btn">H</button>
+              <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">S</button>
+              <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+              <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+            </div>
+          </div>
+
+          <!-- Student 2 -->
+          <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">2</span>
+              <div>
+                <h5 class="text-xs font-bold text-slate-900">Bella Anindita Putri</h5>
+                <p class="text-[10px] text-slate-500">NIS: 20240802</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs tactile-btn">H</button>
+              <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">S</button>
+              <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">I</button>
+              <button class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs tactile-btn">A</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jurnal Input -->
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+          <label class="text-xs font-bold text-slate-800 block">Topik Aktual Pembelajaran Hari Ini (Wajib)</label>
+          <input type="text" value="Pembuktian Teorema Pythagoras dengan Puzzle Karton Luas" class="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-xs font-medium focus:outline-teal-600">
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <button onclick="closeLiveSessionModal()" class="px-3.5 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold tactile-btn">
+          Tutup
+        </button>
+        <button onclick="saveAndLockSession()" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-extrabold tactile-btn flex items-center gap-1.5 shadow-xs">
+          <i data-lucide="check-check" class="w-4 h-4"></i>
+          <span>Selesaikan & Kunci Sesi</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCRIPT ENGINE: NAVIGATION & INTERACTION -->
+  <script>
+    // 1. SWITCH TOP PRIMARY VIEWS (Beranda, AI Studio, Project Kelas)
+    function switchMainView(viewId) {
+      document.getElementById('view-beranda').classList.add('hidden');
+      document.getElementById('view-aistudio').classList.add('hidden');
+      document.getElementById('view-kelas').classList.add('hidden');
+
+      document.querySelectorAll('.main-nav-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-teal-700', 'text-white', 'shadow-xs');
+        btn.classList.add('text-slate-600', 'hover:text-slate-900', 'hover:bg-slate-200/60');
+      });
+
+      const activeBtn = document.getElementById('nav-btn-' + viewId);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'bg-teal-700', 'text-white', 'shadow-xs');
+        activeBtn.classList.remove('text-slate-600', 'hover:text-slate-900', 'hover:bg-slate-200/60');
+      }
+
+      document.getElementById('view-' + viewId).classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      lucide.createIcons();
+    }
+
+    // 2. SWITCH 4 WORKSPACES IN KELAS VIEW
+    function switchWorkspace(wsId) {
+      document.getElementById('ws-content-mengajar').classList.add('hidden');
+      document.getElementById('ws-content-nilai').classList.add('hidden');
+      document.getElementById('ws-content-siswa').classList.add('hidden');
+      document.getElementById('ws-content-administrasi').classList.add('hidden');
+
+      document.querySelectorAll('.ws-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-teal-700', 'text-white', 'shadow-xs');
+        btn.classList.add('text-teal-900', 'hover:bg-teal-100/60');
+      });
+
+      const activeBtn = document.getElementById('ws-btn-' + wsId);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'bg-teal-700', 'text-white', 'shadow-xs');
+        activeBtn.classList.remove('text-teal-900', 'hover:bg-teal-100/60');
+      }
+
+      document.getElementById('ws-content-' + wsId).classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // 3. AI STUDIO PRESET SWITCHER & GENERATOR
+    function selectAiPreset(preset) {
+      document.querySelectorAll('.ai-preset-btn').forEach(b => {
+        b.classList.remove('border-teal-600', 'bg-teal-50', 'text-teal-900');
+        b.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-700');
+      });
+      event.currentTarget.classList.add('border-teal-600', 'bg-teal-50', 'text-teal-900');
+      event.currentTarget.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-700');
+    }
+
+    function triggerAiGenerate() {
+      const btn = document.getElementById('btn-generate-ai');
+      const outputBox = document.getElementById('ai-output-box');
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Sedang Menyusun Soal & Rubrik...</span>`;
+      lucide.createIcons();
+
+      setTimeout(() => {
+        btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4"></i><span>Selesai Dibuat via AI! (Generate Lagi)</span>`;
+        alert('✨ Draf Soal Kuis Berhasil Dibuat oleh Gemini 2.5 Flash!');
+        lucide.createIcons();
+      }, 900);
+    }
+
+    function copyAiOutput() {
+      navigator.clipboard.writeText("Kisi-kisi & Soal Kuis Pythagoras Fase D...");
+      alert('📋 Teks soal & rubrik berhasil disalin ke clipboard!');
+    }
+
+    // 4. LIVE SESSION MODAL (MODE 1 GURU)
+    function openLiveSessionModal() {
+      document.getElementById('live-session-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeLiveSessionModal() {
+      document.getElementById('live-session-modal').classList.add('hidden');
+    }
+
+    function modalMarkAllHadir() {
+      alert('✅ Semua 32 siswa ditandai HADIR dalam 1 ketukan!');
+    }
+
+    function saveAndLockSession() {
+      alert('🔒 Sesi Mengajar Berhasil Diselesaikan, Rekap Presensi & Jurnal Terkunci Permanen!');
+      closeLiveSessionModal();
+    }
+
+    // INITIALIZE ON LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

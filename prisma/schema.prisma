@@ -115,6 +115,13 @@ enum AcademicPlanType {
   PROSEM
 }
 
+enum PlanItemCategory {
+  REGULAR_MATERIAL
+  STS
+  SAS
+  RESERVE
+}
+
 // -------------------------------------------------
 // ENUMS (STAGE 08)
 // -------------------------------------------------
@@ -389,6 +396,7 @@ model TeachingContext {
   parentTeachingAccesses ParentTeachingAccess[]
   importSessions         ImportSession[]
   quizzes                Quiz[]
+  teachingSchedules      TeachingSchedule[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -411,6 +419,8 @@ model TeachingSession {
   activitySummary      String?
   reflection           String?
   status               SessionStatus   @default(IN_PROGRESS)
+  teachingScheduleId   String?
+  teachingSchedule     TeachingSchedule? @relation(fields: [teachingScheduleId], references: [id], onDelete: SetNull)
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
@@ -420,9 +430,34 @@ model TeachingSession {
   learningObjectiveLinks TeachingSessionLearningObjective[]
 
   @@index([teachingContextId])
+  @@index([teachingScheduleId])
   @@index([date])
   @@index([status])
   @@map("teaching_session")
+}
+
+// -------------------------------------------------
+// TEACHING SCHEDULE (TIMETABLE ENGINE)
+// -------------------------------------------------
+
+model TeachingSchedule {
+  id                String          @id @default(cuid())
+  teachingContextId String
+  teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek         Int             // 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu, 7 = Minggu
+  startTime         String          // Format 24h: "HH:mm" (contoh: "07:30")
+  endTime           String          // Format 24h: "HH:mm" (contoh: "09:00")
+  room              String?         // Opsional (contoh: "Ruang 8A", "Lab Komputer")
+  
+  teachingSessions  TeachingSession[]
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([teachingContextId, dayOfWeek])
+  @@index([dayOfWeek, startTime])
+  @@map("teaching_schedule")
 }
 
 model AttendanceRecord {
@@ -662,15 +697,18 @@ model DocumentTemplate {
 // -------------------------------------------------
 
 model AcademicContextProfile {
-  id                String          @id @default(cuid())
-  teachingContextId String          @unique
-  teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
-  curriculumName    String?
-  phase             String?
-  academicNote      String?         @db.Text
-  cpText            String?         @db.Text
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                 String          @id @default(cuid())
+  teachingContextId  String          @unique
+  teachingContext    TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  curriculumName     String?
+  phase              String?
+  academicNote       String?         @db.Text
+  cpText             String?         @db.Text
+  hoursPerWeek       Int             @default(3)
+  effectiveWeeksSem1  Int             @default(18)
+  effectiveWeeksSem2  Int             @default(16)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   @@map("academic_context_profile")
 }
@@ -682,12 +720,15 @@ model LearningObjective {
   code              String?
   description       String          @db.Text
   orderIndex        Int             @default(0)
+  targetSemester    Int?            @default(1)
+  allocatedHours    Int?            @default(6)
   status            EntityStatus    @default(ACTIVE)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   sessionLinks    TeachingSessionLearningObjective[]
   assessmentLinks AssessmentLearningObjective[]
+  planItems       AcademicPlanItem[]
 
   @@index([teachingContextId, status])
   @@index([teachingContextId, orderIndex])
@@ -695,21 +736,27 @@ model LearningObjective {
 }
 
 model AcademicPlanItem {
-  id                String           @id @default(cuid())
-  teachingContextId String
-  teachingContext   TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
-  planType          AcademicPlanType
-  title             String
-  targetMonth       Int?
-  allocatedHours    Int?
-  notes             String?          @db.Text
-  orderIndex        Int              @default(0)
-  status            EntityStatus     @default(ACTIVE)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id                  String             @id @default(cuid())
+  teachingContextId   String
+  teachingContext     TeachingContext    @relation(fields: [teachingContextId], references: [id], onDelete: Restrict)
+  learningObjectiveId String?
+  learningObjective   LearningObjective? @relation(fields: [learningObjectiveId], references: [id], onDelete: SetNull)
+  planType            AcademicPlanType
+  category            PlanItemCategory   @default(REGULAR_MATERIAL)
+  title               String
+  targetMonth         Int?
+  targetSemester      Int                @default(1)
+  allocatedHours      Int?
+  notes               String?            @db.Text
+  weeklyDistribution  Json?
+  orderIndex          Int                @default(0)
+  status              EntityStatus       @default(ACTIVE)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@index([teachingContextId, planType, status])
-  @@index([teachingContextId, orderIndex])
+  @@index([teachingContextId, targetSemester, orderIndex])
+  @@index([learningObjectiveId])
   @@map("academic_plan_item")
 }
 

@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAcademicContext } from "@/modules/academic/academic.actions";
 import AcademicClient from "@/app/(dashboard)/akademik/AcademicClient";
-import KelasTabs from "../KelasTabs";
+
 
 export default async function ContextualAcademicPage({
   params,
@@ -56,7 +56,6 @@ export default async function ContextualAcademicPage({
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-16">
-      <KelasTabs teachingContextId={teachingContextId} />
       <AcademicClient
         contexts={formattedContexts}
         initialContextId={teachingContextId}

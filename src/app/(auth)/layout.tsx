@@ -1,28 +1,18 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { redirect } from "next/navigation";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  let session = null;
-  let profile = null;
+  let authContext = null;
 
   try {
-    session = await auth.api.getSession({
-      headers: await headers()
-    });
-
-    if (session) {
-      profile = await prisma.teacherProfile.findUnique({
-        where: { userId: session.user.id }
-      });
-    }
-  } catch (err) {
-    // If database is not reachable or no session, proceed to render login/register page
-    console.warn("AuthLayout session check skipped:", err);
+    authContext = await getRscAuthContext();
+  } catch {
+    authContext = null;
   }
 
-  if (session) {
-    if (profile?.onboardingCompleted) {
+  // Only redirect away from login if the teacher is fully authenticated and active
+  if (authContext) {
+    if (authContext.profile?.onboardingCompleted && authContext.activeSchoolId) {
       redirect("/");
     } else {
       redirect("/onboarding");

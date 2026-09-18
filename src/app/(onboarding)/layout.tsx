@@ -1,22 +1,17 @@
-import { auth, prisma } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { redirect } from "next/navigation";
 
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
+  let authContext = null;
 
-  if (!session) {
-    redirect("/login");
+  try {
+    authContext = await getRscAuthContext();
+  } catch {
+    authContext = null;
   }
 
-  // If already onboarded, send to dashboard
-  const profile = await prisma.teacherProfile.findUnique({
-    where: { userId: session.user.id }
-  });
-  
-  if (profile?.onboardingCompleted) {
+  // If already fully onboarded with active school, send to dashboard
+  if (authContext && authContext.profile?.onboardingCompleted && authContext.activeSchoolId) {
     redirect("/");
   }
 

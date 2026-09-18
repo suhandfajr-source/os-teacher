@@ -18,13 +18,23 @@ export function NavigationProgressBar() {
       const timer = setTimeout(() => {
         setLoading(false);
         setProgress(0);
-      }, 300);
+      }, 250);
       return () => {
         cancelAnimationFrame(frame);
         clearTimeout(timer);
       };
     }
   }, [pathname, searchParams, loading]);
+
+  // Safety fallback: cancel loading if it takes more than 4 seconds
+  useEffect(() => {
+    if (!loading) return;
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+      setProgress(0);
+    }, 4000);
+    return () => clearTimeout(safetyTimer);
+  }, [loading]);
 
   useEffect(() => {
     const handleAnchorClick = (event: MouseEvent) => {
@@ -33,37 +43,43 @@ export function NavigationProgressBar() {
 
       if (!anchor || !anchor.href) return;
 
-      const currentOrigin = window.location.origin;
-      const targetUrl = new URL(anchor.href, window.location.href);
+      // Ignore hash links on the same page
+      if (anchor.getAttribute("href")?.startsWith("#")) return;
 
-      // Only trigger for same-origin internal navigations
-      if (
-        targetUrl.origin === currentOrigin &&
-        !anchor.target &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey &&
-        !event.altKey &&
-        (targetUrl.pathname !== window.location.pathname ||
-          targetUrl.search !== window.location.search)
-      ) {
-        setLoading(true);
-        setProgress(20);
+      try {
+        const currentOrigin = window.location.origin;
+        const targetUrl = new URL(anchor.href, window.location.href);
 
-        // Incremental progress simulation
-        const step1 = setTimeout(() => setProgress(55), 100);
-        const step2 = setTimeout(() => setProgress(80), 300);
+        // Only trigger for same-origin internal navigations
+        if (
+          targetUrl.origin === currentOrigin &&
+          !anchor.target &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.shiftKey &&
+          !event.altKey &&
+          (targetUrl.pathname !== window.location.pathname ||
+            targetUrl.search !== window.location.search)
+        ) {
+          setLoading(true);
+          setProgress(25);
 
-        return () => {
-          clearTimeout(step1);
-          clearTimeout(step2);
-        };
+          const step1 = setTimeout(() => setProgress(60), 150);
+          const step2 = setTimeout(() => setProgress(85), 400);
+
+          return () => {
+            clearTimeout(step1);
+            clearTimeout(step2);
+          };
+        }
+      } catch {
+        // Safe ignore
       }
     };
 
-    document.addEventListener("click", handleAnchorClick, { capture: true });
+    document.addEventListener("click", handleAnchorClick);
     return () => {
-      document.removeEventListener("click", handleAnchorClick, { capture: true });
+      document.removeEventListener("click", handleAnchorClick);
     };
   }, []);
 
@@ -79,7 +95,7 @@ export function NavigationProgressBar() {
         style={{
           width: `${progress}%`,
           opacity: progress === 100 ? 0 : 1,
-          transition: progress === 100 ? "width 150ms ease-out, opacity 300ms 150ms ease-out" : "width 300ms ease-out",
+          transition: progress === 100 ? "width 150ms ease-out, opacity 250ms ease-out" : "width 300ms ease-out",
         }}
       />
     </div>

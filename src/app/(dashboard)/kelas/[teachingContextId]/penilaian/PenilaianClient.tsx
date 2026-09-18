@@ -81,8 +81,8 @@ export default function PenilaianClient({
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Penilaian & Nilai Siswa</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Buku Nilai & Penilaian Siswa</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Kelola ulangan, tugas, ujian, input nilai, dan pantau performa berjalan siswa.
           </p>
         </div>
@@ -90,16 +90,16 @@ export default function PenilaianClient({
         <div className="flex gap-2">
           <Link
             href={`/kelas/${teachingContextId}/pengaturan-nilai`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs")}
           >
             Pengaturan Bobot
           </Link>
           <Link
             href={`/assessment/new?teachingContextId=${teachingContextId}`}
-            className={cn(buttonVariants({ size: "sm" }))}
+            className={cn(buttonVariants({ size: "sm" }), "text-xs font-semibold bg-primary")}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            + Buat Penilaian Baru
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Buat Penilaian Baru
           </Link>
         </div>
       </div>
@@ -266,20 +266,20 @@ export default function PenilaianClient({
                     <thead className="bg-slate-50 border-b">
                       <tr>
                         <th className="py-3 px-3 text-center font-semibold w-12">No</th>
-                        <th className="py-3 px-4 text-left font-semibold">Nama Siswa</th>
+                        <th className="py-3 px-4 text-left font-semibold sticky left-0 bg-slate-50 z-10 min-w-[180px] shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">Nama Siswa</th>
                         <th className="py-3 px-3 text-left font-semibold w-24">NIS</th>
                         {gradePolicy.items.map((item) => (
-                          <th key={item.id} className="py-3 px-3 text-center font-semibold">
+                          <th key={item.id} className="py-3 px-3 text-center font-semibold min-w-[100px]">
                             {item.assessmentType.name}
                             <span className="block text-[10px] text-muted-foreground font-normal">
                               ({Number(item.weight)}%)
                             </span>
                           </th>
                         ))}
-                        <th className="py-3 px-3 text-center font-semibold bg-slate-100/70">
+                        <th className="py-3 px-3 text-center font-semibold bg-slate-100/70 min-w-[110px]">
                           Bobot Tersedia
                         </th>
-                        <th className="py-3 px-4 text-center font-bold bg-primary/10 text-primary">
+                        <th className="py-3 px-4 text-center font-bold bg-primary/10 text-primary min-w-[120px]">
                           Performa Berjalan
                         </th>
                       </tr>
@@ -295,7 +295,7 @@ export default function PenilaianClient({
                         runningGrades.map((rg, idx) => (
                           <tr key={rg.studentId} className="hover:bg-slate-50/50">
                             <td className="py-2.5 px-3 text-center text-xs text-muted-foreground">{idx + 1}</td>
-                            <td className="py-2.5 px-4 font-medium">
+                            <td className="py-2.5 px-4 font-medium sticky left-0 bg-white z-10 shadow-[1px_0_0_0_rgba(0,0,0,0.05)]">
                               <Link href={`/siswa/${rg.studentId}`} className="hover:underline text-primary">
                                 {rg.studentName}
                               </Link>

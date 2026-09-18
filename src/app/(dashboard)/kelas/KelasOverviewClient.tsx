@@ -25,7 +25,9 @@ import {
   School,
   GraduationCap,
   Calendar,
+  Clock,
 } from "lucide-react";
+import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
 
 interface ContextItem {
   id: string;
@@ -189,6 +191,27 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
                     <Users className="h-3.5 w-3.5 text-muted-foreground" />
                     {ctx.class._count.classStudents} Siswa
                   </span>
+                </div>
+
+                <div className="pt-2 border-t flex justify-end" onClick={(e) => e.preventDefault()}>
+                  <ScheduleConfigDialog
+                    teachingContextId={ctx.id}
+                    contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
+                    triggerButton={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs font-semibold text-primary hover:bg-primary/10 gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Atur Jadwal</span>
+                      </Button>
+                    }
+                  />
                 </div>
               </CardContent>
             </Card>

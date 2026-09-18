@@ -1,0 +1,74 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradient Deep Pine Teal -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F766E" />
+      <stop offset="60%" stop-color="#115E59" />
+      <stop offset="100%" stop-color="#042F2E" />
+    </linearGradient>
+
+    <!-- Gradasi Tiang Putih-Mint -->
+    <linearGradient id="appPillar" x1="140" y1="100" x2="140" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#CCFBF1" />
+    </linearGradient>
+
+    <!-- Gradasi Sayap Atas Mint -->
+    <linearGradient id="appTopWing" x1="220" y1="260" x2="390" y2="130" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4" />
+      <stop offset="60%" stop-color="#99F6E4" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+
+    <!-- Gradasi Lipatan Ribbon -->
+    <linearGradient id="appFold" x1="190" y1="240" x2="280" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F766E" />
+      <stop offset="60%" stop-color="#14B8A6" />
+      <stop offset="100%" stop-color="#5EEAD4" />
+    </linearGradient>
+
+    <!-- Gradasi Sayap Bawah -->
+    <linearGradient id="appBottomWing" x1="220" y1="240" x2="400" y2="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5EEAD4" />
+      <stop offset="60%" stop-color="#2DD4BF" />
+      <stop offset="100%" stop-color="#14B8A6" />
+    </linearGradient>
+
+    <!-- Gradasi Bintang Sparkle Violet -->
+    <linearGradient id="appSparkle" x1="330" y1="50" x2="430" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A5B4FC" />
+      <stop offset="50%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#6366F1" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glow" x="250" y="20" width="220" height="220" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 1. SQUIRCLE BACKGROUND -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
+
+  <!-- Ambient Light Reflection -->
+  <circle cx="120" cy="100" r="180" fill="#2DD4BF" fill-opacity="0.12" />
+
+  <!-- 2. LOGO GROUP -->
+  <g transform="translate(18, 18) scale(1.97)">
+    <!-- Tiang Vertikal -->
+    <rect x="44" y="42" width="38" height="156" rx="19" fill="url(#appPillar)" />
+
+    <!-- Sayap Bawah Centang -->
+    <path d="M92 122C92 122 120 148 152 174C160 180.5 171.5 180 179 173C186.5 166 186.5 154.5 180 147C154 122 124 100 124 100L92 122Z" fill="url(#appBottomWing)" />
+
+    <!-- Lipatan Sayap Atas Ribbon -->
+    <path d="M86 128C86 128 116 88 162 62C172 56.5 184 62 186 73C187.5 81.5 182.5 89.5 174.5 93C138 109 110 138 110 138L86 128Z" fill="url(#appTopWing)" />
+
+    <!-- Lipatan Tengah Ribbon 3D -->
+    <path d="M88 122C102 108 124 100 138 108C138 108 118 134 94 146L88 122Z" fill="url(#appFold)" opacity="0.9" />
+
+    <!-- Bintang AI Sparkle -->
+    <path d="M168 20C168 34.5 178.5 45 193 45C178.5 45 168 55.5 168 70C168 55.5 157.5 45 143 45C157.5 45 168 34.5 168 20Z" fill="url(#appSparkle)" />
+  </g>
+</svg>

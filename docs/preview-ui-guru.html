@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preview Desain UI/UX — AI Teacher Assistant</title>
+  <!-- Google Fonts: Plus Jakarta Sans (Sangat ramah & modern untuk aplikasi Indonesia) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            },
+            surface: {
+              subtle: '#F8FAFC',
+              card: '#FFFFFF',
+              border: '#E2E8F0',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F1F5F9;
+    }
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F8FAFC;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- TOP BAR KONTROL PREVIEW (Khusus untuk pengembang & desainer) -->
+  <header class="bg-slate-900 text-white px-4 py-2.5 flex items-center justify-between text-xs sticky top-0 z-50 shadow-md">
+    <div class="flex items-center gap-2">
+      <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40 flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        PROPOSAL BMAD UX (Sally)
+      </span>
+      <span class="text-slate-400 hidden sm:inline">• Preview Konsep UI Guru Ramah & Tenang</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-slate-400">Mode Tampilan:</span>
+      <div class="inline-flex rounded-md bg-slate-800 p-0.5 border border-slate-700">
+        <button id="btnDesktop" onclick="setViewMode('desktop')" class="px-2.5 py-1 rounded text-xs font-medium bg-emerald-600 text-white flex items-center gap-1.5 transition-all">
+          <i data-lucide="monitor" class="w-3.5 h-3.5"></i> Desktop Guru
+        </button>
+        <button id="btnMobile" onclick="setViewMode('mobile')" class="px-2.5 py-1 rounded text-xs font-medium text-slate-300 hover:text-white flex items-center gap-1.5 transition-all">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Mobile HP
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- WRAPPER UTAMA -->
+  <div id="viewportContainer" class="flex-1 flex justify-center items-start p-0 md:p-4 transition-all duration-300">
+    <div id="appFrame" class="w-full max-w-[1440px] bg-white rounded-none md:rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden flex flex-col min-h-[90vh] transition-all duration-300">
+
+      <!-- APP HEADER / TOPBAR -->
+      <header class="h-16 border-b border-slate-100 bg-white px-5 flex items-center justify-between sticky top-0 z-30">
+        <!-- Brand & School Context -->
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-200">
+              <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="font-bold text-base leading-none tracking-tight flex items-center gap-1.5">
+                Teacher<span class="text-emerald-600">OS</span>
+                <span class="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">Pro</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden md:block h-5 w-px bg-slate-200"></div>
+
+          <!-- School Context Pill (Context Indicator) -->
+          <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200/70 text-xs text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+            <i data-lucide="building-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span class="font-semibold text-slate-800">SMP Negeri 1 Nusantara</span>
+            <span class="text-slate-300">•</span>
+            <span class="text-slate-500">Semester Ganjil 2026/2027</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400 ml-0.5"></i>
+          </div>
+        </div>
+
+        <!-- Right Utilities & Profile -->
+        <div class="flex items-center gap-3">
+          <!-- AI Assistant Quick CTA -->
+          <button class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200/70 text-purple-700 text-xs font-semibold hover:from-purple-100 hover:to-indigo-100 transition shadow-xs">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-600"></i>
+            <span>AI Studio</span>
+          </button>
+
+          <!-- Notification Bell with Pending Grading indicator -->
+          <button class="relative w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+          </button>
+
+          <!-- Teacher Profile Card -->
+          <div class="flex items-center gap-3 pl-2 border-l border-slate-100 cursor-pointer">
+            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm border border-emerald-200">
+              SR
+            </div>
+            <div class="hidden lg:block text-left">
+              <div class="text-xs font-bold text-slate-800 leading-tight">Ibu Siti Rahmawati, S.Pd.</div>
+              <div class="text-[11px] text-slate-400 font-medium leading-tight">Guru IPA & Biologi</div>
+            </div>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 hidden lg:block"></i>
+          </div>
+        </div>
+      </header>
+
+      <!-- BODY CONTAINER (SIDEBAR + MAIN CONTENT) -->
+      <div class="flex-1 flex overflow-hidden">
+        
+        <!-- SIDEBAR (Kelompok Alami KBM) -->
+        <aside id="mainSidebar" class="w-64 border-r border-slate-100 bg-slate-50/70 p-4 flex flex-col justify-between hidden md:flex">
+          <div class="space-y-6">
+            
+            <!-- Group 1: Kegiatan Utama Kelas -->
+            <div>
+              <div class="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">Kegiatan Kelas</div>
+              <nav class="space-y-1 text-sm font-medium">
+                <!-- Item: Beranda (Active) -->
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/20 font-semibold transition">
+                  <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                  <span>Beranda</span>
+                </a>
+                <!-- Item: Jadwal & Hari Ini -->
+                <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <div class="flex items-center gap-3">
+                    <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i>
+                    <span>Mengajar Hari Ini</span>
+                  </div>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">2 Sesi</span>
+                </a>
+                <!-- Item: Rombel & Siswa -->
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <i data-lucide="users" class="w-4 h-4 text-slate-500"></i>
+                  <span>Kelas & Siswa</span>
+                </a>
+              </nav>
+            </div>
+
+            <!-- Group 2: Asesmen & Bahan Ajar -->
+            <div>
+              <div class="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">Asesmen & Materi</div>
+              <nav class="space-y-1 text-sm font-medium">
+                <!-- Item: Quiz Online -->
+                <a href="#" class="flex items-center justify-between px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <div class="flex items-center gap-3">
+                    <i data-lucide="file-question" class="w-4 h-4 text-slate-500"></i>
+                    <span>Quiz Online</span>
+                  </div>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 animate-pulse">3 Esai</span>
+                </a>
+                <!-- Item: Penilaian & Nilai -->
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <i data-lucide="award" class="w-4 h-4 text-slate-500"></i>
+                  <span>Buku Nilai & KKTP</span>
+                </a>
+                <!-- Item: AI Studio -->
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <i data-lucide="sparkles" class="w-4 h-4 text-purple-600"></i>
+                  <span>AI Modul & PPT</span>
+                </a>
+              </nav>
+            </div>
+
+            <!-- Group 3: Administrasi & Pelaporan -->
+            <div>
+              <div class="text-[10px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">Administrasi</div>
+              <nav class="space-y-1 text-sm font-medium">
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4 text-slate-500"></i>
+                  <span>Laporan & Excel</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white transition">
+                  <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i>
+                  <span>Pengaturan Mapel</span>
+                </a>
+              </nav>
+            </div>
+
+          </div>
+
+          <!-- Bottom Card: Support & Help -->
+          <div class="p-3 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="text-xs font-bold text-slate-800">Database Tersinkron</span>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-tight">Data tersimpan aman di server awan.</p>
+          </div>
+        </aside>
+
+        <!-- MAIN DASHBOARD CONTENT AREA -->
+        <main class="flex-1 bg-[#FAFBFD] p-5 md:p-8 overflow-y-auto">
+          <div class="max-w-5xl mx-auto space-y-6">
+
+            <!-- 1. GREETING & CONTEXT HEADER -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2">
+              <div>
+                <div class="text-xs font-semibold text-emerald-700 tracking-wide uppercase flex items-center gap-1.5 mb-1">
+                  <i data-lucide="sun" class="w-4 h-4 text-amber-500"></i>
+                  Senin, 14 September 2026
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+                  Selamat Pagi, Bu Siti 👋
+                </h1>
+                <p class="text-sm text-slate-500 mt-0.5">
+                  Ada <span class="font-semibold text-slate-700">2 jadwal mengajar</span> dan <span class="font-semibold text-rose-600">3 lembar esai</span> yang siap Anda periksa hari ini.
+                </p>
+              </div>
+
+              <!-- Quick Start Action Buttons -->
+              <div class="flex items-center gap-2.5">
+                <button class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 flex items-center gap-1.5 shadow-xs transition">
+                  <i data-lucide="plus" class="w-3.5 h-3.5 text-slate-500"></i>
+                  <span>Buat Kuis</span>
+                </button>
+                <button class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-emerald-600/25 transition">
+                  <i data-lucide="play" class="w-3.5 h-3.5 fill-white"></i>
+                  <span>Mulai Sesi Kelas</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 2. URGENT ACTION BANNER (Kotak Tugas yang Perlu Ditindaklanjuti Segera) -->
+            <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50 to-orange-50 border border-amber-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+              <div class="flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-white border border-amber-200 text-rose-600 flex items-center justify-center shrink-0 shadow-xs">
+                  <i data-lucide="edit-3" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-rose-700">Perlu Koreksi Anda</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">3 Jawaban Esai</span>
+                  </div>
+                  <h2 class="text-sm font-bold text-slate-900 mt-0.5">Ulangan Harian 1: Sistem Pencernaan Manusia (Kelas 8A)</h2>
+                  <p class="text-xs text-slate-600 mt-0.5">3 siswa mengumpulkan soal uraian. Nilai otomatis belum terbit sebelum koreksi guru selesai.</p>
+                </div>
+              </div>
+              <div class="shrink-0 flex items-center gap-2">
+                <button class="w-full md:w-auto px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-rose-600/20 transition">
+                  <span>Buka Lembar Koreksi</span>
+                  <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. DUA KOLOM: JADWAL MENGAJAR HARI INI & RINGKASAN AKTIVITAS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+              <!-- Kolom Kiri (2 Kolom): Jadwal Mengajar Hari Ini -->
+              <div class="lg:col-span-2 space-y-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4 text-emerald-600"></i>
+                    <h2 class="text-base font-bold text-slate-900">Jadwal Mengajar Hari Ini</h2>
+                  </div>
+                  <a href="#" class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1">
+                    <span>Lihat Roster Lengkap</span>
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </a>
+                </div>
+
+                <!-- Kartu Sesi 1: Siap Dimulai (Prioritas Tinggi) -->
+                <div class="p-5 rounded-2xl bg-white border-2 border-emerald-500/40 shadow-sm relative overflow-hidden">
+                  <div class="absolute top-0 left-0 bottom-0 w-1.5 bg-emerald-500"></div>
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1.5">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">
+                          Jam ke 3–4 (08.40 – 10.00 WIB)
+                        </span>
+                        <span class="text-xs font-semibold text-slate-500">• 32 Siswa</span>
+                      </div>
+                      <h3 class="text-base font-bold text-slate-900">IPA — Kelas 8A</h3>
+                      <p class="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <span>Materi: Praktikum Enzim Amilase & Penyerapan Nutrisi</span>
+                      </p>
+                    </div>
+                    <div class="shrink-0 flex sm:flex-col items-end gap-2">
+                      <button class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/30 transition">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        <span>Buka Absensi & Jurnal</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Kartu Sesi 2: Jam Berikutnya -->
+                <div class="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1.5">
+                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
+                          Jam ke 5–6 (10.30 – 11.50 WIB)
+                        </span>
+                        <span class="text-xs text-slate-500">• 30 Siswa</span>
+                      </div>
+                      <h3 class="text-base font-bold text-slate-900">Biologi Peminatan — Kelas 9B</h3>
+                      <p class="text-xs text-slate-600 mt-1 flex items-center gap-1.5">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-400"></i>
+                        <span>Materi: Pewarisan Sifat & Hukum Mendel I</span>
+                      </p>
+                    </div>
+                    <div class="shrink-0">
+                      <button class="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1.5 transition">
+                        <span>Siapkan Sesi</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rangkuman KBM Terakhir -->
+                <div class="p-4 rounded-xl bg-slate-50/80 border border-dashed border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                  <span class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                    Sesi Jumat lalu (Kelas 8B) telah ditutup lengkap dengan jurnal & refleksi guru.
+                  </span>
+                  <a href="#" class="font-semibold text-emerald-700 hover:underline">Arsip Jurnal</a>
+                </div>
+
+              </div>
+
+              <!-- Kolom Kanan (1 Kolom): Pintasan Cepat & Status Belajar Siswa -->
+              <div class="space-y-6">
+                
+                <!-- Card: Alat Cepat Guru -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                  <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Akses Cepat Pengajaran</h3>
+                  
+                  <div class="grid grid-cols-1 gap-2">
+                    <!-- Quick action 1 -->
+                    <a href="#" class="p-3 rounded-xl bg-slate-50 hover:bg-emerald-50/60 border border-slate-200/60 hover:border-emerald-200 flex items-center gap-3 transition group">
+                      <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <i data-lucide="file-plus" class="w-4 h-4"></i>
+                      </div>
+                      <div>
+                        <div class="text-xs font-bold text-slate-800">Quiz Cepat di Kelas</div>
+                        <div class="text-[11px] text-slate-500">Tampilkan PIN ke proyektor</div>
+                      </div>
+                    </a>
+
+                    <!-- Quick action 2 -->
+                    <a href="#" class="p-3 rounded-xl bg-slate-50 hover:bg-purple-50/60 border border-slate-200/60 hover:border-purple-200 flex items-center gap-3 transition group">
+                      <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i>
+                      </div>
+                      <div>
+                        <div class="text-xs font-bold text-slate-800">Bikin RPP / Soal AI</div>
+                        <div class="text-[11px] text-slate-500">Ekspor langsung ke Word/PPT</div>
+                      </div>
+                    </a>
+
+                    <!-- Quick action 3 -->
+                    <a href="#" class="p-3 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200/60 hover:border-blue-200 flex items-center gap-3 transition group">
+                      <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                      </div>
+                      <div>
+                        <div class="text-xs font-bold text-slate-800">Rekap Nilai Excel</div>
+                        <div class="text-[11px] text-slate-500">Unduh format siap rapor</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Card: Catatan Perhatian Siswa (Monitoring Ringan) -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Perhatian Khusus</h3>
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                  </div>
+                  
+                  <div class="space-y-2.5">
+                    <div class="p-3 rounded-xl bg-amber-50/50 border border-amber-100 flex items-start gap-2.5">
+                      <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                      <div>
+                        <div class="text-xs font-bold text-slate-800">Ahmad Zaki (8A)</div>
+                        <p class="text-[11px] text-slate-600 mt-0.5">Absen 2 kali berturut-turut karena sakit. Butuh penugasan remedial.</p>
+                      </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-2.5">
+                      <i data-lucide="message-square" class="w-4 h-4 text-slate-400 shrink-0 mt-0.5"></i>
+                      <div>
+                        <div class="text-xs font-bold text-slate-800">Portal Orang Tua Aktif</div>
+                        <p class="text-[11px] text-slate-500 mt-0.5">28 dari 32 wali murid Kelas 8A telah menerima ringkasan capaian.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </main>
+      </div>
+
+      <!-- BOTTOM NAV (Tampil Saat Mode Mobile) -->
+      <nav id="mobileBottomNav" class="border-t border-slate-200 bg-white flex justify-around py-2 px-1 sticky bottom-0 z-40 hidden">
+        <a href="#" class="flex flex-col items-center justify-center w-full py-1 text-emerald-600 font-bold">
+          <i data-lucide="layout-dashboard" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px]">Beranda</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center w-full py-1 text-slate-500 hover:text-slate-900">
+          <i data-lucide="calendar" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px]">Hari Ini</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center w-full py-1 text-slate-500 hover:text-slate-900 relative">
+          <i data-lucide="file-question" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px]">Quiz</span>
+          <span class="absolute top-0.5 right-6 w-2 h-2 bg-rose-500 rounded-full"></span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center w-full py-1 text-slate-500 hover:text-slate-900">
+          <i data-lucide="users" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px]">Kelas</span>
+        </a>
+        <a href="#" class="flex flex-col items-center justify-center w-full py-1 text-slate-500 hover:text-slate-900">
+          <i data-lucide="settings" class="w-5 h-5 mb-0.5"></i>
+          <span class="text-[10px]">Menu</span>
+        </a>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- Script Interaktivitas Switcher Desktop / Mobile Preview -->
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    function setViewMode(mode) {
+      const appFrame = document.getElementById('appFrame');
+      const mainSidebar = document.getElementById('mainSidebar');
+      const mobileBottomNav = document.getElementById('mobileBottomNav');
+      const btnDesktop = document.getElementById('btnDesktop');
+      const btnMobile = document.getElementById('btnMobile');
+
+      if (mode === 'mobile') {
+        // Switch to Mobile simulation
+        appFrame.classList.remove('max-w-[1440px]', 'rounded-2xl');
+        appFrame.classList.add('max-w-[390px]', 'rounded-3xl', 'shadow-2xl', 'border-4', 'border-slate-800');
+        mainSidebar.classList.add('hidden');
+        mobileBottomNav.classList.remove('hidden');
+
+        btnMobile.classList.add('bg-emerald-600', 'text-white');
+        btnMobile.classList.remove('text-slate-300');
+        btnDesktop.classList.remove('bg-emerald-600', 'text-white');
+        btnDesktop.classList.add('text-slate-300');
+      } else {
+        // Switch to Desktop
+        appFrame.classList.add('max-w-[1440px]', 'rounded-2xl');
+        appFrame.classList.remove('max-w-[390px]', 'rounded-3xl', 'shadow-2xl', 'border-4', 'border-slate-800');
+        mainSidebar.classList.remove('hidden');
+        mobileBottomNav.classList.add('hidden');
+
+        btnDesktop.classList.add('bg-emerald-600', 'text-white');
+        btnDesktop.classList.remove('text-slate-300');
+        btnMobile.classList.remove('bg-emerald-600', 'text-white');
+        btnMobile.classList.add('text-slate-300');
+      }
+    }
+  </script>
+</body>
+</html>
