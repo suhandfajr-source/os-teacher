@@ -93,7 +93,7 @@ export default function MidSemesterWizard({
 
     try {
       const res = await submitOnboarding(formData);
-      toast.success("Setup dasar berhasil! Memulai Teacher OS dari hari ini.");
+      toast.success("Setup dasar berhasil! Memulai KLASSA dari hari ini.");
       if (res?.context?.id) {
         router.push(`/kelas/${res.context.id}`);
       } else {
@@ -149,7 +149,7 @@ export default function MidSemesterWizard({
           <div>
             <h1 className="text-2xl font-bold">Onboarding & Setup Tengah Semester</h1>
             <p className="text-indigo-100 text-sm mt-0.5">
-              Mulai gunakan Teacher OS kapan saja tanpa harus merekonstruksi seluruh riwayat semester.
+              Mulai gunakan KLASSA kapan saja tanpa harus merekonstruksi seluruh riwayat semester.
             </p>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function MidSemesterWizard({
               </div>
               <CardTitle className="text-xl">Mulai dari Sekarang</CardTitle>
               <CardDescription>
-                Mulai gunakan Teacher OS untuk kegiatan belajar mengajar hari ini tanpa perlu mengimpor data lampau.
+                Mulai gunakan KLASSA untuk kegiatan belajar mengajar hari ini tanpa perlu mengimpor data lampau.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -243,7 +243,7 @@ export default function MidSemesterWizard({
               </Button>
             </div>
             <CardDescription>
-              Isi data dasar mengajar Anda untuk mulai menggunakan Teacher OS hari ini.
+              Isi data dasar mengajar Anda untuk mulai menggunakan KLASSA hari ini.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -559,7 +559,7 @@ export default function MidSemesterWizard({
                 <h2 className="text-2xl font-bold text-slate-900">Onboarding Mid-Semester Selesai!</h2>
                 <p className="text-muted-foreground text-sm max-w-md mx-auto">
                   Konteks mengajar dan data yang Anda impor telah berhasil disimpan. Anda sekarang siap menjalankan
-                  aktivitas harian Teacher OS.
+                  aktivitas harian bersama KLASSA.
                 </p>
               </CardContent>
               <CardFooter className="flex justify-center gap-3">

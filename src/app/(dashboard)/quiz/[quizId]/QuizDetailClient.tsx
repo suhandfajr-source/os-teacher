@@ -1102,7 +1102,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         <DialogContent className="max-w-lg text-center p-8 flex flex-col items-center gap-5">
           <DialogHeader className="text-center sm:text-center">
             <Badge variant="outline" className="mx-auto w-fit mb-1 border-emerald-500/40 text-emerald-700 bg-emerald-50">
-              Teacher OS · Ujian Kelas
+              KLASSA · Ujian Kelas
             </Badge>
             <DialogTitle className="text-2xl font-bold">{quiz.title}</DialogTitle>
           </DialogHeader>

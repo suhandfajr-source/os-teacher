@@ -45,7 +45,7 @@ export class GeminiAiContentProvider implements AiContentProvider {
   async generate(request: AiProviderGenerateRequest): Promise<AiProviderResult> {
     const prompt = constructGenerationPrompt(request);
     const systemInstruction =
-      "Anda adalah asisten AI guru profesional untuk Teacher OS di Indonesia. " +
+      "Anda adalah asisten AI guru profesional untuk KLASSA (Naik Kelas Bersama) di Indonesia. " +
       "Tugas Anda adalah membuat draf materi/rencana/instruksi/rubrik pembelajaran yang praktis, aplikatif, dan terstruktur. " +
       "Gunakan Bahasa Indonesia yang baik dan ramah guru. " +
       "Draf Anda harus memiliki judul yang jelas di baris pertama (contoh: # Judul) dan isi terstruktur dengan format Markdown. " +
@@ -57,7 +57,7 @@ export class GeminiAiContentProvider implements AiContentProvider {
   async refine(request: AiProviderRefineRequest): Promise<AiProviderResult> {
     const prompt = constructRefinementPrompt(request);
     const systemInstruction =
-      "Anda adalah asisten AI guru profesional untuk Teacher OS. " +
+      "Anda adalah asisten AI guru profesional untuk KLASSA. " +
       "Tugas Anda adalah memperbarui draf pembelajaran yang sudah ada berdasarkan instruksi penyesuaian dari guru. " +
       "Pertahankan format terstruktur dalam Markdown dengan judul di baris pertama. " +
       "WAJIB: Tuntaskan seluruh isi draf hasil penyesuaian secara lengkap.";
@@ -72,7 +72,7 @@ export class GeminiAiContentProvider implements AiContentProvider {
   ): Promise<string> {
     const sysInstruction =
       systemInstruction ||
-      "Anda adalah asisten AI guru profesional untuk Teacher OS di Indonesia. " +
+      "Anda adalah asisten AI guru profesional untuk KLASSA di Indonesia. " +
       "Tugas Anda adalah menghasilkan data terstruktur dalam format JSON array yang valid. " +
       "HANYA keluarkan array JSON murni, tanpa teks lain, tanpa markdown code block, dan tanpa salam pembuka/penutup.";
 

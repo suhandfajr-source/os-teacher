@@ -354,7 +354,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
       selectedContext?.subjectName;
     const schoolToExport =
       customSchool ||
-      "AI Teacher Assistant";
+      "KLASSA";
     const classToExport =
       customClass ||
       activePreviewInfo?.contextSummary.className ||
@@ -675,7 +675,7 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
       <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl p-3.5 flex items-start gap-3 text-amber-900 dark:text-amber-200 text-sm">
         <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
         <div>
-          <span className="font-semibold">Prinsip Teacher OS: AI Assists, Teacher Decides.</span>
+          <span className="font-semibold">Prinsip KLASSA: AI Membantu, Guru Menentukan (AI Assists, Teacher Decides).</span>
           <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
             Hasil AI adalah <span className="font-semibold underline">Draf Sementara</span>. Guru bertanggung jawab penuh untuk memeriksa, menyesuaikan, dan menyimpannya sebelum digunakan.
           </p>

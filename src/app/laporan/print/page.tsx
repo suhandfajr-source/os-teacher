@@ -325,7 +325,7 @@ export default async function ReportPrintPage({
 
       {/* Footer Info */}
       <div className="mt-8 pt-4 border-t border-gray-300 text-[11px] text-gray-500 flex justify-between items-center print:mt-6">
-        <div>AI Teacher Assistant — Laporan Pembelajaran Guru</div>
+        <div>KLASSA — Laporan Pembelajaran Guru</div>
         <div>Tanggal Cetak: {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</div>
       </div>
     </div>

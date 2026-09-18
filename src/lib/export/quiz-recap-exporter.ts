@@ -56,7 +56,7 @@ export function exportQuizRecapToExcel(options: QuizRecapExportOptions): void {
       : 0;
 
   const rows: (string | number)[][] = [
-    ["REKAP NILAI KUIS ONLINE — TEACHER OS"],
+    ["REKAP NILAI KUIS ONLINE — KLASSA"],
     [],
     ["Judul Kuis", quizTitle],
     ["Kelas & Mapel", contextLabel],

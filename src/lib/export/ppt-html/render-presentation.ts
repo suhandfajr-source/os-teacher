@@ -42,7 +42,7 @@ export async function renderPresentationPptxVisual(
   const pres = new PptxGenJSClass();
   pres.layout = "LAYOUT_16x9";
   pres.author = model.metadata.teacherName || "Guru Pengampu";
-  pres.company = model.metadata.schoolName || "Teacher OS";
+  pres.company = model.metadata.schoolName || "KLASSA";
   pres.title = model.metadata.title;
 
   // Cache illustrations by prompt to avoid duplicate generations.

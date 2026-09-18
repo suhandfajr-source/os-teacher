@@ -49,7 +49,7 @@ export async function generateQuizQuestionsAction(input: unknown): Promise<{
     if (typeof provider.generateStructured === "function") {
       rawOutput = await provider.generateStructured(
         prompt,
-        "Anda adalah asisten AI pembuat soal ujian profesional untuk Teacher OS di Indonesia. " +
+        "Anda adalah asisten AI pembuat soal ujian profesional untuk KLASSA di Indonesia. " +
         "Tugas Anda adalah menghasilkan soal pilihan ganda sekolah dalam format array JSON murni."
       );
     } else {
@@ -95,7 +95,7 @@ export async function convertDocumentToQuizAction(input: unknown): Promise<{
     if (typeof provider.generateStructured === "function") {
       rawOutput = await provider.generateStructured(
         prompt,
-        "Anda adalah asisten AI konversi soal untuk Teacher OS. Ekstrak soal pilihan ganda menjadi array JSON murni."
+        "Anda adalah asisten AI konversi soal untuk KLASSA. Ekstrak soal pilihan ganda menjadi array JSON murni."
       );
     } else {
       const result = await provider.generate({

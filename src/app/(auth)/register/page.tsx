@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { KlassaLogo } from "@/components/brand";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,10 +46,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold">Daftar Akun</CardTitle>
-        <CardDescription>Buat akun AI Teacher Assistant baru</CardDescription>
+    <Card className="border-slate-200/80 shadow-md">
+      <CardHeader className="items-center text-center space-y-3 pb-4">
+        <KlassaLogo variant="vertical" size="sm" priority />
+        <div>
+          <CardTitle className="text-xl font-bold text-slate-900">Daftar Akun KLASSA</CardTitle>
+          <CardDescription className="text-xs text-slate-500 mt-1">
+            Mulai perjalanan mengajar lebih tenang & berkelas
+          </CardDescription>
+        </div>
       </CardHeader>
       <form onSubmit={handleRegister}>
         <CardContent className="space-y-4">

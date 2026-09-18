@@ -162,15 +162,15 @@ export interface KlassaLogoProps {
 │                                                                                                             │
 │  PERAN OWNER (ANDA):                                                                                      │
 │ 1. [x] Melampirkan acuan desain visual & menyetujui nama "KLASSA: NAIK KELAS BERSAMA".                      │
-│ 2. [ ] Me-review kesesuaian visual pada HTML showcase vektor yang kami hasilkan.                            │
-│ 3. [ ] Mengarahkan tim terminal sebelah (UI) untuk mengadopsi komponen `<KlassaLogo />` begitu siap.        │
+│ 2. [x] Menyerahkan aset SVG master resmi di folder `Branding/`.                                             │
+│ 3. [x] Mengarahkan implementasi menyeluruh komponen `<KlassaLogo />` di seluruh UI.                         │
 │                                                                                                             │
 │  PERAN TIM BMAD (KAMI DI TERMINAL INI):                                                                   │
 │ 1. [x] Menyusun Master Blueprint Brand Identitas resmi ini.                                                 │
-│ 2. [ ] Membuat komponen SVG Vektor Presisi `KlassaLogo.tsx` & `KlassaMark.tsx`.                             │
-│ 3. [ ] Membuat paket aset web (Favicon SVG, Touch Icon, Manifest PWA).                                      │
-│ 4. [ ] Memperbarui HTML showcase `docs/klassa-logo-showcase.html` dengan vektor 100% presisi gambar Anda.   │
-│ 5. [ ] Memperbarui `MASTER_CONTEXT.md` dengan nama resmi KLASSA.                                            │
+│ 2. [x] Membuat komponen SVG Vektor Presisi `KlassaLogo.tsx` & `KlassaMark.tsx`.                             │
+│ 3. [x] Membuat paket aset web (Favicon SVG, Touch Icon, Manifest PWA).                                      │
+│ 4. [x] Memperbarui HTML showcase `docs/klassa-logo-showcase.html` dengan vektor 100% presisi gambar Anda.   │
+│ 5. [x] Memperbarui `MASTER_CONTEXT.md` & Shell UI Aplikasi (Sidebar, Topbar, Auth Pages) dengan KLASSA.    │
 │                                                                                                             │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```

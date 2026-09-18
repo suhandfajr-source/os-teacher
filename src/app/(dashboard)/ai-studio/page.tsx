@@ -3,7 +3,7 @@ import { getTeacherTeachingContextsAction, getAiDraftsAction } from "@/modules/a
 import { AiStudioClient } from "./AiStudioClient";
 
 export const metadata: Metadata = {
-  title: "AI Content Studio | Teacher OS",
+  title: "AI Content Studio | KLASSA",
   description: "Bantu siapkan draf materi, rencana aktivitas, instruksi tugas, dan rubrik pembelajaran.",
 };
 

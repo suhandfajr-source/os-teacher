@@ -67,7 +67,7 @@ export default async function ParentLayout({ children }: { children: React.React
       {/* Parent Footer */}
       <footer className="border-t bg-white py-6 text-center text-xs text-slate-500">
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>&copy; {new Date().getFullYear()} AI Teacher Assistant &mdash; Portal Pembelajaran Siswa</span>
+          <span>&copy; {new Date().getFullYear()} KLASSA &mdash; Portal Pembelajaran & Komunikasi Orang Tua</span>
           <span className="text-slate-400">Akses Mandiri & Terbatas untuk Orang Tua / Wali</span>
         </div>
       </footer>

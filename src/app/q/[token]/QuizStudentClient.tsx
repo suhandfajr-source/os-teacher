@@ -669,7 +669,7 @@ function Shell({
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <School className="h-3.5 w-3.5" /> AI Teacher Assistant
+              <School className="h-3.5 w-3.5" /> KLASSA Quiz Hub
             </div>
             <h1 className="text-xl font-bold">{title}</h1>
             {description && <p className="text-muted-foreground text-sm mt-1">{description}</p>}

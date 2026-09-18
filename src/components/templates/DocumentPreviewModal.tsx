@@ -456,7 +456,7 @@ export function DocumentPreviewModal({
                 onChange={(e) => handleTemplateChange(e.target.value || null)}
                 className="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 max-w-[240px]"
               >
-                <option value="">Standar Teacher OS ({activeFormat.toUpperCase()})</option>
+                <option value="">Standar KLASSA ({activeFormat.toUpperCase()})</option>
                 {relevantTemplates.map((t) => (
                   <option key={t.id} value={t.id}>
                     Template: {t.name}

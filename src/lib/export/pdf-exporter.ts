@@ -30,7 +30,7 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
   let cursorY = 18;
 
   // Header / Kop Sekolah
-  const displaySchool = schoolName || "AI TEACHER ASSISTANT";
+  const displaySchool = schoolName || "KLASSA";
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(30, 41, 59); // Slate 800
@@ -343,7 +343,7 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184); // Slate 400
     doc.text(
-      `Halaman ${i} dari ${totalPages}  •  AI Teacher Assistant`,
+      `Halaman ${i} dari ${totalPages}  •  KLASSA (Naik Kelas Bersama)`,
       pageWidth / 2,
       pageHeight - 8,
       { align: "center" }

@@ -1,8 +1,7 @@
 import React from 'react';
-import Image from 'next/image';
 
 export interface KlassaLogoProps {
-  variant?: 'horizontal' | 'vertical' | 'mark-only' | 'app-icon';
+  variant?: 'horizontal' | 'vertical' | 'mark-only' | 'app-icon' | 'app-icon-dark' | 'app-icon-light';
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   onClick?: () => void;
@@ -11,41 +10,51 @@ export interface KlassaLogoProps {
 
 const sizeMap = {
   xs: {
-    horizontal: { width: 110, height: 32 },
-    vertical: { width: 64, height: 72 },
+    horizontal: { width: 120, height: 36 },
+    vertical: { width: 64, height: 76 },
     'mark-only': { width: 28, height: 28 },
     'app-icon': { width: 32, height: 32 },
+    'app-icon-dark': { width: 32, height: 32 },
+    'app-icon-light': { width: 32, height: 32 },
   },
   sm: {
-    horizontal: { width: 140, height: 42 },
-    vertical: { width: 90, height: 102 },
+    horizontal: { width: 150, height: 46 },
+    vertical: { width: 90, height: 108 },
     'mark-only': { width: 36, height: 36 },
     'app-icon': { width: 44, height: 44 },
+    'app-icon-dark': { width: 44, height: 44 },
+    'app-icon-light': { width: 44, height: 44 },
   },
   md: {
-    horizontal: { width: 180, height: 54 },
-    vertical: { width: 130, height: 148 },
+    horizontal: { width: 190, height: 58 },
+    vertical: { width: 130, height: 156 },
     'mark-only': { width: 48, height: 48 },
     'app-icon': { width: 56, height: 56 },
+    'app-icon-dark': { width: 56, height: 56 },
+    'app-icon-light': { width: 56, height: 56 },
   },
   lg: {
-    horizontal: { width: 240, height: 72 },
-    vertical: { width: 180, height: 204 },
+    horizontal: { width: 260, height: 80 },
+    vertical: { width: 180, height: 216 },
     'mark-only': { width: 72, height: 72 },
     'app-icon': { width: 80, height: 80 },
+    'app-icon-dark': { width: 80, height: 80 },
+    'app-icon-light': { width: 80, height: 80 },
   },
   xl: {
-    horizontal: { width: 320, height: 96 },
-    vertical: { width: 260, height: 296 },
+    horizontal: { width: 340, height: 104 },
+    vertical: { width: 260, height: 312 },
     'mark-only': { width: 100, height: 100 },
     'app-icon': { width: 120, height: 120 },
+    'app-icon-dark': { width: 120, height: 120 },
+    'app-icon-light': { width: 120, height: 120 },
   },
 };
 
 /**
  * KlassaLogo - Komponen Resmi Identitas Brand KLASSA
- * Menggunakan aset master resmi beresolusi tinggi (Transparent PNG / Retina 4K Ready)
- * Persis 100% dengan dokumen acuan brand approved.
+ * Menggunakan aset master resmi berformat Pure Vector SVG (Crisp 4K / Retina Ready)
+ * Persis 100% dengan standar brand asset KLASSA.
  */
 export const KlassaLogo: React.FC<KlassaLogoProps> = ({
   variant = 'horizontal',
@@ -54,21 +63,24 @@ export const KlassaLogo: React.FC<KlassaLogoProps> = ({
   onClick,
   priority = false,
 }) => {
-  const dims = sizeMap[size]?.[variant] || sizeMap.md[variant];
+  const currentSize = sizeMap[size] || sizeMap.md;
+  const dims = currentSize[variant] || currentSize.horizontal;
 
-  // Map asset source
-  let src = '/brand/klassa-logo-horizontal.png';
+  let src = '/brand/klassa-logo-horizontal.svg';
   let alt = 'KLASSA — Naik Kelas Bersama';
 
   if (variant === 'vertical') {
-    src = '/brand/klassa-logo-vertical.png';
+    src = '/brand/klassa-logo-vertical.svg';
     alt = 'KLASSA Vertical Logo';
   } else if (variant === 'mark-only') {
-    src = '/brand/klassa-mark.png';
+    src = '/brand/klassa-mark.svg';
     alt = 'KLASSA Mark';
-  } else if (variant === 'app-icon') {
-    src = '/brand/klassa-app-icon.png';
-    alt = 'KLASSA App Icon';
+  } else if (variant === 'app-icon' || variant === 'app-icon-dark') {
+    src = '/brand/klassa-app-icon-dark.svg';
+    alt = 'KLASSA App Icon Dark';
+  } else if (variant === 'app-icon-light') {
+    src = '/brand/klassa-app-icon-light.svg';
+    alt = 'KLASSA App Icon Light';
   }
 
   return (

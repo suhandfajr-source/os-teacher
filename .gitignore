@@ -57,5 +57,6 @@ problem/
 _tmp*
 .agents/
 .claude/
-.next_dev.log
+.next_dev*.log
+*.log
 *.mjs.tmp

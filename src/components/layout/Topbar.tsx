@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { KlassaLogo } from "@/components/brand";
 
 const mainNavItems = [
   { href: "/", label: "Beranda", icon: Home, exact: true },
@@ -58,17 +59,9 @@ export function Topbar() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-teal-700 flex items-center justify-center text-white shadow-2xs shrink-0">
-              <GraduationCap className="h-4 w-4" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-sm text-slate-900 leading-none">OS Teacher</span>
-              <span className="text-[9px] font-semibold text-teal-700 tracking-wider uppercase leading-tight">
-                Naik Kelas Bersama
-              </span>
-            </div>
-          </div>
+          <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+            <KlassaLogo variant="horizontal" size="xs" priority />
+          </Link>
         </div>
 
         {/* Right Action Icons */}
@@ -112,17 +105,9 @@ export function Topbar() {
           <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[#F6F8F8] border-r border-slate-200 shadow-2xl flex flex-col z-50 animate-in slide-in-from-left duration-250">
             {/* Drawer Header */}
             <div className="flex h-16 items-center justify-between border-b border-slate-200/80 px-5">
-              <div className="flex items-center gap-2.5">
-                <div className="h-9 w-9 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-2xs shrink-0">
-                  <GraduationCap className="h-5 w-5" />
-                </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="font-extrabold text-sm text-slate-900 leading-tight">OS Teacher</span>
-                  <span className="text-[9px] font-semibold text-teal-700 tracking-wider uppercase">
-                    Naik Kelas Bersama
-                  </span>
-                </div>
-              </div>
+              <Link href="/" onClick={() => setMobileDrawerOpen(false)} className="flex items-center">
+                <KlassaLogo variant="horizontal" size="sm" priority />
+              </Link>
               <button
                 onClick={() => setMobileDrawerOpen(false)}
                 aria-label="Tutup Menu"

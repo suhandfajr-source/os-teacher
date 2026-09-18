@@ -5,8 +5,13 @@ import { Toaster } from "sonner";
 import { NavigationProgressBar } from "@/components/layout/NavigationProgressBar";
 
 export const metadata: Metadata = {
-  title: "AI Teacher Assistant",
-  description: "Teacher-first web application",
+  title: "KLASSA — Naik Kelas Bersama",
+  description: "Personal Workspace & AI Co-Pilot Guru Indonesia: Administrasi Tuntas, Mengajar Jadi Berkelas.",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

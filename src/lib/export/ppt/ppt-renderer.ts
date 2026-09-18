@@ -67,7 +67,7 @@ export async function renderPresentationPptx(
   const pres = new PptxGenJSClass();
   pres.layout = "LAYOUT_16x9";
   pres.author = model.metadata.teacherName || "Guru Pengampu";
-  pres.company = model.metadata.schoolName || "Teacher OS";
+  pres.company = model.metadata.schoolName || "KLASSA";
   pres.title = model.metadata.title;
 
   for (const slideData of model.slides) {
@@ -286,7 +286,7 @@ function renderSlideFooter(
   slide: { slideNumber: number; totalSlides: number },
   model: PresentationModel
 ) {
-  const school = model.metadata.schoolName || model.metadata.subjectName || "AI Teacher Assistant";
+  const school = model.metadata.schoolName || model.metadata.subjectName || "KLASSA Presentation Studio";
   
   // Footer divider line
   slideObj.addShape(pres.ShapeType.line, {

@@ -16,6 +16,7 @@ import {
   BookOpenCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KlassaLogo } from "@/components/brand";
 
 const mainNavItems = [
   { href: "/", label: "Beranda", icon: Home, exact: true },
@@ -47,18 +48,10 @@ export function Sidebar() {
       {/* ─────────────────────────────────────────────────────────────
           1. SIDEBAR BRAND HEADER
       ───────────────────────────────────────────────────────────── */}
-      <div className="flex h-16 items-center border-b border-slate-200/80 px-5 gap-3">
-        <div className="h-9 w-9 rounded-xl bg-teal-700 flex items-center justify-center text-white shadow-2xs shrink-0">
-          <GraduationCap className="h-5 w-5" />
-        </div>
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5 font-extrabold text-base tracking-tight text-slate-900 truncate">
-            <span>OS Teacher</span>
-          </div>
-          <span className="text-[10px] font-semibold text-teal-700 tracking-wider uppercase">
-            Naik Kelas Bersama
-          </span>
-        </div>
+      <div className="flex h-16 items-center border-b border-slate-200/80 px-5">
+        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+          <KlassaLogo variant="horizontal" size="sm" priority />
+        </Link>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────

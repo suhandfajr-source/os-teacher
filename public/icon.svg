@@ -1,74 +1,32 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <!-- Background Gradient Deep Pine Teal -->
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0F766E" />
-      <stop offset="60%" stop-color="#115E59" />
-      <stop offset="100%" stop-color="#042F2E" />
-    </linearGradient>
-
-    <!-- Gradasi Tiang Putih-Mint -->
-    <linearGradient id="appPillar" x1="140" y1="100" x2="140" y2="400" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="100%" stop-color="#CCFBF1" />
-    </linearGradient>
-
-    <!-- Gradasi Sayap Atas Mint -->
-    <linearGradient id="appTopWing" x1="220" y1="260" x2="390" y2="130" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#5EEAD4" />
-      <stop offset="60%" stop-color="#99F6E4" />
-      <stop offset="100%" stop-color="#FFFFFF" />
-    </linearGradient>
-
-    <!-- Gradasi Lipatan Ribbon -->
-    <linearGradient id="appFold" x1="190" y1="240" x2="280" y2="300" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0F766E" />
-      <stop offset="60%" stop-color="#14B8A6" />
-      <stop offset="100%" stop-color="#5EEAD4" />
-    </linearGradient>
-
-    <!-- Gradasi Sayap Bawah -->
-    <linearGradient id="appBottomWing" x1="220" y1="240" x2="400" y2="380" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#5EEAD4" />
-      <stop offset="60%" stop-color="#2DD4BF" />
-      <stop offset="100%" stop-color="#14B8A6" />
-    </linearGradient>
-
-    <!-- Gradasi Bintang Sparkle Violet -->
-    <linearGradient id="appSparkle" x1="330" y1="50" x2="430" y2="150" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#A5B4FC" />
-      <stop offset="50%" stop-color="#818CF8" />
-      <stop offset="100%" stop-color="#6366F1" />
-    </linearGradient>
-
-    <!-- Glow Filter -->
-    <filter id="glow" x="250" y="20" width="220" height="220" filterUnits="userSpaceOnUse">
-      <feGaussianBlur stdDeviation="16" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-
-  <!-- 1. SQUIRCLE BACKGROUND -->
-  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
-
-  <!-- Ambient Light Reflection -->
-  <circle cx="120" cy="100" r="180" fill="#2DD4BF" fill-opacity="0.12" />
-
-  <!-- 2. LOGO GROUP -->
-  <g transform="translate(18, 18) scale(1.97)">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="1180 650 1600 2100" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <defs>
+        <linearGradient id="_Linear1" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(216.740404,70.849589,-70.849589,216.740404,2405.947843,880.077367)">
+            <stop offset="0" style="stop-color:rgb(151,135,251);stop-opacity:1"/>
+            <stop offset="1" style="stop-color:rgb(81,70,227);stop-opacity:1"/>
+        </linearGradient>
+        <linearGradient id="_Linear2" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(14.192756,1163.797168,-1163.797168,14.192756,1496.150318,1336.998916)">
+            <stop offset="0" style="stop-color:rgb(1,152,150);stop-opacity:1"/>
+            <stop offset="1" style="stop-color:rgb(1,78,83);stop-opacity:1"/>
+        </linearGradient>
+        <linearGradient id="_Linear3" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(603.222271,440.787666,-440.787666,603.222271,2195.75164,2122.402009)">
+            <stop offset="0" style="stop-color:rgb(10,156,135);stop-opacity:1"/>
+            <stop offset="1" style="stop-color:rgb(159,247,232);stop-opacity:1"/>
+        </linearGradient>
+        <linearGradient id="_Linear4" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" gradientTransform="matrix(697.142792,-617.663794,617.663794,697.142792,1894.87956,1960.201868)">
+            <stop offset="0" style="stop-color:rgb(52,200,176);stop-opacity:1"/>
+            <stop offset="1" style="stop-color:rgb(165,248,231);stop-opacity:1"/>
+        </linearGradient>
+    </defs>
+    <!-- AI Sparkle -->
+    <path d="M2195.849,956.752C2320.702,975.859 2409.749,1044.208 2457.128,1201.751C2463.167,1221.828 2478.812,1221.54 2484.577,1201.988C2523.956,1068.416 2604.896,983.331 2735.711,956.434C2759.882,951.464 2758.753,930.403 2736.277,926.261C2594.717,900.169 2523.748,803.897 2484.291,680.935C2478.109,661.669 2465.419,662.824 2459.94,681.289C2418.566,820.731 2328.367,898.982 2198.097,926.67C2167.269,933.222 2184.476,955.012 2195.849,956.752Z" style="fill:url(#_Linear1);"/>
     <!-- Tiang Vertikal -->
-    <rect x="44" y="42" width="38" height="156" rx="19" fill="url(#appPillar)" />
-
+    <path d="M1759.347,2700.828C1759.347,2700.828 1783.865,1241.469 1756.779,1129.792C1729.693,1018.114 1625.246,966.429 1546.07,962.243C1466.894,958.056 1341.712,1023.835 1282.468,1103.928C1245.906,1153.358 1219.473,1215.086 1202.879,1290.764C1186.284,1366.441 1202.976,2360.747 1202.976,2360.747C1224.855,2529.927 1308.682,2632.322 1419.266,2683.229C1515.133,2726.414 1678.15,2715.896 1734.83,2718.829C1744.955,2719.353 1758.874,2712.021 1759.347,2700.828Z" style="fill:url(#_Linear2);"/>
     <!-- Sayap Bawah Centang -->
-    <path d="M92 122C92 122 120 148 152 174C160 180.5 171.5 180 179 173C186.5 166 186.5 154.5 180 147C154 122 124 100 124 100L92 122Z" fill="url(#appBottomWing)" />
-
-    <!-- Lipatan Sayap Atas Ribbon -->
-    <path d="M86 128C86 128 116 88 162 62C172 56.5 184 62 186 73C187.5 81.5 182.5 89.5 174.5 93C138 109 110 138 110 138L86 128Z" fill="url(#appTopWing)" />
-
-    <!-- Lipatan Tengah Ribbon 3D -->
-    <path d="M88 122C102 108 124 100 138 108C138 108 118 134 94 146L88 122Z" fill="url(#appFold)" opacity="0.9" />
-
-    <!-- Bintang AI Sparkle -->
-    <path d="M168 20C168 34.5 178.5 45 193 45C178.5 45 168 55.5 168 70C168 55.5 157.5 45 143 45C157.5 45 168 34.5 168 20Z" fill="url(#appSparkle)" />
-  </g>
+    <path d="M1923.794,2204.726L2309.09,2609.107C2392.221,2682.103 2486.859,2726.335 2599.755,2724.919L2914.469,2718.735C3001.538,2710.964 3023.858,2599.609 2989.105,2548.205C2905.618,2424.719 2542.213,2085.954 2413.548,1977.818C2359.575,1932.457 2263.025,1890.129 2217.115,1899.392C2064.647,1995.097 1993.905,2113.865 1923.794,2204.726Z" style="fill:url(#_Linear3);"/>
+    <!-- Sayap Atas Ribbon -->
+    <g transform="matrix(1,0,0,1,0,10)">
+        <path d="M1926.874,2199.442C1926.874,2199.442 2891.925,1300.512 2907.562,1285.871C2919.73,1274.478 2906.186,1261.579 2897.28,1261.179C2810.447,1257.272 2510.14,1242.542 2386.569,1262.431C2301.274,1276.159 2217.357,1326.657 2155.853,1380.514C2094.349,1434.37 2011.474,1528.148 1921.504,1616.679C1821.23,1715.349 1807.44,1790.231 1807.781,1887.361C1808.131,1986.838 1850.146,2111.096 1926.874,2199.442Z" style="fill:url(#_Linear4);"/>
+    </g>
 </svg>

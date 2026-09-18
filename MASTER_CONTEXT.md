@@ -1,5 +1,6 @@
 # MASTER CONTEXT
-## AI Teacher Assistant
+## KLASSA (Naik Kelas Bersama)
+*Formerly: AI Teacher Assistant / OS Teacher*
 
 This file is the high-level orientation document for development agents.
 
@@ -27,7 +28,7 @@ Current implementation specifications live under:
 
 # 1. Product Vision
 
-AI Teacher Assistant is a teacher-first web application that reduces repetitive teacher administration, supports teaching preparation, organizes assessment data, monitors student progress, and generates useful academic reports.
+KLASSA (Naik Kelas Bersama) is a teacher-first personal workspace and AI co-pilot web application that reduces repetitive teacher administration, supports teaching preparation, organizes assessment data, monitors student progress, and generates useful academic reports.
 
 It is NOT intended to become a full school ERP/SIS/LMS in V1.
 

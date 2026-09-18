@@ -38,7 +38,7 @@ const DOUBLE_BOTTOM_BORDER: Partial<ExcelJS.Borders> = {
  */
 export async function exportProsemToXlsx(data: ProsemExportData): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "AI Teacher Assistant - OS Teacher";
+  workbook.creator = "KLASSA (Naik Kelas Bersama)";
   workbook.lastModifiedBy = data.teacherName;
   workbook.created = new Date();
   workbook.modified = new Date();

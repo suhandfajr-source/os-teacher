@@ -7,8 +7,7 @@ export interface KlassaMarkProps {
 }
 
 /**
- * KlassaMark - Komponen Simbol Tunggal Monogram K KLASSA
- * Menggunakan aset master resmi beresolusi tinggi (Transparent PNG)
+ * KlassaMark - Komponen Simbol Tunggal Monogram K KLASSA (Pure Vector SVG)
  */
 export const KlassaMark: React.FC<KlassaMarkProps> = ({
   size = 48,
@@ -26,7 +25,7 @@ export const KlassaMark: React.FC<KlassaMarkProps> = ({
       onClick={onClick}
     >
       <img
-        src="/brand/klassa-mark.png"
+        src="/brand/klassa-mark.svg"
         alt="KLASSA Mark"
         className="w-full h-full object-contain drop-shadow-xs"
       />
