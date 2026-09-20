@@ -79,173 +79,195 @@ export default async function DashboardPage() {
       />
 
       {/* 3. REAL STATISTICS CARDS */}
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="shadow-2xs rounded-2xl bg-teal-50/70 border-teal-200/80 hover:bg-teal-50 hover:border-teal-300 transition-all">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-teal-800 uppercase tracking-wider">
+      <div className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 pt-3">
+        {/* Stat 1: Konteks Mengajar */}
+        <div className="bg-white rounded-3xl p-6 pt-8 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100/90 relative flex flex-col justify-between transition-all">
+          <div className="absolute -top-4 left-6 w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-400 text-white flex items-center justify-center shadow-floating-badge">
+            <BookOpen className="h-5 w-5" />
+          </div>
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider">
               Konteks Mengajar
-            </CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-2xs">
-              <BookOpen className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-extrabold text-slate-900">{teachingContexts.length}</div>
-            <p className="text-[11px] text-teal-800/80 font-medium mt-1">
+            </span>
+          </div>
+          <div>
+            <div className="text-3xl font-black text-slate-900">{teachingContexts.length}</div>
+            <p className="text-[11px] text-slate-500 font-medium mt-1">
               Kombinasi kelas, mata pelajaran & periode aktif
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="shadow-2xs rounded-2xl bg-amber-50/70 border-amber-200/80 hover:bg-amber-50 hover:border-amber-300 transition-all">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+        {/* Stat 2: Jadwal Hari Ini */}
+        <div className="bg-white rounded-3xl p-6 pt-8 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100/90 relative flex flex-col justify-between transition-all">
+          <div className="absolute -top-4 left-6 w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 text-white flex items-center justify-center shadow-floating-badge">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
               Jadwal Hari Ini
-            </CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-2xs">
-              <Calendar className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-extrabold text-slate-900">
+            </span>
+          </div>
+          <div>
+            <div className="text-3xl font-black text-slate-900">
               {scheduleStream.items.length}{" "}
-              <span className="text-xs text-amber-800 font-semibold">Sesi Mengajar</span>
+              <span className="text-xs text-amber-800 font-semibold">Sesi</span>
             </div>
-            <p className="text-[11px] text-amber-800/80 font-medium mt-1">
+            <p className="text-[11px] text-slate-500 font-medium mt-1">
               {scheduleStream.items.filter((i) => i.status === "COMPLETED").length} selesai,{" "}
               {scheduleStream.items.filter((i) => i.status === "IN_PROGRESS" || i.status === "TIME_TO_TEACH").length} butuh perhatian
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="shadow-2xs rounded-2xl bg-indigo-50/70 border-indigo-200/80 hover:bg-indigo-50 hover:border-indigo-300 transition-all">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold text-indigo-800 uppercase tracking-wider">
+        {/* Stat 3: Siswa Terdaftar */}
+        <div className="bg-white rounded-3xl p-6 pt-8 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100/90 relative flex flex-col justify-between transition-all sm:col-span-2 lg:col-span-1">
+          <div className="absolute -top-4 left-6 w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-400 text-white flex items-center justify-center shadow-floating-badge">
+            <Users className="h-5 w-5" />
+          </div>
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider">
               Siswa Terdaftar
-            </CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-2xs">
-              <Users className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-extrabold text-slate-900">{reachableStudentsCount}</div>
-            <p className="text-[11px] text-indigo-800/80 font-medium mt-1">
+            </span>
+          </div>
+          <div>
+            <div className="text-3xl font-black text-slate-900">{reachableStudentsCount}</div>
+            <p className="text-[11px] text-slate-500 font-medium mt-1">
               Siswa aktif pada kelas yang Anda ampu
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* 4. ACTION / NEXT STEPS HUB */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="flex flex-col justify-between shadow-2xs rounded-2xl bg-white border-slate-200/80 hover:border-teal-300 hover:shadow-xs transition-all">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-slate-900">
-              <Calendar className="h-4 w-4 text-teal-700" />
-              Sesi Mengajar & Presensi
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-600">
-              Mulai sesi pembelajaran hari ini, catat presensi siswa, dan buat catatan jurnal mengajar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="bg-white rounded-3xl p-6 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100 flex flex-col justify-between transition-all">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5 font-bold text-base text-slate-900">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <span>Sesi Mengajar & Presensi</span>
+            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Mulai sesi pembelajaran hari ini, catat presensi siswa, dan buat catatan jurnal mengajar dengan cepat.
+            </p>
+          </div>
+          <div className="pt-4">
             <Link
               href="/hari-ini"
-              className={cn(buttonVariants({ variant: "default", size: "sm" }), "w-full sm:w-auto text-xs font-semibold rounded-xl bg-teal-700 hover:bg-teal-800 text-white")}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white shadow-pill-glow transition-all"
             >
-              Buka Menu Hari Ini
-              <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              <span>Buka Menu Hari Ini</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="flex flex-col justify-between shadow-2xs rounded-2xl bg-gradient-to-br from-indigo-50/70 via-white to-teal-50/50 border-indigo-200/80 hover:border-indigo-300 hover:shadow-xs transition-all">
-          <CardHeader>
+        <div className="bg-gradient-to-br from-indigo-50/80 via-white to-teal-50/40 rounded-3xl p-6 shadow-squircle-card hover:shadow-squircle-card-hover border border-indigo-100 flex flex-col justify-between transition-all">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-base text-slate-900">
-                <Sparkles className="h-4 w-4 text-indigo-600" />
-                AI Content Studio
-              </CardTitle>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">
+              <div className="flex items-center gap-2.5 font-bold text-base text-indigo-950">
+                <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <span>AI Content Studio</span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
                 Co-Pilot
               </span>
             </div>
-            <CardDescription className="text-xs text-slate-600">
-              Buat draf materi, rencana aktivitas, instruksi tugas, dan rubrik pembelajaran dengan bantuan AI.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Buat draf materi, rencana aktivitas, instruksi tugas, dan rubrik pembelajaran Kurikulum Merdeka otomatis.
+            </p>
+          </div>
+          <div className="pt-4">
             <Link
               href="/ai-studio"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "w-full sm:w-auto text-xs font-semibold rounded-xl text-indigo-700 border-indigo-200 bg-white hover:bg-indigo-50"
-              )}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all"
             >
-              Buka AI Studio
-              <ArrowRight className="h-3.5 w-3.5 ml-1.5 text-indigo-600" />
+              <span>Buka AI Studio</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* 5. QUICK CLASS NAVIGATOR */}
-      <Card className="shadow-2xs">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold">Daftar Kelas Diampu</CardTitle>
-              <CardDescription className="text-xs">
-                Akses cepat ke detail kelas, lembar penilaian, presensi, dan pengelolaan siswa.
-              </CardDescription>
-            </div>
-            <Link
-              href="/kelas"
-              className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-            >
-              <span>Semua Kelas</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+      <div className="bg-white rounded-3xl p-6 shadow-squircle-card border border-slate-100/90 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900">Daftar Kelas Diampu</h2>
+            <p className="text-xs text-slate-500">
+              Akses cepat ke detail kelas, lembar penilaian, presensi, dan pengelolaan siswa.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
+          <Link
+            href="/kelas"
+            className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100"
+          >
+            <span>Semua Kelas</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div>
           {teachingContexts.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground space-y-3">
+            <div className="py-8 text-center text-slate-400 space-y-3">
               <p className="text-xs">Belum ada kelas atau mata pelajaran yang diatur.</p>
               <Link
                 href="/pengaturan/setup"
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs font-semibold")}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               >
-                <Settings className="h-3.5 w-3.5 mr-1.5" />
-                Atur Kelas di Pengaturan
+                <Settings className="h-3.5 w-3.5" />
+                <span>Atur Kelas di Pengaturan</span>
               </Link>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {teachingContexts.map((tc) => (
-                <Link
-                  key={tc.id}
-                  href={`/kelas/${tc.id}`}
-                  className="p-4 rounded-xl border bg-card hover:border-primary transition-all duration-150 flex flex-col justify-between hover:shadow-xs group"
-                >
-                  <div>
-                    <div className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                      {tc.subject.name}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 pt-1">
+              {teachingContexts.map((tc, index) => {
+                const badgeGradients = [
+                  "from-teal-600 to-emerald-400",
+                  "from-pink-600 to-rose-400",
+                  "from-blue-600 to-cyan-400",
+                  "from-purple-600 to-fuchsia-400",
+                  "from-amber-500 to-orange-400",
+                  "from-indigo-600 to-violet-400",
+                ];
+                const gradient = badgeGradients[index % badgeGradients.length];
+
+                return (
+                  <Link
+                    key={tc.id}
+                    href={`/kelas/${tc.id}`}
+                    className="p-5 rounded-2xl border border-slate-100 bg-[#F8FAFA] hover:bg-white hover:border-teal-200 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${gradient} text-white flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform`}
+                      >
+                        <BookOpen className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-sm text-slate-900 group-hover:text-teal-700 transition-colors truncate">
+                          {tc.subject.name}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-500 mt-0.5">{tc.class.name}</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{tc.class.name}</div>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground mt-3 pt-2 border-t flex items-center justify-between">
-                    <span>{tc.academicPeriod.semester} {tc.academicPeriod.year}</span>
-                    <span className="text-primary font-semibold flex items-center">
-                      Masuk Kelas &rarr;
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                    <div className="text-[11px] text-slate-400 mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between">
+                      <span>{tc.academicPeriod.semester} {tc.academicPeriod.year}</span>
+                      <span className="text-teal-700 font-bold flex items-center group-hover:translate-x-0.5 transition-transform">
+                        Masuk Kelas &rarr;
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

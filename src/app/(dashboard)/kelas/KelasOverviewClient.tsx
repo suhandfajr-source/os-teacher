@@ -161,80 +161,112 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
       )}
 
       {/* Grid of Classes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredContexts.map((ctx) => (
-          <Link href={`/kelas/${ctx.id}`} key={ctx.id} className="block group">
-            <Card className="hover:border-primary transition-all duration-150 hover:shadow-sm cursor-pointer h-full flex flex-col justify-between">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">
-                    {ctx.class.name}
-                  </CardTitle>
-                  {ctx.class.gradeLevel && (
-                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-medium">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10 pt-4">
+        {filteredContexts.map((ctx, index) => {
+          // Palette rotation for floating badges
+          const badgeGradients = [
+            "from-teal-600 to-emerald-400",
+            "from-pink-600 to-rose-400",
+            "from-blue-600 to-cyan-400",
+            "from-purple-600 to-fuchsia-400",
+            "from-amber-500 to-orange-400",
+            "from-indigo-600 to-violet-400",
+          ];
+          const gradient = badgeGradients[index % badgeGradients.length];
+
+          return (
+            <Link href={`/kelas/${ctx.id}`} key={ctx.id} className="block group">
+              <div className="bg-white rounded-3xl p-6 pt-9 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100/90 relative flex flex-col justify-between h-full transition-all duration-200 cursor-pointer">
+                {/* Floating Squircle Icon Overlap */}
+                <div
+                  className={`absolute -top-5 left-6 w-12 h-12 rounded-2xl bg-gradient-to-tr ${gradient} text-white flex items-center justify-center shadow-floating-badge group-hover:scale-110 group-hover:-translate-y-1 transition-transform`}
+                >
+                  <BookOpen className="w-6 h-6" />
+                </div>
+
+                {/* Top Status Tag */}
+                <div className="flex items-center justify-end mb-3">
+                  {ctx.class.gradeLevel ? (
+                    <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
                       Tingkat {ctx.class.gradeLevel}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-100">
+                      Reguler
                     </span>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="flex items-center gap-2 text-sm text-foreground">
-                  <BookOpen className="h-4 w-4 text-primary shrink-0" />
-                  <span className="font-medium">{ctx.subject.name}</span>
-                </div>
-                <div className="flex justify-between items-center text-xs text-muted-foreground pt-2 border-t">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {ctx.academicPeriod.year} ({ctx.academicPeriod.semester})
-                  </span>
-                  <span className="flex items-center gap-1 font-medium text-foreground">
-                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                    {ctx.class._count.classStudents} Siswa
-                  </span>
+
+                {/* Title & Subject */}
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-extrabold text-slate-900 group-hover:text-teal-700 transition-colors">
+                    {ctx.class.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold">
+                    <GraduationCap className="w-4 h-4 text-teal-600 shrink-0" />
+                    <span>{ctx.subject.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400 pt-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span>
+                      {ctx.academicPeriod.year} ({ctx.academicPeriod.semester})
+                    </span>
+                  </div>
                 </div>
 
-                <div className="pt-2 border-t flex justify-end" onClick={(e) => e.preventDefault()}>
-                  <ScheduleConfigDialog
-                    teachingContextId={ctx.id}
-                    contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
-                    triggerButton={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs font-semibold text-primary hover:bg-primary/10 gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>Atur Jadwal</span>
-                      </Button>
-                    }
-                  />
+                {/* Divider */}
+                <div className="my-4 border-t border-slate-100"></div>
+
+                {/* Footer: Students Count + Schedule Config Action */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                    <Users className="w-4 h-4 text-teal-700" />
+                    <span>{ctx.class._count.classStudents} Siswa</span>
+                  </div>
+
+                  <div onClick={(e) => e.preventDefault()}>
+                    <ScheduleConfigDialog
+                      teachingContextId={ctx.id}
+                      contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
+                      triggerButton={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2.5 rounded-xl text-xs font-bold text-teal-700 hover:bg-teal-50 gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Jadwal</span>
+                        </Button>
+                      }
+                    />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+              </div>
+            </Link>
+          );
+        })}
 
         {/* Empty State */}
         {filteredContexts.length === 0 && (
-          <div className="col-span-full py-12 px-6 text-center border-2 border-dashed rounded-xl bg-card space-y-4">
-            <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <div className="col-span-full py-12 px-6 text-center border-2 border-dashed rounded-3xl bg-white space-y-4 shadow-2xs">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-700 shadow-2xs">
               <School className="h-6 w-6" />
             </div>
             <div className="space-y-1 max-w-sm mx-auto">
-              <h3 className="font-semibold text-lg">
+              <h3 className="font-bold text-lg text-slate-900">
                 {searchQuery ? "Kelas Tidak Ditemukan" : "Belum Ada Kelas Mengajar"}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-slate-500">
                 {searchQuery
                   ? `Tidak ada kelas yang cocok dengan kata kunci "${searchQuery}".`
                   : "Mulai dengan menambahkan kelas dan mata pelajaran yang Anda ampu di sekolah ini."}
               </p>
             </div>
-            <Button onClick={handleOpenModal} className="gap-2">
+            <Button onClick={handleOpenModal} className="gap-2 rounded-full bg-teal-700 hover:bg-teal-800 text-white font-bold">
               <Plus className="h-4 w-4" />
               Tambah Kelas Sekarang
             </Button>
