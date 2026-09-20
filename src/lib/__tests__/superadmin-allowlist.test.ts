@@ -77,6 +77,29 @@ describe("redactMetadata (BH6)", () => {
         expect(out.name).toBe("Guru");
     });
 
+    it("review 1c: denylist meliputi kunci masa-depan Stories 3–5 (apiKey, credential, session, otp, bearer, jwt)", () => {
+        const out = redactMetadata({
+            apiKey: "sk-live-xxx",
+            api_key: "sk-2",
+            credentials: { user: "u", pass: "p" },
+            sessionId: "abc123",
+            otp: "998877",
+            bearer: "t",
+            jwt: "eyJhbGci...",
+            privateKey: "-----BEGIN...",
+            safe: "kept",
+        });
+        expect(out.apiKey).toBe(REDACTED);
+        expect(out.api_key).toBe(REDACTED);
+        expect(out.credentials).toBe(REDACTED);
+        expect(out.sessionId).toBe(REDACTED);
+        expect(out.otp).toBe(REDACTED);
+        expect(out.bearer).toBe(REDACTED);
+        expect(out.jwt).toBe(REDACTED);
+        expect(out.privateKey).toBe(REDACTED);
+        expect(out.safe).toBe("kept");
+    });
+
     it("redacts nested objects and arrays, dropping non-JSON-safe values", () => {
         const fn = (): number => 1;
         const out = redactMetadata({

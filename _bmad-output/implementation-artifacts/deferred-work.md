@@ -21,18 +21,6 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
   summary: Gate verifikasi otomatis file migrasi (`migrate diff --from-migrations --to-schema --exit-code`) diaktifkan segera setelah rekonsiliasi drift lunas.
   evidence: VG1 pre-verified: menghapus baris migrasi tetap hijau di semua verifikasi 1a (test menyentuh Neon yang sudah dimigrasi, bukan file); gate hari ini merah karena drift pra-existing.
-- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
-  summary: Tambah task helper redaksi `redactMetadata()` + unit test ke spec 1c sebelum diimplementasi (penulis AuditLog pertama).
-  evidence: BH6: konvensi "metadata bebas secret" tanpa enforcement DB (defer) maupun tooling; jendela Stories 3–5 menulis audit tanpa pengaman mekanis.
-- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
-  summary: Definisikan semantik penyusutan allowlist di spec 1c — minimal laporan drift ADMIN-not-in-allowlist tiap run; keputusan demosi eksplisit.
-  evidence: BH7: seeder hanya promote; email yang dihapus dari SUPERADMIN_EMAILS tidak pernah didemosi.
-- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
-  summary: Verifikasi invariant "Better Auth selalu menyimpan email lowercase" ATAU pakai lookup insensitive di seeder; tambah baris matriks stored-mixed-case.
-  evidence: BH8 maybe-false: bila DB menyimpan mixed-case, lookup normalized miss (laporan "tidak dikenal" palsu); disetel dengan membaca normalisasi email better-auth versi 1.6.29.
-- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
-  summary: Tambah test integrasi seeder ke spec 1c: idempotensi (run 2× → 0 entri audit baru) + transaksi-rollback (email tak dikenal → nol row berubah).
-  evidence: BH12: jaminan inti keamanan (all-or-nothing, idempotent) hanya diverifikasi manual via Verification commands.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
   summary: Proyeksikan kolom (select) di getStudents/updateStudent/archiveStudent SEBELUM Story 3 mengisi accessPinHash — jika tidak, hash PIN terkirim ke klien via server action.
   evidence: VG-other2: students.actions.ts:94 tanpa select; hari ini kolom null (aman), begitu terisi = kebocoran hash.
@@ -51,3 +39,12 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1b-primitif-pin.md`
   summary: Rotasi pepper pasca-produksi (bila jadi kebutuhan): perkenalkan format baru ber-prefix versi (mis. `scryptv2:pv2:{N}:{r}:{p}:{salt}:{hash}`) backward-compatible — parser memperlakukan format `scrypt:{N}:…` hari ini sebagai v1 implisit dengan verify ganda masa transisi; TIDAK perlu diubah sekarang.
   evidence: Keputusan walkthrough 1b 2026-09-20 (human-delegated): scheme token di awal hash menjaga pintu evolusi tetap terbuka pasca-produksi — mengubah format sekarang = dual-verify + registry untuk hipotesis; golden vector 1b mem-pin v1 agar evolusi masa depan tak memutus legacy.
+
+# Review 1c pass 1 — defer entries (2026-09-20)
+
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
+  summary: Deklarasikan `dotenv` sebagai devDependency — `vitest.config.ts:1` mengimpor `dotenv/config` tapi hanya tersedia phantom via transitive (prisma→c12, shadcn→dotenvx); seluruh mekanisme warisan `DATABASE_URL` test integrasi (termasuk 1c, elicitation F1) bertumpu dependency tak terdeklarasi.
+  evidence: VG-other3 review 1c (pre-existing, bukan caused-by 1c); hilangnya phantom = 48 file test merah environmental.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
+  summary: Putuskan field `engines` di package.json (mis. `node >= 20.12` — syarat `--env-file-if-exists` script seed) — kebijakan manifest seluruh app, bukan keputusan seeder sendirian; sementara ini terdokumentasi di `.env.example` + header CLI.
+  evidence: VG-other5 review 1c; tanpa engines, Node 18–20.11 mati "bad option" tanpa penjelasan.

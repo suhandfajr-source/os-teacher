@@ -1,5 +1,4 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
-import type { Pool } from "pg";
 import { redactMetadata } from "./audit-metadata";
 import type { ParsedAllowlist } from "./superadmin-allowlist";
 
@@ -62,6 +61,11 @@ export interface DriftEntry {
     createdAt: Date;
 }
 
+export interface AmbiguousEntry {
+    email: string;
+    candidates: { userId: string; email: string; name: string }[];
+}
+
 export interface SeederReport {
     target: { host: string; database: string };
     dryRun: boolean;
@@ -73,6 +77,8 @@ export interface SeederReport {
     unverified: SeedPlanEntry[];
     /** Plan entries with no matching User row. */
     unknown: SeedPlanEntry[];
+    /** Emails matching >1 case-variant User row — identity ambiguity (RT1). */
+    ambiguous: AmbiguousEntry[];
     promoted: number;
     auditEntries: number;
 }
@@ -88,12 +94,16 @@ interface UserRow {
 
 type Tx = Prisma.TransactionClient;
 
-async function findUserInsensitive(tx: Tx, email: string): Promise<UserRow | null> {
-    // mode:"insensitive" over the normalized value (BH8). If the PrismaPg
-    // adapter ever rejects it, door criteria catch it; LOWER() raw is the
-    // documented fallback (elicitation F9).
-    return tx.user.findFirst({
+async function findCandidatesInsensitive(tx: Tx, email: string): Promise<UserRow[]> {
+    // mode:"insensitive" over the normalized value (BH8). Postgres unique is
+    // case-SENSITIVE, so case-variant twin rows can legally coexist (rows
+    // written outside better-auth) — callers must abort as AMBIGUOUS when
+    // more than one row matches, never promote an arbitrary twin (RT1).
+    // LOWER() raw is the documented fallback if the adapter ever rejects the
+    // mode (elicitation F9).
+    return tx.user.findMany({
         where: { email: { equals: email, mode: "insensitive" } },
+        take: 2,
         select: {
             id: true,
             name: true,
@@ -111,8 +121,6 @@ export async function runSuperadminSeed(options: {
     target: { host: string; database: string };
     dryRun?: boolean;
     allowUnverified?: boolean;
-    /** Optional pool so tests reusing a shared client can pass the same target info. */
-    pool?: Pool;
 }): Promise<SeederReport> {
     const { prisma, allowlist, target } = options;
     const dryRun = options.dryRun ?? false;
@@ -135,8 +143,18 @@ export async function runSuperadminSeed(options: {
 
             // --- Plan: lookup every allowlist email (same tx as apply — F4).
             const plan: SeedPlanEntry[] = [];
+            const ambiguous: AmbiguousEntry[] = [];
             for (const email of allowlist.emails) {
-                const user = await findUserInsensitive(tx, email);
+                const candidates = await findCandidatesInsensitive(tx, email);
+                if (candidates.length > 1) {
+                    ambiguous.push({
+                        email,
+                        candidates: candidates.map((c) => ({ userId: c.id, email: c.email, name: c.name })),
+                    });
+                    plan.push({ email, found: false, willPromote: false });
+                    continue;
+                }
+                const user = candidates[0] ?? null;
                 const teacherProfile = user
                     ? await tx.teacherProfile.findUnique({ where: { userId: user.id }, select: { userId: true } })
                     : null;
@@ -179,11 +197,20 @@ export async function runSuperadminSeed(options: {
                 drift,
                 unverified,
                 unknown,
+                ambiguous,
                 promoted: 0,
                 auditEntries: 0,
             };
 
             // --- Gates (before ANY write; zero rows change on abort).
+            if (ambiguous.length > 0) {
+                throw new SeedAbortError(
+                    `Email ambigu (>1 row User varian-case): ${ambiguous
+                        .map((a) => `${a.email} [${a.candidates.map((c) => `${c.email}/${c.userId}`).join(" | ")}])`)
+                        .join("; ")} — selesaikan duplikat manual sebelum seeding.`,
+                    baseReport
+                );
+            }
             if (unknown.length > 0) {
                 throw new SeedAbortError(
                     `Email tidak dikenal (tanpa row User): ${unknown.map((u) => u.email).join(", ")} — all-or-nothing, nol row diubah.`,
@@ -249,6 +276,13 @@ export function formatSeederReport(report: SeederReport): string {
         ].filter(Boolean);
         lines.push(`  - ${p.email}${p.name ? ` (${p.name})` : ""} [${flags.join(", ")}]`);
     }
+    if (report.ambiguous.length > 0) {
+        lines.push("");
+        lines.push("Email AMBIGU — >1 row varian-case (selesaikan manual):");
+        for (const a of report.ambiguous) {
+            lines.push(`  ? ${a.email} → ${a.candidates.map((c) => `${c.email}/${c.userId}`).join(" | ")}`);
+        }
+    }
     if (report.drift.length > 0) {
         lines.push("");
         lines.push("PERINGATAN drift — ADMIN di luar allowlist (TIDAK didemosi otomatis, BH7):");
@@ -269,11 +303,11 @@ export function formatSeederReport(report: SeederReport): string {
     return lines.join("\n");
 }
 
-/** Parse a DATABASE_URL into a display-safe target identity (host + dbname). */
+/** Parse a DATABASE_URL into a display-safe target identity (host:port + dbname). */
 export function describeDatabaseTarget(databaseUrl: string): { host: string; database: string } {
     try {
         const url = new URL(databaseUrl);
-        return { host: url.hostname, database: url.pathname.replace(/^\//, "") || "(default)" };
+        return { host: url.host, database: url.pathname.replace(/^\//, "") || "(default)" };
     } catch {
         return { host: "(unparseable)", database: "(unparseable)" };
     }

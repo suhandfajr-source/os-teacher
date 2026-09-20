@@ -15,8 +15,9 @@ const REDACTED = "[REDACTED]";
 const MAX_STRING_LENGTH = 256;
 const MAX_DEPTH = 6;
 
-/** Substring, case-insensitive — "studentPin", "AUTH_TOKEN", "accessPinHash" all match. */
-const SENSITIVE_KEY_PATTERN = /pin|password|secret|token|hash|pepper|authorization|cookie/i;
+/** Substring, case-insensitive — "studentPin", "AUTH_TOKEN", "accessPinHash", "apiKey",
+ * "credential", "sessionId" all match. Errs towards over-redaction (safe direction). */
+const SENSITIVE_KEY_PATTERN = /pin|password|secret|token|hash|pepper|authorization|cookie|key|credential|session|otp|bearer|jwt/i;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
