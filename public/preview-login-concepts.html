@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KLASSA — 4 Opsi Visualisasi Artwork Kanan (Floating Master Card)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotateX(42deg) rotateZ(-22deg); }
+      50% { transform: translateY(-10px) rotateX(42deg) rotateZ(-22deg); }
+    }
+
+    @keyframes floatMid {
+      0%, 100% { transform: translateY(0px) rotateX(42deg) rotateZ(-22deg); }
+      50% { transform: translateY(-18px) rotateX(42deg) rotateZ(-22deg); }
+    }
+
+    @keyframes floatTop {
+      0%, 100% { transform: translateY(0px) rotateX(42deg) rotateZ(-22deg); }
+      50% { transform: translateY(-26px) rotateX(42deg) rotateZ(-22deg); }
+    }
+
+    @keyframes float3D {
+      0%, 100% { transform: translateY(0px) rotateY(-15deg) rotateX(10deg); }
+      50% { transform: translateY(-12px) rotateY(-10deg) rotateX(15deg); }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4)); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.8)); transform: scale(1.06); }
+    }
+
+    @keyframes spinOrbit {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes shimmerWave {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .shimmer-text {
+      background: linear-gradient(90deg, #0F766E 0%, #14B8A6 40%, #5EEAD4 50%, #14B8A6 60%, #0F766E 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      animation: shimmerWave 6s linear infinite;
+    }
+
+    .shimmer-text-emerald {
+      background: linear-gradient(90deg, #059669 0%, #10B981 40%, #6EE7B7 50%, #10B981 60%, #059669 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      animation: shimmerWave 6s linear infinite;
+    }
+
+    .isometric-container {
+      perspective: 1200px;
+      transform-style: preserve-3d;
+    }
+
+    .layer-bottom {
+      animation: floatSlow 6s ease-in-out infinite;
+      transform-style: preserve-3d;
+    }
+
+    .layer-middle {
+      animation: floatMid 6s ease-in-out infinite 0.6s;
+      transform-style: preserve-3d;
+    }
+
+    .layer-top {
+      animation: floatTop 6s ease-in-out infinite 1.2s;
+      transform-style: preserve-3d;
+    }
+
+    .anim-3d-floating {
+      animation: float3D 6s ease-in-out infinite;
+      transform-style: preserve-3d;
+    }
+
+    .glow-pulse-ai {
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+
+    .orbit-spin {
+      animation: spinOrbit 25s linear infinite;
+    }
+
+    .glass-card-shadow {
+      box-shadow: 0 30px 70px -15px rgba(15, 118, 110, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+    }
+  </style>
+</head>
+<body class="bg-[#EEF3F3] min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 lg:p-10 relative overflow-x-hidden selection:bg-teal-500 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- TOP TOOLBAR: CONTROL SWITCHER (4 PILIHAN ARTWORK KANAN)                    -->
+  <!-- ========================================================================= -->
+  <header class="w-full max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 z-30 bg-white/90 backdrop-blur-md px-5 py-3.5 rounded-3xl border border-slate-200/80 shadow-xs">
+    
+    <!-- Title & Info -->
+    <div class="flex items-center gap-3">
+      <div class="h-9 w-9 rounded-2xl bg-[#0F766E] text-white flex items-center justify-center font-black text-base shadow-xs">
+        K
+      </div>
+      <div>
+        <div class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+          <span>Pilihan Visualisasi Artwork Sisi Kanan</span>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-teal-100 text-teal-800">4 OPSI</span>
+        </div>
+        <div class="text-[11px] text-slate-500">Pilih opsi di samping untuk melihat perubahannya secara instan:</div>
+      </div>
+    </div>
+
+    <!-- 4 Concept Buttons -->
+    <div class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-2xl">
+      <button id="opt-1" onclick="switchArtwork(1)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0F766E] text-white shadow-xs">
+        💻 1. Layered Laptop
+      </button>
+      <button id="opt-2" onclick="switchArtwork(2)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 hover:bg-white/60">
+        🏛️ 2. 3D Monogram K
+      </button>
+      <button id="opt-3" onclick="switchArtwork(3)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 hover:bg-white/60">
+        📖 3. Hologram Book
+      </button>
+      <button id="opt-4" onclick="switchArtwork(4)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 hover:bg-white/60">
+        🚀 4. Modular Cockpit
+      </button>
+    </div>
+
+  </header>
+
+
+  <!-- ========================================================================= -->
+  <!-- MAIN FLOATING MASTER CARD CONTAINER                                       -->
+  <!-- ========================================================================= -->
+  <main class="w-full max-w-5xl bg-white rounded-[2.5rem] border border-slate-200/80 glass-card-shadow flex flex-col lg:flex-row overflow-hidden relative z-20 my-auto min-h-[640px] transition-all duration-300">
+
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <!-- SISI KIRI: FORM & BRANDING (KONSISTEN & BERSIH)                          -->
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <div class="w-full lg:w-[52%] p-8 sm:p-12 lg:p-14 flex flex-col justify-between z-10 bg-white">
+      
+      <!-- Top Brand Logo -->
+      <div>
+        <div class="flex items-center gap-2.5">
+          <svg class="w-7 h-7" viewBox="0 0 32 32" fill="none">
+            <path d="M4 7C4 5.34315 5.34315 4 7 4H9C10.6569 4 12 5.34315 12 7V25C12 26.6569 10.6569 28 9 28H7C5.34315 28 4 26.6569 4 25V7Z" fill="#0F766E"/>
+            <path d="M11 16L20.5 6.5C21.8807 5.11929 24.1193 5.11929 25.5 6.5C26.8807 7.88071 26.8807 8.11929 25.5 9.5L16 19" fill="#14B8A6"/>
+            <path d="M12 16L21.5 25.5C22.8807 26.8807 25.1193 26.8807 26.5 25.5C27.8807 24.1193 27.8807 23.8807 26.5 22.5L17 13" fill="#0F766E"/>
+            <path d="M22 3L23 5L25 6L23 7L22 9L21 7L19 6L21 5L22 3Z" fill="#6366F1"/>
+          </svg>
+          <div class="flex flex-col">
+            <span class="text-base font-extrabold tracking-tight text-slate-900 leading-none">KLASSA</span>
+            <span class="text-[9px] font-bold tracking-widest text-[#0F766E] uppercase">Naik Kelas Bersama</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Copy & Form -->
+      <div class="my-auto py-6 space-y-6 max-w-md">
+        
+        <!-- Header Text (User Exact Request) -->
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-[#0F766E] text-[11px] font-extrabold tracking-wider uppercase border border-teal-200/60">
+            <span class="w-1.5 h-1.5 rounded-full bg-teal-600 animate-pulse"></span>
+            <span>RUANG KERJA CERDAS GURU</span>
+          </div>
+
+          <h1 class="text-2xl sm:text-3xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+            Bantu Guru Naik Kelas, <br>
+            <span class="shimmer-text">Kurangi Rutinitas & Tingkatkan Produktivitas.</span>
+          </h1>
+
+          <p class="text-xs text-slate-500 leading-relaxed font-medium">
+            Otomatisasi presensi harian, draf modul ajar AI, dan rekap nilai resmi dalam satu ruang kerja terpadu.
+          </p>
+        </div>
+
+        <!-- Form Elements (Styled with Soft Pill Shape from Reference) -->
+        <form onsubmit="event.preventDefault(); alert('Simulasi Login Berhasil!');" class="space-y-3.5">
+          
+          <!-- Input Email -->
+          <div class="space-y-1">
+            <div class="relative">
+              <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <input
+                id="input-email"
+                type="email"
+                placeholder="nama@sekolah.sch.id"
+                value="guru.teladan@sekolah.sch.id"
+                required
+                class="w-full h-12 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Input Password with Eye Toggle -->
+          <div class="space-y-1">
+            <div class="relative">
+              <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+              <input
+                id="input-password"
+                type="password"
+                placeholder="Kata sandi akun"
+                value="password123"
+                required
+                class="w-full h-12 pl-11 pr-11 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+              />
+              <button
+                type="button"
+                onclick="togglePassword()"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Options Row (Remember me & Forgot Password) -->
+          <div class="flex items-center justify-between text-[11px] pt-1 text-slate-500 font-medium">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked class="w-3.5 h-3.5 rounded border-slate-300 text-teal-700 focus:ring-teal-500 accent-teal-700 cursor-pointer">
+              <span>Ingat sesi saya</span>
+            </label>
+            <a href="#" class="text-teal-700 hover:underline font-bold">Lupa kata sandi?</a>
+          </div>
+
+          <!-- Buttons Action Row -->
+          <div class="flex items-center gap-3 pt-2">
+            <button
+              id="btn-submit"
+              type="submit"
+              class="flex-1 h-12 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#14B8A6] hover:from-[#0D635C] hover:to-[#0F9E8E] text-white text-xs font-extrabold shadow-lg shadow-teal-700/25 hover:shadow-teal-700/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <span>Masuk ke Ruang Kerja</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+            <button
+              type="button"
+              onclick="alert('Membuka form pendaftaran...')"
+              class="px-5 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+            >
+              Daftar
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Bottom Micro Switcher -->
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <span>© 2026 KLASSA</span>
+        <a href="/parent/login" class="text-teal-700 font-bold hover:underline flex items-center gap-1">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span>Portal Orang Tua →</span>
+        </a>
+      </div>
+
+    </div>
+
+
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <!-- SISI KANAN: ORGANIC S-CURVE WAVE + 4 OPSI VISUALISASI ARTWORK           -->
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <div id="right-panel" class="w-full lg:w-[48%] relative flex items-center justify-center p-8 lg:p-12 overflow-hidden bg-gradient-to-br from-slate-50 to-teal-50/40 select-none">
+      
+      <!-- 1. PURE SVG ORGANIC S-CURVE WAVE BACKGROUND (EXACT FROM REFERENCE) -->
+      <div class="absolute inset-0 pointer-events-none z-0">
+        <svg class="w-full h-full preserve-3d" viewBox="0 0 500 640" fill="none" preserveAspectRatio="none">
+          <path
+            d="M 120 0 C 180 180, 20 380, 160 640 L 500 640 L 500 0 Z"
+            fill="url(#waveGradientSecondary)"
+            opacity="0.25"
+          />
+          <path
+            d="M 160 0 C 220 200, 40 400, 200 640 L 500 640 L 500 0 Z"
+            fill="url(#waveGradientPrimary)"
+          />
+
+          <defs>
+            <linearGradient id="waveGradientPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0F766E" />
+              <stop offset="60%" stop-color="#115E59" />
+              <stop offset="100%" stop-color="#042F2E" />
+            </linearGradient>
+            <linearGradient id="waveGradientSecondary" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#2DD4BF" />
+              <stop offset="100%" stop-color="#0F766E" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Ambient Glow Blobs -->
+      <div class="absolute top-10 right-10 w-64 h-64 bg-teal-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute bottom-10 right-20 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+
+      <!-- ========================================================================= -->
+      <!-- OPSI 1: LAYERED ISOMETRIC LAPTOP & MULTI-TIER GLASS WORKSPACE             -->
+      <!-- ========================================================================= -->
+      <div id="artwork-1" class="artwork-view relative z-10 w-full max-w-[360px] h-[340px] isometric-container flex items-center justify-center">
+
+        <!-- Layer 1: Base Database Sheet -->
+        <div class="absolute w-[280px] h-[170px] rounded-2xl bg-white/30 backdrop-blur-md border border-white/40 shadow-2xl layer-bottom p-3.5 flex flex-col justify-between text-white" style="bottom: 10px;">
+          <div class="flex items-center justify-between text-[10px] font-bold">
+            <span class="flex items-center gap-1.5"><i data-lucide="users" class="w-3.5 h-3.5 text-teal-300"></i> Database Siswa</span>
+            <span class="px-2 py-0.5 rounded bg-teal-500/40 text-teal-200">32 Siswa</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="h-2 w-full bg-white/20 rounded-full"></div>
+            <div class="h-2 w-3/4 bg-white/20 rounded-full"></div>
+            <div class="h-2 w-1/2 bg-white/20 rounded-full"></div>
+          </div>
+          <div class="text-[9px] text-teal-200/80 font-mono flex items-center justify-between">
+            <span>Presensi: 100% Hadir</span>
+            <span>NISN: 00849201</span>
+          </div>
+        </div>
+
+        <!-- Layer 2: AI Co-Pilot & Kurikulum Merdeka -->
+        <div class="absolute w-[300px] h-[180px] rounded-2xl bg-gradient-to-br from-indigo-500/40 to-teal-600/40 backdrop-blur-md border border-white/50 shadow-2xl layer-middle p-4 flex flex-col justify-between text-white" style="bottom: 50px;">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300 animate-pulse"></i>
+              <span class="text-[11px] font-extrabold text-white">AI Studio • Modul Ajar</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-400/40 text-indigo-100 border border-indigo-300/30">
+              Fase F Siap
+            </span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-white/10 border border-white/20 text-[10px] leading-tight text-indigo-100">
+            "Draf Rencana Pembelajaran Biologi & Rubrik Asesmen selesai disusun otomatis..."
+          </div>
+          <div class="flex items-center justify-between text-[9px] text-indigo-200 font-semibold">
+            <span>Kurikulum Merdeka</span>
+            <span>1-Klik Export .DOCX</span>
+          </div>
+        </div>
+
+        <!-- Layer 3: Top Laptop Screen -->
+        <div class="absolute w-[320px] h-[195px] rounded-2xl bg-white/95 backdrop-blur-lg border border-white shadow-2xl layer-top p-4 flex flex-col justify-between text-slate-800" style="bottom: 95px;">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-[10px] font-bold text-slate-600 ml-1">KLASSA OS Guru</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-md bg-teal-50 text-[#0F766E] text-[9px] font-bold border border-teal-200">
+              Sesi Aktif
+            </span>
+          </div>
+          <div class="space-y-2 py-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-extrabold text-slate-900">Biologi — XI RPL 1</span>
+              <span class="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded">07:30 WIB</span>
+            </div>
+            <div class="text-[10px] text-slate-500">Materi: Struktur Sel & Membran Plasma</div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
+              <div class="bg-[#0F766E] h-full w-[85%] rounded-full"></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-[9px] text-slate-400 pt-1 border-t border-slate-100">
+            <span>32/32 Siswa Tuntas</span>
+            <span class="font-bold text-[#0F766E]">Buka Rekap Excel →</span>
+          </div>
+        </div>
+
+        <!-- Floating Badge -->
+        <div class="absolute -bottom-2 right-2 z-20 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white text-[11px] font-bold text-[#0F766E] shadow-lg flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-teal-600"></i>
+          <span>Multi-Layer Workspace</span>
+        </div>
+      </div>
+
+
+      <!-- ========================================================================= -->
+      <!-- OPSI 2: 3D ISOMETRIC MONOGRAM "K" MONUMENT & AI PULSE ORBIT               -->
+      <!-- ========================================================================= -->
+      <div id="artwork-2" class="artwork-view hidden relative z-10 w-full max-w-[360px] h-[360px] flex items-center justify-center">
+        
+        <!-- Center Floating 3D Monogram Landmark -->
+        <div class="relative w-64 h-64 flex items-center justify-center anim-3d-floating">
+          
+          <!-- Outer Orbit Ring -->
+          <div class="absolute inset-0 rounded-full border border-teal-300/30 border-dashed orbit-spin pointer-events-none"></div>
+          
+          <!-- Orbiting Satellite 1: Sparkle AI -->
+          <div class="absolute top-2 right-4 px-3 py-1.5 rounded-2xl bg-indigo-600/90 text-white text-[10px] font-bold shadow-xl backdrop-blur-md flex items-center gap-1.5 border border-indigo-400/40 glow-pulse-ai">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
+            <span>AI Co-Pilot 4K</span>
+          </div>
+
+          <!-- Orbiting Satellite 2: Checkmark Presensi -->
+          <div class="absolute bottom-4 left-0 px-3 py-1.5 rounded-2xl bg-white/90 text-teal-900 text-[10px] font-bold shadow-xl backdrop-blur-md flex items-center gap-1.5 border border-white">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span>Presensi Tuntas</span>
+          </div>
+
+          <!-- 3D Monogram Vector Sculpture -->
+          <svg class="w-44 h-44 drop-shadow-[0_25px_35px_rgba(0,0,0,0.35)]" viewBox="0 0 200 200" fill="none">
+            <!-- Ambient Glow Base -->
+            <ellipse cx="100" cy="170" rx="60" ry="18" fill="black" opacity="0.35" filter="blur(8px)"/>
+            
+            <!-- 3D Vertical Pillar -->
+            <path d="M40 30 C40 24.4772 44.4772 20 50 20 H65 C70.5228 20 75 24.4772 75 30 V160 C75 165.523 70.5228 170 65 170 H50 C44.4772 170 40 165.523 40 160 V30 Z" fill="url(#pillarGrad)"/>
+            
+            <!-- 3D Upper Open Book Ribbon -->
+            <path d="M72 100 L135 35 C144 26 158 26 167 35 C176 44 176 58 167 67 L105 130 Z" fill="url(#upperWingGrad)"/>
+            
+            <!-- 3D Lower Checkmark Ribbon -->
+            <path d="M75 100 L140 165 C149 174 163 174 172 165 C181 156 181 142 172 133 L110 70 Z" fill="url(#lowerWingGrad)"/>
+            
+            <!-- 3D Floating Diamond Star (AI Sparkle) -->
+            <path d="M145 10 L152 24 L166 31 L152 38 L145 52 L138 38 L124 31 L138 24 Z" fill="#6366F1" filter="drop-shadow(0 0 8px #818CF8)"/>
+
+            <!-- Gradients -->
+            <defs>
+              <linearGradient id="pillarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#14B8A6" />
+                <stop offset="40%" stop-color="#0F766E" />
+                <stop offset="100%" stop-color="#042F2E" />
+              </linearGradient>
+              <linearGradient id="upperWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5EEAD4" />
+                <stop offset="50%" stop-color="#14B8A6" />
+                <stop offset="100%" stop-color="#0F766E" />
+              </linearGradient>
+              <linearGradient id="lowerWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2DD4BF" />
+                <stop offset="60%" stop-color="#0F766E" />
+                <stop offset="100%" stop-color="#042F2E" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+        </div>
+
+        <!-- Floating Caption -->
+        <div class="absolute -bottom-2 right-2 z-20 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white text-[11px] font-bold text-[#0F766E] shadow-lg flex items-center gap-1.5">
+          <i data-lucide="award" class="w-3.5 h-3.5 text-indigo-600"></i>
+          <span>Monogram K Landmark</span>
+        </div>
+      </div>
+
+
+      <!-- ========================================================================= -->
+      <!-- OPSI 3: 3D HOLOGRAPHIC OPEN WISDOM BOOK & CURRICULUM MATRIX              -->
+      <!-- ========================================================================= -->
+      <div id="artwork-3" class="artwork-view hidden relative z-10 w-full max-w-[360px] h-[360px] flex items-center justify-center">
+        
+        <div class="relative w-72 h-72 flex items-center justify-center anim-3d-floating">
+          
+          <!-- Base 3D Open Binder Book -->
+          <div class="absolute w-64 h-40 rounded-3xl bg-gradient-to-r from-teal-800 to-teal-900 border-2 border-teal-600 shadow-2xl p-4 flex justify-between text-white" style="transform: rotateX(50deg); bottom: 20px;">
+            <div class="w-1/2 border-r border-teal-700/80 pr-2 space-y-1">
+              <div class="h-2 w-3/4 bg-teal-400/40 rounded"></div>
+              <div class="h-1.5 w-full bg-teal-500/20 rounded"></div>
+              <div class="h-1.5 w-full bg-teal-500/20 rounded"></div>
+            </div>
+            <div class="w-1/2 pl-2 space-y-1">
+              <div class="h-2 w-3/4 bg-teal-400/40 rounded"></div>
+              <div class="h-1.5 w-full bg-teal-500/20 rounded"></div>
+              <div class="h-1.5 w-full bg-teal-500/20 rounded"></div>
+            </div>
+          </div>
+
+          <!-- Holographic 3D Floating Glass Matrix emanating from the book -->
+          <div class="absolute w-[290px] h-[190px] rounded-2xl bg-white/90 backdrop-blur-xl border border-white shadow-2xl p-4 flex flex-col justify-between text-slate-800" style="bottom: 70px;">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-teal-100 text-[#0F766E] flex items-center justify-center">
+                  <i data-lucide="book-open-check" class="w-3.5 h-3.5"></i>
+                </div>
+                <span class="text-xs font-bold text-slate-900">Alur Tujuan Pembelajaran (ATP)</span>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-teal-100 text-[#0F766E]">Merdeka</span>
+            </div>
+
+            <div class="space-y-1.5">
+              <div class="p-2 rounded-xl bg-teal-50/70 border border-teal-100 text-[10px] text-teal-900 flex items-center justify-between">
+                <span>TP 1: Fisiologi & Struktur Membran</span>
+                <span class="font-bold text-emerald-600">✓ Tuntas</span>
+              </div>
+              <div class="p-2 rounded-xl bg-slate-50 border border-slate-100 text-[10px] text-slate-700 flex items-center justify-between">
+                <span>TP 2: Transport Aktif & Pasif</span>
+                <span class="font-bold text-[#0F766E]">Sedang Diajar</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-[9px] text-slate-400 pt-1">
+              <span>Fase F • Kelas XI</span>
+              <span class="font-bold text-[#0F766E]">Sinkron RPP & Nilai →</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Floating Caption -->
+        <div class="absolute -bottom-2 right-2 z-20 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white text-[11px] font-bold text-[#0F766E] shadow-lg flex items-center gap-1.5">
+          <i data-lucide="book-open" class="w-3.5 h-3.5 text-teal-600"></i>
+          <span>Hologram Open Book</span>
+        </div>
+      </div>
+
+
+      <!-- ========================================================================= -->
+      <!-- OPSI 4: 3D MODULAR TEACHER'S COCKPIT DESK PLATFORM                        -->
+      <!-- ========================================================================= -->
+      <div id="artwork-4" class="artwork-view hidden relative z-10 w-full max-w-[360px] h-[360px] flex items-center justify-center">
+        
+        <div class="relative w-80 h-80 flex items-center justify-center anim-3d-floating">
+          
+          <!-- Isometric Desk Base -->
+          <div class="absolute w-72 h-48 rounded-3xl bg-gradient-to-br from-white/40 to-teal-900/30 backdrop-blur-md border border-white/40 shadow-2xl p-4" style="transform: rotateX(55deg) rotateZ(-25deg); bottom: 10px;">
+            <div class="w-full h-full border border-teal-300/30 rounded-2xl grid grid-cols-3 gap-2 p-2">
+              <div class="bg-white/20 rounded-lg"></div>
+              <div class="bg-white/20 rounded-lg"></div>
+              <div class="bg-white/20 rounded-lg"></div>
+            </div>
+          </div>
+
+          <!-- Main Floating Tablet (Daily Command Center) -->
+          <div class="absolute w-60 h-36 rounded-2xl bg-slate-900 text-white border-2 border-slate-700 shadow-2xl p-3 flex flex-col justify-between" style="bottom: 85px; left: 15px; transform: rotateX(25deg) rotateY(15deg);">
+            <div class="flex items-center justify-between text-[10px]">
+              <span class="font-bold text-teal-300">Jadwal Mengajar Hari Ini</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            </div>
+            <div class="space-y-1 text-center py-1">
+              <div class="text-xs font-bold text-white">Biologi XI RPL 1</div>
+              <div class="text-[10px] text-slate-400">07:30 - 09:00 WIB • Lab 2</div>
+            </div>
+            <div class="flex items-center justify-between text-[9px] text-slate-400 border-t border-slate-800 pt-1">
+              <span>Presensi 1-Klik</span>
+              <span class="text-teal-400 font-bold">Mulai Kelas</span>
+            </div>
+          </div>
+
+          <!-- Floating AI Crystal Orb -->
+          <div class="absolute w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 via-teal-400 to-white shadow-2xl flex items-center justify-center glow-pulse-ai" style="bottom: 130px; right: 25px;">
+            <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
+          </div>
+
+          <!-- Floating Report Sheet Badge -->
+          <div class="absolute w-44 rounded-xl bg-white/95 backdrop-blur-md border border-white shadow-xl p-2.5 text-slate-800" style="bottom: 25px; right: 5px;">
+            <div class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-800">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-600"></i>
+              <span>Rekap Nilai .XLSX</span>
+            </div>
+            <div class="text-[9px] text-slate-500 mt-0.5">Siap tanda tangan kepsek</div>
+          </div>
+
+        </div>
+
+        <!-- Floating Caption -->
+        <div class="absolute -bottom-2 right-2 z-20 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white text-[11px] font-bold text-[#0F766E] shadow-lg flex items-center gap-1.5">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-teal-600"></i>
+          <span>Modular Cockpit Desk</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- ========================================================================= -->
+  <!-- FOOTER DESKRIPSI & RINGKASAN                                              -->
+  <!-- ========================================================================= -->
+  <footer class="w-full max-w-5xl text-center text-xs text-slate-400 mt-6 z-20 space-y-1">
+    <div>Adaptasi Desain: <strong>Floating Master Card + Organic Wave + 3D Interactive Artworks</strong></div>
+    <div>Klik 4 tombol di bagian atas untuk menguji dan membandingkan masing-masing konsep visual!</div>
+  </footer>
+
+
+  <!-- ========================================================================= -->
+  <!-- SCRIPT SWITCHER CONTROLLER                                                -->
+  <!-- ========================================================================= -->
+  <script>
+    lucide.createIcons();
+
+    let passwordVisible = false;
+
+    function togglePassword() {
+      passwordVisible = !passwordVisible;
+      const pwdInput = document.getElementById('input-password');
+      const eyeIcon = document.getElementById('eye-icon');
+      if (passwordVisible) {
+        pwdInput.type = 'text';
+        eyeIcon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        pwdInput.type = 'password';
+        eyeIcon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    function switchArtwork(optionNum) {
+      // Hide all artworks
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById('artwork-' + i);
+        const btn = document.getElementById('opt-' + i);
+        if (el) el.classList.add('hidden');
+        if (btn) {
+          btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 hover:bg-white/60';
+        }
+      }
+
+      // Show selected
+      const activeEl = document.getElementById('artwork-' + optionNum);
+      const activeBtn = document.getElementById('opt-' + optionNum);
+      if (activeEl) activeEl.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0F766E] text-white shadow-xs';
+      }
+
+      lucide.createIcons();
+    }
+
+    // 3D Parallax Mouse Controller for Right Panel
+    const rightPanel = document.getElementById('right-panel');
+    rightPanel.addEventListener('mousemove', (e) => {
+      const rect = rightPanel.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      const activeView = document.querySelector('.artwork-view:not(.hidden)');
+      if (activeView) {
+        activeView.style.transform = `rotateY(${x * 18}deg) rotateX(${-y * 18}deg) scale(1.03)`;
+      }
+    });
+
+    rightPanel.addEventListener('mouseleave', () => {
+      const activeView = document.querySelector('.artwork-view:not(.hidden)');
+      if (activeView) {
+        activeView.style.transform = `rotateY(0deg) rotateX(0deg) scale(1)`;
+      }
+    });
+  </script>
+</body>
+</html>

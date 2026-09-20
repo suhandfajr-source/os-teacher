@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KLASSA — Preview Desain Login (Floating Master Card & Layered Wave)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotateX(45deg) rotateZ(-25deg); }
+      50% { transform: translateY(-10px) rotateX(45deg) rotateZ(-25deg); }
+    }
+
+    @keyframes floatMid {
+      0%, 100% { transform: translateY(0px) rotateX(45deg) rotateZ(-25deg); }
+      50% { transform: translateY(-16px) rotateX(45deg) rotateZ(-25deg); }
+    }
+
+    @keyframes floatTop {
+      0%, 100% { transform: translateY(0px) rotateX(45deg) rotateZ(-25deg); }
+      50% { transform: translateY(-22px) rotateX(45deg) rotateZ(-25deg); }
+    }
+
+    @keyframes shimmerWave {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .shimmer-text {
+      background: linear-gradient(90deg, #0F766E 0%, #14B8A6 40%, #5EEAD4 50%, #14B8A6 60%, #0F766E 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      animation: shimmerWave 6s linear infinite;
+    }
+
+    .shimmer-text-emerald {
+      background: linear-gradient(90deg, #059669 0%, #10B981 40%, #6EE7B7 50%, #10B981 60%, #059669 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      animation: shimmerWave 6s linear infinite;
+    }
+
+    .isometric-container {
+      perspective: 1200px;
+      transform-style: preserve-3d;
+    }
+
+    .layer-bottom {
+      animation: floatSlow 6s ease-in-out infinite;
+      transform-style: preserve-3d;
+    }
+
+    .layer-middle {
+      animation: floatMid 6s ease-in-out infinite 0.5s;
+      transform-style: preserve-3d;
+    }
+
+    .layer-top {
+      animation: floatTop 6s ease-in-out infinite 1s;
+      transform-style: preserve-3d;
+    }
+
+    .glass-card-shadow {
+      box-shadow: 0 30px 60px -15px rgba(15, 118, 110, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+    }
+  </style>
+</head>
+<body class="bg-[#EEF3F3] min-h-screen flex flex-col justify-between items-center p-4 sm:p-6 lg:p-10 relative overflow-x-hidden selection:bg-teal-500 selection:text-white">
+
+  <!-- ========================================================================= -->
+  <!-- TOP TOOLBAR: CONTROL SWITCHER (GURU VS ORANG TUA / LOGIN VS REGISTER)    -->
+  <!-- ========================================================================= -->
+  <header class="w-full max-w-5xl flex flex-wrap items-center justify-between gap-4 mb-6 z-30 bg-white/80 backdrop-blur-md px-5 py-3 rounded-2xl border border-slate-200/80 shadow-xs">
+    <div class="flex items-center gap-3">
+      <div class="h-8 w-8 rounded-xl bg-teal-700 text-white flex items-center justify-center font-black text-sm shadow-xs">
+        K
+      </div>
+      <div>
+        <div class="text-xs font-bold text-slate-900">Preview Desain Login KLASSA</div>
+        <div class="text-[11px] text-slate-500">Gaya: Floating Master Card & Layered Isometric Wave</div>
+      </div>
+    </div>
+
+    <!-- Toggle Buttons -->
+    <div class="flex items-center gap-2">
+      <button id="btn-portal-guru" onclick="setPortal('guru')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-teal-700 text-white shadow-xs">
+        👨‍🏫 Portal Guru
+      </button>
+      <button id="btn-portal-parent" onclick="setPortal('parent')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
+        👨‍👩‍👧 Portal Orang Tua
+      </button>
+    </div>
+  </header>
+
+
+  <!-- ========================================================================= -->
+  <!-- MAIN FLOATING MASTER CARD CONTAINER (INSPIRED BY REFERENCE)               -->
+  <!-- ========================================================================= -->
+  <main class="w-full max-w-5xl bg-white rounded-[2.5rem] border border-slate-200/80 glass-card-shadow flex flex-col lg:flex-row overflow-hidden relative z-20 my-auto min-h-[640px] transition-all duration-300">
+
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <!-- SISI KIRI: FORM & IDENTITY                                              -->
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <div class="w-full lg:w-[52%] p-8 sm:p-12 lg:p-14 flex flex-col justify-between z-10 bg-white">
+      
+      <!-- Top Brand Logo -->
+      <div>
+        <div class="flex items-center gap-2.5">
+          <svg class="w-7 h-7" viewBox="0 0 32 32" fill="none">
+            <path d="M4 7C4 5.34315 5.34315 4 7 4H9C10.6569 4 12 5.34315 12 7V25C12 26.6569 10.6569 28 9 28H7C5.34315 28 4 26.6569 4 25V7Z" fill="#0F766E"/>
+            <path d="M11 16L20.5 6.5C21.8807 5.11929 24.1193 5.11929 25.5 6.5C26.8807 7.88071 26.8807 8.11929 25.5 9.5L16 19" fill="#14B8A6"/>
+            <path d="M12 16L21.5 25.5C22.8807 26.8807 25.1193 26.8807 26.5 25.5C27.8807 24.1193 27.8807 23.8807 26.5 22.5L17 13" fill="#0F766E"/>
+            <path d="M22 3L23 5L25 6L23 7L22 9L21 7L19 6L21 5L22 3Z" fill="#6366F1"/>
+          </svg>
+          <div class="flex flex-col">
+            <span class="text-base font-extrabold tracking-tight text-slate-900 leading-none">KLASSA</span>
+            <span class="text-[9px] font-bold tracking-widest text-[#0F766E] uppercase">Naik Kelas Bersama</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Copy & Form -->
+      <div class="my-auto py-6 space-y-6 max-w-md">
+        
+        <!-- Header Text -->
+        <div class="space-y-2">
+          <div id="hero-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-[#0F766E] text-[11px] font-extrabold tracking-wider uppercase border border-teal-200/60">
+            <span class="w-1.5 h-1.5 rounded-full bg-teal-600 animate-pulse"></span>
+            <span id="txt-kicker">RUANG KERJA CERDAS GURU</span>
+          </div>
+
+          <h1 id="txt-headline" class="text-2xl sm:text-3xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+            Bantu Guru Naik Kelas, <br>
+            <span class="shimmer-text">Kurangi Rutinitas & Tingkatkan Produktivitas.</span>
+          </h1>
+
+          <p id="txt-subheadline" class="text-xs text-slate-500 leading-relaxed font-medium">
+            Otomatisasi presensi harian, draf modul ajar AI, dan rekap nilai resmi dalam satu ruang kerja terpadu.
+          </p>
+        </div>
+
+        <!-- Form Elements (Styled with Soft Pill Shape from Reference) -->
+        <form onsubmit="event.preventDefault(); alert('Simulasi Login Berhasil!');" class="space-y-3.5">
+          
+          <!-- Input Email -->
+          <div class="space-y-1">
+            <div class="relative">
+              <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <i data-lucide="mail" class="w-4 h-4"></i>
+              </div>
+              <input
+                id="input-email"
+                type="email"
+                placeholder="nama@sekolah.sch.id"
+                value="guru.teladan@sekolah.sch.id"
+                required
+                class="w-full h-12 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+              />
+            </div>
+          </div>
+
+          <!-- Input Password with Eye Toggle -->
+          <div class="space-y-1">
+            <div class="relative">
+              <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+              </div>
+              <input
+                id="input-password"
+                type="password"
+                placeholder="Kata sandi akun"
+                value="password123"
+                required
+                class="w-full h-12 pl-11 pr-11 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+              />
+              <button
+                type="button"
+                onclick="togglePassword()"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                <i id="eye-icon" data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Options Row (Remember me & Forgot Password) -->
+          <div class="flex items-center justify-between text-[11px] pt-1 text-slate-500 font-medium">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked class="w-3.5 h-3.5 rounded border-slate-300 text-teal-700 focus:ring-teal-500 accent-teal-700 cursor-pointer">
+              <span>Ingat sesi saya</span>
+            </label>
+            <a href="#" class="text-teal-700 hover:underline font-bold">Lupa kata sandi?</a>
+          </div>
+
+          <!-- Buttons Action Row -->
+          <div class="flex items-center gap-3 pt-2">
+            <button
+              id="btn-submit"
+              type="submit"
+              class="flex-1 h-12 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#14B8A6] hover:from-[#0D635C] hover:to-[#0F9E8E] text-white text-xs font-extrabold shadow-lg shadow-teal-700/25 hover:shadow-teal-700/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <span id="btn-text">Masuk ke Ruang Kerja</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+            <button
+              type="button"
+              onclick="alert('Membuka form pendaftaran...')"
+              class="px-5 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
+            >
+              Daftar
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Bottom Micro Switcher -->
+      <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <span>© 2026 KLASSA</span>
+        <button id="btn-switch-bottom" onclick="togglePortal()" class="text-teal-700 font-bold hover:underline flex items-center gap-1">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          <span id="txt-switch">Bukan guru? Masuk Portal Orang Tua →</span>
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <!-- SISI KANAN: ORGANIC S-CURVE WAVE + LAYERED 3D ISOMETRIC TEACHING DECK   -->
+    <!-- ─────────────────────────────────────────────────────────────────────── -->
+    <div id="right-panel" class="w-full lg:w-[48%] relative flex items-center justify-center p-8 lg:p-12 overflow-hidden bg-gradient-to-br from-slate-50 to-teal-50/40">
+      
+      <!-- 1. PURE SVG ORGANIC S-CURVE WAVE BACKGROUND (EXACT FROM REFERENCE) -->
+      <div class="absolute inset-0 pointer-events-none z-0">
+        <svg class="w-full h-full preserve-3d" viewBox="0 0 500 640" fill="none" preserveAspectRatio="none">
+          <!-- Background Wave Shadow -->
+          <path
+            d="M 120 0 C 180 180, 20 380, 160 640 L 500 640 L 500 0 Z"
+            fill="url(#waveGradientSecondary)"
+            opacity="0.25"
+          />
+          <!-- Main S-Curve Ribbon Wave -->
+          <path
+            id="main-wave-path"
+            d="M 160 0 C 220 200, 40 400, 200 640 L 500 640 L 500 0 Z"
+            fill="url(#waveGradientPrimary)"
+          />
+
+          <!-- Gradient Definitions -->
+          <defs>
+            <linearGradient id="waveGradientPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0F766E" />
+              <stop offset="60%" stop-color="#115E59" />
+              <stop offset="100%" stop-color="#042F2E" />
+            </linearGradient>
+            <linearGradient id="waveGradientSecondary" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#2DD4BF" />
+              <stop offset="100%" stop-color="#0F766E" />
+            </linearGradient>
+            <linearGradient id="emeraldPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#059669" />
+              <stop offset="60%" stop-color="#047857" />
+              <stop offset="100%" stop-color="#064E3B" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      <!-- Ambient Glow Blobs -->
+      <div class="absolute top-10 right-10 w-64 h-64 bg-teal-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute bottom-10 right-20 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- 2. LAYERED ISOMETRIC 3D TEACHING WORKSPACE DECK -->
+      <div id="isometric-deck" class="relative z-10 w-full max-w-[360px] h-[340px] isometric-container flex items-center justify-center">
+
+        <!-- ================= LAYER 1: BASE DATA STACK (PRESENSI & SISWA) ================= -->
+        <div class="absolute w-[280px] h-[170px] rounded-2xl bg-white/30 backdrop-blur-md border border-white/40 shadow-2xl layer-bottom p-3 flex flex-col justify-between text-white" style="bottom: 10px;">
+          <div class="flex items-center justify-between text-[10px] font-bold">
+            <span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3 text-teal-300"></i> Database Siswa</span>
+            <span class="px-1.5 py-0.5 rounded bg-teal-500/40 text-teal-200">32 Siswa</span>
+          </div>
+          <div class="space-y-1.5">
+            <div class="h-2 w-full bg-white/20 rounded-full"></div>
+            <div class="h-2 w-3/4 bg-white/20 rounded-full"></div>
+            <div class="h-2 w-1/2 bg-white/20 rounded-full"></div>
+          </div>
+          <div class="text-[9px] text-teal-200/80 font-mono flex items-center justify-between">
+            <span>Presensi: 100% Hadir</span>
+            <span>NISN: 00849201</span>
+          </div>
+        </div>
+
+        <!-- ================= LAYER 2: AI CO-PILOT & KURIKULUM MERDEKA ================= -->
+        <div class="absolute w-[300px] h-[180px] rounded-2xl bg-gradient-to-br from-indigo-500/40 to-teal-600/40 backdrop-blur-md border border-white/50 shadow-2xl layer-middle p-4 flex flex-col justify-between text-white" style="bottom: 50px;">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-300 animate-pulse"></i>
+              <span class="text-[11px] font-extrabold text-white">AI Studio • Modul Ajar</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-400/40 text-indigo-100 border border-indigo-300/30">
+              Fase F Siap
+            </span>
+          </div>
+          <div class="p-2 rounded-xl bg-white/10 border border-white/20 text-[10px] leading-tight text-indigo-100">
+            "Draf Rencana Pembelajaran Biologi & Rubrik Asesmen selesai disusun otomatis..."
+          </div>
+          <div class="flex items-center justify-between text-[9px] text-indigo-200 font-semibold">
+            <span>Kurikulum Merdeka</span>
+            <span>1-Klik Export .DOCX</span>
+          </div>
+        </div>
+
+        <!-- ================= LAYER 3: TOP LAPTOP WORKSPACE ================= -->
+        <div class="absolute w-[320px] h-[195px] rounded-2xl bg-white/95 backdrop-blur-lg border border-white shadow-2xl layer-top p-4 flex flex-col justify-between text-slate-800" style="bottom: 95px;">
+          
+          <!-- Top Laptop Header Bar -->
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span class="text-[10px] font-bold text-slate-600 ml-1">KLASSA OS Guru</span>
+            </div>
+            <span class="px-2 py-0.5 rounded-md bg-teal-50 text-[#0F766E] text-[9px] font-bold border border-teal-200">
+              Sesi Aktif
+            </span>
+          </div>
+
+          <!-- Screen Mini Content -->
+          <div class="space-y-2 py-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-extrabold text-slate-900">Biologi — XI RPL 1</span>
+              <span class="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded">07:30 WIB</span>
+            </div>
+            <div class="text-[10px] text-slate-500">Materi: Struktur Sel & Membran Plasma</div>
+            
+            <!-- Live Progress Bar -->
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
+              <div class="bg-[#0F766E] h-full w-[85%] rounded-full"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Action in Screen -->
+          <div class="flex items-center justify-between text-[9px] text-slate-400 pt-1 border-t border-slate-100">
+            <span>32/32 Siswa Tuntas</span>
+            <span class="font-bold text-[#0F766E]">Buka Rekap Excel →</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Floating Pill Badge on Canvas -->
+      <div class="absolute bottom-6 right-6 z-20 px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white text-[11px] font-bold text-[#0F766E] shadow-lg flex items-center gap-1.5 animate-bounce" style="animation-duration: 4s;">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-teal-600"></i>
+        <span>Workspace Guru Modern</span>
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- ========================================================================= -->
+  <!-- FOOTER DESCRIPTION & GUIDE                                                -->
+  <!-- ========================================================================= -->
+  <footer class="text-center text-xs text-slate-400 mt-6 z-20 space-y-1">
+    <div>Adaptasi Desain Referensi: <strong>Floating Master Card, Organic S-Curve & Layered 3D Isometric Deck</strong></div>
+    <div>100% Pure Vector SVG & CSS 3D GPU Accelerated &bull; Zero Heavy Bitmap</div>
+  </footer>
+
+
+  <!-- ========================================================================= -->
+  <!-- INTERACTIVE JS CONTROLLER (PARALLAX + THEME SWITCHER + TOGGLE PASSWORD)  -->
+  <!-- ========================================================================= -->
+  <script>
+    lucide.createIcons();
+
+    let currentPortal = 'guru';
+    let passwordVisible = false;
+
+    function togglePassword() {
+      passwordVisible = !passwordVisible;
+      const pwdInput = document.getElementById('input-password');
+      const eyeIcon = document.getElementById('eye-icon');
+      if (passwordVisible) {
+        pwdInput.type = 'text';
+        eyeIcon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        pwdInput.type = 'password';
+        eyeIcon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
+    }
+
+    function setPortal(type) {
+      currentPortal = type;
+      const btnGuru = document.getElementById('btn-portal-guru');
+      const btnParent = document.getElementById('btn-portal-parent');
+      const kicker = document.getElementById('txt-kicker');
+      const headline = document.getElementById('txt-headline');
+      const subheadline = document.getElementById('txt-subheadline');
+      const emailInput = document.getElementById('input-email');
+      const btnText = document.getElementById('btn-text');
+      const txtSwitch = document.getElementById('txt-switch');
+      const wavePath = document.getElementById('main-wave-path');
+      const btnSubmit = document.getElementById('btn-submit');
+
+      if (type === 'parent') {
+        btnParent.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-emerald-700 text-white shadow-xs';
+        btnGuru.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200';
+        
+        kicker.textContent = 'PORTAL ORANG TUA & WALI MURID';
+        headline.innerHTML = 'Bantu Buah Hati Anda <br><span class="shimmer-text-emerald">"Naik Kelas."</span>';
+        subheadline.textContent = 'Dampingi setiap langkah tumbuh kembang anak dengan pemantauan kehadiran tepat waktu dan capaian belajar berkala.';
+        emailInput.placeholder = 'nama.orangtua@email.com';
+        emailInput.value = 'rina.kusuma@email.com';
+        btnText.textContent = 'Masuk sebagai Orang Tua';
+        txtSwitch.textContent = 'Anda seorang Guru? Masuk Ruang Kerja Guru →';
+        
+        wavePath.setAttribute('fill', 'url(#emeraldPrimary)');
+        btnSubmit.className = 'flex-1 h-12 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-extrabold shadow-lg shadow-emerald-700/25 hover:shadow-emerald-700/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2';
+      } else {
+        btnGuru.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-teal-700 text-white shadow-xs';
+        btnParent.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 text-slate-600 hover:bg-slate-200';
+        
+        kicker.textContent = 'RUANG KERJA CERDAS GURU';
+        headline.innerHTML = 'Bantu Guru Naik Kelas, <br><span class="shimmer-text">Kurangi Rutinitas & Tingkatkan Produktivitas.</span>';
+        subheadline.textContent = 'Otomatisasi presensi harian, draf modul ajar AI, dan rekap nilai resmi dalam satu ruang kerja terpadu.';
+        emailInput.placeholder = 'nama@sekolah.sch.id';
+        emailInput.value = 'guru.teladan@sekolah.sch.id';
+        btnText.textContent = 'Masuk ke Ruang Kerja';
+        txtSwitch.textContent = 'Bukan guru? Masuk Portal Orang Tua →';
+        
+        wavePath.setAttribute('fill', 'url(#waveGradientPrimary)');
+        btnSubmit.className = 'flex-1 h-12 rounded-2xl bg-gradient-to-r from-[#0F766E] to-[#14B8A6] hover:from-[#0D635C] hover:to-[#0F9E8E] text-white text-xs font-extrabold shadow-lg shadow-teal-700/25 hover:shadow-teal-700/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2';
+      }
+      lucide.createIcons();
+    }
+
+    function togglePortal() {
+      if (currentPortal === 'guru') {
+        setPortal('parent');
+      } else {
+        setPortal('guru');
+      }
+    }
+
+    // Interactive 3D Parallax Mouse Motion on Isometric Deck
+    const rightPanel = document.getElementById('right-panel');
+    const deck = document.getElementById('isometric-deck');
+
+    rightPanel.addEventListener('mousemove', (e) => {
+      const rect = rightPanel.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      deck.style.transform = `rotateY(${x * 15}deg) rotateX(${-y * 15}deg) scale(1.02)`;
+    });
+
+    rightPanel.addEventListener('mouseleave', () => {
+      deck.style.transform = `rotateY(0deg) rotateX(0deg) scale(1)`;
+    });
+  </script>
+</body>
+</html>

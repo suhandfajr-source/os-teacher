@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KLASSA — Studio Perbandingan & Rekomendasi Font UI</title>
+  <link rel="icon" type="image/svg+xml" href="brand/klassa-mark.svg">
+  
+  <!-- Google Fonts: Plus Jakarta Sans, Outfit, Figtree, Manrope, Urbanist, Inter, DM Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&family=Figtree:ital,wght@0,400..900;1,400..900&family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=Urbanist:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+            outfit: ['"Outfit"', 'sans-serif'],
+            figtree: ['"Figtree"', 'sans-serif'],
+            manrope: ['"Manrope"', 'sans-serif'],
+            urbanist: ['"Urbanist"', 'sans-serif'],
+            dmsans: ['"DM Sans"', 'sans-serif'],
+            inter: ['"Inter"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              pine: '#0F766E',      /* Deep Pine Teal */
+              pineDark: '#115E59',
+              pineDeep: '#042F2E',
+              mint: '#CCFBF1',      /* Soft Mint */
+              mintLight: '#F0FDFA',
+              pearl: '#F4F7F6',     /* Soft Pearl Inset Canvas */
+              aiIndigo: '#6366F1',  /* AI Sparkle Indigo */
+            }
+          },
+          boxShadow: {
+            'card': '0 10px 25px -4px rgba(15, 23, 42, 0.04), 0 4px 10px -2px rgba(15, 23, 42, 0.02)',
+            'card-hover': '0 20px 35px -6px rgba(15, 118, 110, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.04)',
+            'floating-badge': '0 10px 20px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            'pill-glow': '0 8px 20px -4px rgba(15, 118, 110, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #EBF1F6;
+      background-image: 
+        radial-gradient(at 15% 15%, rgba(204, 251, 241, 0.6) 0px, transparent 50%),
+        radial-gradient(at 85% 85%, rgba(224, 231, 255, 0.6) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+    .active-font-btn {
+      background-color: #0F766E !important;
+      color: #FFFFFF !important;
+      box-shadow: 0 8px 20px -4px rgba(15, 118, 110, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 lg:p-12 font-jakarta text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
+
+  <!-- HEADER STUDIO -->
+  <header class="max-w-7xl mx-auto mb-10 text-center space-y-3">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-bold uppercase tracking-wider shadow-xs">
+      <i data-lucide="type" class="w-4 h-4 text-teal-700"></i>
+      KLASSA Typography Exploration Studio • 6 Pilihan Font Premium
+    </div>
+    <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+      Eksplorasi & Perbandingan <span class="text-teal-700">Font UI</span>
+    </h1>
+    <p class="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
+      Pilih dan uji keterbacaan font langsung pada kartu dashboard, angka nilai, dan istilah kurikulum guru.
+    </p>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- 1. INTERACTIVE LIVE DASHBOARD SWITCHER                                   -->
+  <!-- ========================================================================= -->
+  <section class="max-w-7xl mx-auto bg-white rounded-3xl sm:rounded-4xl p-6 sm:p-10 border border-white/80 shadow-xl space-y-6 mb-12">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+      <div>
+        <span class="text-xs font-bold text-teal-800 uppercase tracking-wider block mb-1">
+          🔴 Uji Coba Interaktif Langsung
+        </span>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+          Uji Font pada Dashboard Nyata: <span id="current-font-label" class="text-teal-700 font-extrabold">Plus Jakarta Sans</span>
+        </h2>
+        <p class="text-xs text-slate-500 mt-1">
+          Klik tombol font di bawah untuk mengubah seluruh font kartu dashboard secara instan:
+        </p>
+      </div>
+
+      <!-- FONT SWITCHER PILLS -->
+      <div class="flex flex-wrap gap-2">
+        <button onclick="switchGlobalFont('jakarta', 'Plus Jakarta Sans (Default Master)')" id="btn-jakarta" class="font-btn active-font-btn px-4 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all">
+          1. Plus Jakarta Sans ⭐
+        </button>
+        <button onclick="switchGlobalFont('outfit', 'Outfit (Modern & Trendy)')" id="btn-outfit" class="font-btn px-4 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-outfit">
+          2. Outfit 🚀
+        </button>
+        <button onclick="switchGlobalFont('figtree', 'Figtree (Friendly SaaS)')" id="btn-figtree" class="font-btn px-4 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-figtree">
+          3. Figtree 🌿
+        </button>
+        <button onclick="switchGlobalFont('manrope', 'Manrope (Readable & Clean)')" id="btn-manrope" class="font-btn px-4 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-manrope">
+          4. Manrope 📖
+        </button>
+        <button onclick="switchGlobalFont('urbanist', 'Urbanist (Digital & Sharp)')" id="btn-urbanist" class="font-btn px-4 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-urbanist">
+          5. Urbanist ⚡
+        </button>
+        <button onclick="switchGlobalFont('inter', 'Inter (Technical Precision)')" id="btn-inter" class="font-btn px-4 py-2 rounded-full text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-inter">
+          6. Inter ⚙️
+        </button>
+      </div>
+    </div>
+
+    <!-- LIVE DEMO CONTAINER -->
+    <div id="live-demo-box" class="font-jakarta bg-brand-pearl p-6 sm:p-8 rounded-3xl border border-slate-200/60 transition-all space-y-8">
+      
+      <!-- Mini Header Demo -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-2xl font-black text-slate-900 tracking-tight">
+            Ruang Kerja Guru — SMP Negeri 1 Madani
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Semester Genap 2026/2027 • Kurikulum Merdeka • 8 Rombongan Belajar Aktif
+          </p>
+        </div>
+        <div class="inline-flex p-1 bg-white rounded-full border border-slate-200/80 shadow-2xs gap-1">
+          <button class="px-3.5 py-1.5 rounded-full text-xs font-bold bg-teal-700 text-white shadow-xs">
+            Semua Kelas (8)
+          </button>
+          <button class="px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-600">
+            Jadwal Hari Ini (3)
+          </button>
+        </div>
+      </div>
+
+      <!-- 3 Sample Cards in Selected Font -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        
+        <!-- CARD 1: IPA TERPADU -->
+        <div class="bg-white rounded-3xl p-6 pt-9 shadow-card border border-slate-100 relative flex flex-col justify-between">
+          <div class="absolute -top-5 left-6 w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-400 text-white flex items-center justify-center shadow-floating-badge">
+            <i data-lucide="microscope" class="w-6 h-6"></i>
+          </div>
+          <div class="flex items-center justify-end mb-2">
+            <span class="text-[11px] font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
+              09.15 - 10.45 WIB
+            </span>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base font-extrabold text-slate-900">Kelas 8-B — IPA Terpadu</h4>
+            <p class="text-xs text-slate-500">Wali Kelas: Bu Sarah Fahira, S.Pd.</p>
+            <p class="text-xs font-bold text-teal-700 pt-1">Bab 5: Pengukuran Kalor & Termodinamika</p>
+          </div>
+          <div class="my-4 border-t border-slate-100"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-600">32 Siswa Terdaftar</span>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 font-semibold block uppercase">Ketuntasan TP</span>
+              <span class="text-sm font-black text-teal-700">92.5%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: MATEMATIKA -->
+        <div class="bg-white rounded-3xl p-6 pt-9 shadow-card border border-slate-100 relative flex flex-col justify-between">
+          <div class="absolute -top-5 left-6 w-12 h-12 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-400 text-white flex items-center justify-center shadow-floating-badge">
+            <i data-lucide="calculator" class="w-6 h-6"></i>
+          </div>
+          <div class="flex items-center justify-end mb-2">
+            <span class="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100">
+              11.00 - 12.30 WIB
+            </span>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base font-extrabold text-slate-900">Kelas 7-A — Matematika</h4>
+            <p class="text-xs text-slate-500">Wali Kelas: Pak Hendra Pratama, M.Pd.</p>
+            <p class="text-xs font-bold text-rose-700 pt-1">Bab 4: Sistem Persamaan Linier Satu Variabel</p>
+          </div>
+          <div class="my-4 border-t border-slate-100"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-600">30 Siswa Terdaftar</span>
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 font-semibold block uppercase">Presensi Hari Ini</span>
+              <span class="text-sm font-black text-rose-700">96.7%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 3: AI CO-PILOT -->
+        <div class="bg-gradient-to-b from-white to-indigo-50/40 rounded-3xl p-6 pt-9 shadow-card border border-indigo-100 relative flex flex-col justify-between">
+          <div class="absolute -top-5 left-6 w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-400 text-white flex items-center justify-center shadow-floating-badge">
+            <i data-lucide="sparkles" class="w-6 h-6"></i>
+          </div>
+          <div class="flex items-center justify-end mb-2">
+            <span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full border border-indigo-200">
+              ✨ AI Co-Pilot Ready
+            </span>
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base font-extrabold text-indigo-950">Draf Modul Ajar Otomatis</h4>
+            <p class="text-xs text-indigo-700/80 font-medium">Berdasarkan CP & ATP Fase D</p>
+            <p class="text-xs font-bold text-indigo-900 pt-1">4 Dokumen Siap Diekspor (.docx / .xlsx)</p>
+          </div>
+          <div class="my-4 border-t border-indigo-100"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-indigo-700">Format Resmi Kemdikbud</span>
+            <div class="text-right">
+              <span class="text-[10px] text-indigo-400 font-semibold block uppercase">Status Generator</span>
+              <span class="text-sm font-black text-indigo-700">100% Selesai</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 2. SIDE-BY-SIDE 6 FONT CANDIDATES BREAKDOWN                              -->
+  <!-- ========================================================================= -->
+  <section class="max-w-7xl mx-auto space-y-8 mb-16">
+    <div class="text-center space-y-2">
+      <h2 class="text-2xl sm:text-3xl font-black text-slate-900">
+        Perbandingan Head-to-Head 6 Font Pilihan
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
+        Karakteristik, kelebihan, dan kecocokan masing-masing font untuk aplikasi guru.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- FONT 1: PLUS JAKARTA SANS -->
+      <div class="bg-white rounded-3xl p-6 border-2 border-teal-600 shadow-lg relative flex flex-col justify-between font-jakarta">
+        <div class="absolute -top-3 right-6 bg-teal-700 text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase">
+          Current Master Brand ⭐
+        </div>
+        <div class="space-y-4">
+          <div>
+            <span class="text-xs font-bold text-teal-800 font-mono">01. GEOMETRIC HUMANIST</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">Plus Jakarta Sans</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Didesain oleh Tokotype (Indonesia)</p>
+          </div>
+
+          <!-- Specimen Preview -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+            <div class="text-base font-extrabold text-slate-900">
+              Kelas 8-B — IPA Terpadu
+            </div>
+            <div class="text-xs text-slate-600">
+              Capaian Pembelajaran (CP) Fase D • Nilai: 95.8 / 100
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Aa Bb Cc Dd Gg Jj Kk 1234567890
+            </div>
+          </div>
+
+          <!-- Pros & Cons -->
+          <div class="space-y-1.5 text-xs text-slate-600">
+            <div class="flex items-center gap-1.5 text-teal-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Karakter hangat, ramah guru, dan berkelas</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-teal-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Sangat cocok dengan geometri logo KLASSA</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="font-bold text-teal-800">Skor Rekomendasi:</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-teal-100 text-teal-800 font-black">9.8 / 10</span>
+        </div>
+      </div>
+
+      <!-- FONT 2: OUTFIT -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md relative flex flex-col justify-between font-outfit">
+        <div class="space-y-4">
+          <div>
+            <span class="text-xs font-bold text-indigo-700 font-mono">02. MODERN GEOMETRIC</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">Outfit</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Terinspirasi brand Figma & Canva</p>
+          </div>
+
+          <!-- Specimen Preview -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+            <div class="text-base font-extrabold text-slate-900">
+              Kelas 8-B — IPA Terpadu
+            </div>
+            <div class="text-xs text-slate-600">
+              Capaian Pembelajaran (CP) Fase D • Nilai: 95.8 / 100
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Aa Bb Cc Dd Gg Jj Kk 1234567890
+            </div>
+          </div>
+
+          <!-- Pros & Cons -->
+          <div class="space-y-1.5 text-xs text-slate-600">
+            <div class="flex items-center gap-1.5 text-indigo-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Tampilan sangat modern, fresh, dan energik</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-indigo-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Huruf bulat sempurna (O, C, G) terasa empuk</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-700">Skor Rekomendasi:</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-black">9.4 / 10</span>
+        </div>
+      </div>
+
+      <!-- FONT 3: FIGTREE -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md relative flex flex-col justify-between font-figtree">
+        <div class="space-y-4">
+          <div>
+            <span class="text-xs font-bold text-emerald-700 font-mono">03. FRIENDLY CLEAN SANS</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">Figtree</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Standar baru UI SaaS & Edtech Global</p>
+          </div>
+
+          <!-- Specimen Preview -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+            <div class="text-base font-extrabold text-slate-900">
+              Kelas 8-B — IPA Terpadu
+            </div>
+            <div class="text-xs text-slate-600">
+              Capaian Pembelajaran (CP) Fase D • Nilai: 95.8 / 100
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Aa Bb Cc Dd Gg Jj Kk 1234567890
+            </div>
+          </div>
+
+          <!-- Pros & Cons -->
+          <div class="space-y-1.5 text-xs text-slate-600">
+            <div class="flex items-center gap-1.5 text-emerald-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Keseimbangan terbaik antara kehangatan & keterbacaan</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-emerald-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Sangat stabil pada teks kecil 11-13px</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-700">Skor Rekomendasi:</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black">9.5 / 10</span>
+        </div>
+      </div>
+
+      <!-- FONT 4: MANROPE -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md relative flex flex-col justify-between font-manrope">
+        <div class="space-y-4">
+          <div>
+            <span class="text-xs font-bold text-sky-700 font-mono">04. HIGH LEGIBILITY</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">Manrope</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Bukaan huruf lebar (*open aperture*)</p>
+          </div>
+
+          <!-- Specimen Preview -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+            <div class="text-base font-extrabold text-slate-900">
+              Kelas 8-B — IPA Terpadu
+            </div>
+            <div class="text-xs text-slate-600">
+              Capaian Pembelajaran (CP) Fase D • Nilai: 95.8 / 100
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Aa Bb Cc Dd Gg Jj Kk 1234567890
+            </div>
+          </div>
+
+          <!-- Pros & Cons -->
+          <div class="space-y-1.5 text-xs text-slate-600">
+            <div class="flex items-center gap-1.5 text-sky-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Mata tidak cepat lelah saat membaca RPP panjang</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-sky-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Tinggi x-height konsisten dan profesional</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-700">Skor Rekomendasi:</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 font-black">9.1 / 10</span>
+        </div>
+      </div>
+
+      <!-- FONT 5: URBANIST -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md relative flex flex-col justify-between font-urbanist">
+        <div class="space-y-4">
+          <div>
+            <span class="text-xs font-bold text-purple-700 font-mono">05. NEO-DIGITAL SANS</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">Urbanist</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Karakter futuristik & AI-centric</p>
+          </div>
+
+          <!-- Specimen Preview -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+            <div class="text-base font-extrabold text-slate-900">
+              Kelas 8-B — IPA Terpadu
+            </div>
+            <div class="text-xs text-slate-600">
+              Capaian Pembelajaran (CP) Fase D • Nilai: 95.8 / 100
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Aa Bb Cc Dd Gg Jj Kk 1234567890
+            </div>
+          </div>
+
+          <!-- Pros & Cons -->
+          <div class="space-y-1.5 text-xs text-slate-600">
+            <div class="flex items-center gap-1.5 text-purple-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Gaya digital modern yang sangat tajam</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-purple-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Sangat cocok untuk headline dan badge AI Studio</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-700">Skor Rekomendasi:</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black">9.0 / 10</span>
+        </div>
+      </div>
+
+      <!-- FONT 6: INTER -->
+      <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md relative flex flex-col justify-between font-inter">
+        <div class="space-y-4">
+          <div>
+            <span class="text-xs font-bold text-slate-600 font-mono">06. INDUSTRY STANDARD</span>
+            <h3 class="text-xl font-black text-slate-900 mt-1">Inter</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Standar UI Vercel, Linear & GitHub</p>
+          </div>
+
+          <!-- Specimen Preview -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+            <div class="text-base font-extrabold text-slate-900">
+              Kelas 8-B — IPA Terpadu
+            </div>
+            <div class="text-xs text-slate-600">
+              Capaian Pembelajaran (CP) Fase D • Nilai: 95.8 / 100
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Aa Bb Cc Dd Gg Jj Kk 1234567890
+            </div>
+          </div>
+
+          <!-- Pros & Cons -->
+          <div class="space-y-1.5 text-xs text-slate-600">
+            <div class="flex items-center gap-1.5 text-slate-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Presisi data mikro tak tertandingi pada tabel rapat</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-slate-700 font-bold">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Karakter netral, objektif, dan teruji di miliaran layar</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-700">Skor Rekomendasi:</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-800 font-black">9.3 / 10</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- 3. TABEL UJI KETERBACAAN NILAI & AKRONIM KURIKULUM                        -->
+  <!-- ========================================================================= -->
+  <section class="max-w-7xl mx-auto bg-white rounded-3xl p-6 sm:p-10 border border-slate-200 shadow-lg space-y-6 mb-12">
+    <div>
+      <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+        Uji Keterbacaan Tabel Nilai & Angka Akademik
+      </h3>
+      <p class="text-xs text-slate-500 mt-1">
+        Perbandingan render angka nilai desimal (KKM/KKTP 75, Rata-rata 88.4) dan istilah Kurikulum Merdeka:
+      </p>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-50 border-y border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
+          <tr>
+            <th class="p-3">Keluarga Font</th>
+            <th class="p-3">Nama Siswa & Sekolah</th>
+            <th class="p-3">Istilah Kurikulum</th>
+            <th class="p-3 text-right">Nilai TP 1</th>
+            <th class="p-3 text-right">Nilai TP 2</th>
+            <th class="p-3 text-right">Rata-Rata</th>
+            <th class="p-3 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-slate-800">
+          <!-- Jakarta -->
+          <tr class="font-jakarta hover:bg-teal-50/40">
+            <td class="p-3 font-bold text-teal-800">Plus Jakarta Sans ⭐</td>
+            <td class="p-3 font-semibold">Ahmad Fauzan • SMPN 1 Madani</td>
+            <td class="p-3">Alur Tujuan Pembelajaran (ATP) Fase D</td>
+            <td class="p-3 text-right font-mono">92.00</td>
+            <td class="p-3 text-right font-mono">88.50</td>
+            <td class="p-3 text-right font-black text-teal-700">90.25</td>
+            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Tuntas</span></td>
+          </tr>
+          <!-- Outfit -->
+          <tr class="font-outfit hover:bg-indigo-50/40">
+            <td class="p-3 font-bold text-indigo-800">Outfit</td>
+            <td class="p-3 font-semibold">Ahmad Fauzan • SMPN 1 Madani</td>
+            <td class="p-3">Alur Tujuan Pembelajaran (ATP) Fase D</td>
+            <td class="p-3 text-right font-mono">92.00</td>
+            <td class="p-3 text-right font-mono">88.50</td>
+            <td class="p-3 text-right font-black text-indigo-700">90.25</td>
+            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Tuntas</span></td>
+          </tr>
+          <!-- Figtree -->
+          <tr class="font-figtree hover:bg-emerald-50/40">
+            <td class="p-3 font-bold text-emerald-800">Figtree</td>
+            <td class="p-3 font-semibold">Ahmad Fauzan • SMPN 1 Madani</td>
+            <td class="p-3">Alur Tujuan Pembelajaran (ATP) Fase D</td>
+            <td class="p-3 text-right font-mono">92.00</td>
+            <td class="p-3 text-right font-mono">88.50</td>
+            <td class="p-3 text-right font-black text-emerald-700">90.25</td>
+            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Tuntas</span></td>
+          </tr>
+          <!-- Manrope -->
+          <tr class="font-manrope hover:bg-sky-50/40">
+            <td class="p-3 font-bold text-sky-800">Manrope</td>
+            <td class="p-3 font-semibold">Ahmad Fauzan • SMPN 1 Madani</td>
+            <td class="p-3">Alur Tujuan Pembelajaran (ATP) Fase D</td>
+            <td class="p-3 text-right font-mono">92.00</td>
+            <td class="p-3 text-right font-mono">88.50</td>
+            <td class="p-3 text-right font-black text-sky-700">90.25</td>
+            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Tuntas</span></td>
+          </tr>
+          <!-- Urbanist -->
+          <tr class="font-urbanist hover:bg-purple-50/40">
+            <td class="p-3 font-bold text-purple-800">Urbanist</td>
+            <td class="p-3 font-semibold">Ahmad Fauzan • SMPN 1 Madani</td>
+            <td class="p-3">Alur Tujuan Pembelajaran (ATP) Fase D</td>
+            <td class="p-3 text-right font-mono">92.00</td>
+            <td class="p-3 text-right font-mono">88.50</td>
+            <td class="p-3 text-right font-black text-purple-700">90.25</td>
+            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Tuntas</span></td>
+          </tr>
+          <!-- Inter -->
+          <tr class="font-inter hover:bg-slate-100">
+            <td class="p-3 font-bold text-slate-800">Inter</td>
+            <td class="p-3 font-semibold">Ahmad Fauzan • SMPN 1 Madani</td>
+            <td class="p-3">Alur Tujuan Pembelajaran (ATP) Fase D</td>
+            <td class="p-3 text-right font-mono">92.00</td>
+            <td class="p-3 text-right font-mono">88.50</td>
+            <td class="p-3 text-right font-black text-slate-800">90.25</td>
+            <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">Tuntas</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    lucide.createIcons();
+
+    function switchGlobalFont(fontKey, fontName) {
+      const demoBox = document.getElementById('live-demo-box');
+      const fontLabel = document.getElementById('current-font-label');
+      
+      // Remove previous font classes
+      demoBox.classList.remove('font-jakarta', 'font-outfit', 'font-figtree', 'font-manrope', 'font-urbanist', 'font-inter');
+      demoBox.classList.add('font-' + fontKey);
+      
+      fontLabel.textContent = fontName;
+
+      // Update button active state
+      document.querySelectorAll('.font-btn').forEach(btn => {
+        btn.classList.remove('active-font-btn');
+      });
+      document.getElementById('btn-' + fontKey).classList.add('active-font-btn');
+    }
+  </script>
+</body>
+</html>
