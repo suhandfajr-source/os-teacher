@@ -44,11 +44,11 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex w-64 flex-col border-r border-slate-200/80 bg-[#F6F8F8] h-full select-none shrink-0">
+    <aside className="hidden md:flex w-64 flex-col bg-white h-full select-none shrink-0 border-r border-slate-200/70">
       {/* ─────────────────────────────────────────────────────────────
           1. SIDEBAR BRAND HEADER
       ───────────────────────────────────────────────────────────── */}
-      <div className="flex h-16 items-center border-b border-slate-200/80 px-5">
+      <div className="flex h-16 items-center px-5 border-b border-slate-100">
         <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
           <KlassaLogo variant="horizontal" size="sm" priority />
         </Link>
@@ -72,32 +72,37 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
+                  "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                   active
                     ? item.isAi
-                      ? "bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shadow-2xs"
-                      : "bg-teal-50 text-teal-800 font-bold border border-teal-200/80 shadow-2xs"
+                      ? "bg-indigo-600 text-white font-bold shadow-md rounded-full"
+                      : "bg-teal-700 text-white font-bold shadow-pill-glow rounded-full"
                     : item.isAi
-                    ? "text-indigo-600/90 hover:text-indigo-700 hover:bg-indigo-50/50"
-                    : "text-slate-600 hover:text-teal-800 hover:bg-teal-50/50"
+                    ? "text-indigo-700 bg-indigo-50/60 border border-indigo-100 hover:bg-indigo-100/70 rounded-2xl"
+                    : "text-slate-600 hover:text-teal-900 hover:bg-teal-50/60 rounded-2xl"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-transform group-hover:scale-105",
                     active
-                      ? item.isAi
-                        ? "text-indigo-600"
-                        : "text-teal-700"
+                      ? "text-white"
                       : item.isAi
-                      ? "text-indigo-500"
+                      ? "text-indigo-600"
                       : "text-slate-400"
                   )}
                 />
                 <span className="truncate">{item.label}</span>
                 {item.isAi && (
-                  <span className="ml-auto text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                    AI
+                  <span
+                    className={cn(
+                      "ml-auto text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md",
+                      active
+                        ? "bg-white/20 text-white"
+                        : "bg-indigo-100 text-indigo-700"
+                    )}
+                  >
+                    PRO
                   </span>
                 )}
               </Link>
@@ -106,7 +111,7 @@ export function Sidebar() {
         </div>
 
         {/* Academic & Setup Section */}
-        <div className="space-y-1 pt-2 border-t border-slate-200/60">
+        <div className="space-y-1 pt-2 border-t border-slate-100">
           <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Perencanaan & Sistem
           </div>
@@ -119,16 +124,16 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
+                  "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                   active
-                    ? "bg-teal-50 text-teal-800 font-bold border border-teal-200/80 shadow-2xs"
-                    : "text-slate-600 hover:text-teal-800 hover:bg-teal-50/50"
+                    ? "bg-teal-700 text-white font-bold shadow-pill-glow rounded-full"
+                    : "text-slate-600 hover:text-teal-900 hover:bg-teal-50/60 rounded-2xl"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0",
-                    active ? "text-teal-700" : "text-slate-400"
+                    active ? "text-white" : "text-slate-400"
                   )}
                 />
                 <span className="truncate">{item.label}</span>
@@ -141,11 +146,11 @@ export function Sidebar() {
       {/* ─────────────────────────────────────────────────────────────
           3. SIDEBAR FOOTER HINT
       ───────────────────────────────────────────────────────────── */}
-      <div className="p-3 border-t border-slate-200/80">
-        <div className="p-2.5 rounded-xl bg-teal-50/60 border border-teal-100 flex items-center gap-2.5">
+      <div className="p-3 border-t border-slate-100">
+        <div className="p-2.5 rounded-2xl bg-teal-50/70 border border-teal-100/80 flex items-center gap-2.5">
           <div className="w-2 h-2 rounded-full bg-teal-600 animate-pulse shrink-0" />
           <div className="text-[11px] text-teal-900 leading-tight">
-            <span className="font-bold">Mode Aktif:</span> Kurikulum Merdeka
+            <span className="font-bold">KLASSA Workspace:</span> Kurikulum Merdeka
           </div>
         </div>
       </div>

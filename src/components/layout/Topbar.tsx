@@ -49,13 +49,13 @@ export function Topbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200/80 bg-[#F6F8F8]/90 backdrop-blur-md px-4 md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-100 bg-white/90 backdrop-blur-md px-4 md:px-6">
         {/* Mobile Left Menu & Brand Title */}
         <div className="flex items-center gap-3 md:hidden">
           <button
             onClick={() => setMobileDrawerOpen(true)}
             aria-label="Buka Menu Navigasi"
-            className="h-9 w-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-teal-50 hover:text-teal-800 shadow-2xs transition-colors"
+            className="h-9 w-9 rounded-2xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-teal-50 hover:text-teal-800 shadow-2xs transition-colors"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -64,13 +64,19 @@ export function Topbar() {
           </Link>
         </div>
 
+        {/* Desktop Search / Quick Context Placeholder */}
+        <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-600 bg-teal-50/70 border border-teal-100/80 px-3 py-1.5 rounded-full shadow-2xs">
+          <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
+          <span>Ruang Kerja Guru Indonesia</span>
+        </div>
+
         {/* Right Action Icons */}
         <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
           <Link
             href="/ai-studio"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "hidden sm:flex items-center gap-1.5 text-xs font-semibold text-indigo-700 border-indigo-200 bg-gradient-to-r from-teal-50/60 to-indigo-50/80 hover:from-teal-100/60 hover:to-indigo-100/80 shadow-2xs rounded-xl transition-all"
+              "hidden sm:flex items-center gap-1.5 text-xs font-semibold text-indigo-700 border-indigo-200 bg-gradient-to-r from-teal-50/60 to-indigo-50/80 hover:from-teal-100/60 hover:to-indigo-100/80 shadow-2xs rounded-full transition-all"
             )}
           >
             <Sparkles className="h-3.5 w-3.5 text-indigo-600 animate-pulse" />
@@ -81,7 +87,7 @@ export function Topbar() {
             aria-label="Pengaturan Akun dan Sekolah"
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon" }),
-              "rounded-xl h-9 w-9 text-slate-500 hover:text-teal-800 hover:bg-teal-50 transition-colors"
+              "rounded-full h-9 w-9 text-slate-500 hover:text-teal-800 hover:bg-teal-50 transition-colors"
             )}
           >
             <Settings className="h-4 w-4" />
@@ -134,23 +140,21 @@ export function Topbar() {
                       href={item.href}
                       onClick={() => setMobileDrawerOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
+                        "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                         active
                           ? item.isAi
-                            ? "bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shadow-2xs"
-                            : "bg-teal-50 text-teal-800 font-bold border border-teal-200/80 shadow-2xs"
+                            ? "bg-indigo-600 text-white font-bold shadow-md rounded-full"
+                            : "bg-teal-700 text-white font-bold shadow-pill-glow rounded-full"
                           : item.isAi
-                          ? "text-indigo-600 hover:bg-indigo-50"
-                          : "text-slate-600 hover:text-teal-800 hover:bg-teal-50/50"
+                          ? "text-indigo-600 hover:bg-indigo-50 rounded-2xl"
+                          : "text-slate-600 hover:text-teal-800 hover:bg-teal-50/50 rounded-2xl"
                       )}
                     >
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0",
                           active
-                            ? item.isAi
-                              ? "text-indigo-600"
-                              : "text-teal-700"
+                            ? "text-white"
                             : item.isAi
                             ? "text-indigo-500"
                             : "text-slate-400"
@@ -158,7 +162,14 @@ export function Topbar() {
                       />
                       <span className="truncate">{item.label}</span>
                       {item.isAi && (
-                        <span className="ml-auto text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        <span
+                          className={cn(
+                            "ml-auto text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full",
+                            active
+                              ? "bg-white/20 text-white"
+                              : "bg-indigo-100 text-indigo-700"
+                          )}
+                        >
                           AI
                         </span>
                       )}
@@ -182,16 +193,16 @@ export function Topbar() {
                       href={item.href}
                       onClick={() => setMobileDrawerOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
+                        "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                         active
-                          ? "bg-teal-50 text-teal-800 font-bold border border-teal-200/80 shadow-2xs"
-                          : "text-slate-600 hover:text-teal-800 hover:bg-teal-50/50"
+                          ? "bg-teal-700 text-white font-bold shadow-pill-glow rounded-full"
+                          : "text-slate-600 hover:text-teal-900 hover:bg-teal-50/60 rounded-2xl"
                       )}
                     >
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          active ? "text-teal-700" : "text-slate-400"
+                          active ? "text-white" : "text-slate-400"
                         )}
                       />
                       <span className="truncate">{item.label}</span>
