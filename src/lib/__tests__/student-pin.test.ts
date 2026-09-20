@@ -90,8 +90,29 @@ describe("Student PIN primitives - verifyPin contract", () => {
         // rejected at parse.
         "scrypt:16384:8:1:abc:00",
         "scrypt:16384:8:1:00:abc",
+        // Params must be plain decimal digits — Number() alone accepts these.
+        "scrypt:0x10:8:1:" + "ab".repeat(16) + ":" + "cd".repeat(32),
+        "scrypt:1e2:8:1:" + "ab".repeat(16) + ":" + "cd".repeat(32),
     ])("returns false (does NOT throw) for corrupt stored hash %j", async (bad) => {
         await expect(verifyPin("1234", bad)).resolves.toBe(false);
+    });
+
+    it("rejects memory-legal but CPU-hostile parameter products at parse (N*r*p work bound)", async () => {
+        // Extreme point of the work vector (walkthrough deep-dive): passes the
+        // 128*N*r memory rule (33.5 MB), passes Node's 128*r*(N+p) check, has
+        // well-formed 16B salt / 32B hash — only the total-work bound rejects
+        // it. Before this bound, one verifyPin call cost ≈7 CPU-hours
+        // (measured linear scaling: N=2048,p=2048 → 3.5 s).
+        const extreme = "scrypt:262144:1:262143:" + "ab".repeat(16) + ":" + "cd".repeat(32);
+        await expect(verifyPin("1234", extreme)).resolves.toBe(false);
+
+        // Comfortably over the 2^22 limit (32768*8*32 = 2^23) — rejected too.
+        const overWork = "scrypt:32768:8:32:" + "ab".repeat(16) + ":" + "cd".repeat(32);
+        await expect(verifyPin("1234", overWork)).resolves.toBe(false);
+
+        // Sanity: the default parameters sit far below the bound — round-trips.
+        const hash = await hashPin("1234");
+        await expect(verifyPin("1234", hash)).resolves.toBe(true);
     });
 
     it("returns false (does NOT throw) for null/undefined storedHash (nullable accessPinHash)", async () => {

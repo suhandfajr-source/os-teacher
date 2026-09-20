@@ -50,6 +50,13 @@ const SALT_LENGTH = 16; // bytes
 // same limit inside scrypt).
 const SCRYPT_MAXMEM = 64 * 1024 * 1024;
 
+// Total-work bound (walkthrough deep-dive 2026-09-20): memory checks do NOT
+// bound CPU — verify time scales linearly with N*r*p while both memory checks
+// stay satisfied (measured: memory-legal scrypt:262144:1:262143 ≈ 7 CPU-hours
+// per call). Cap total work at 32x the default (16384*8*1) so adversarial
+// stored hashes die at parse, not on the clock.
+const SCRYPT_MAX_WORK = 4_194_304; // 2^22 block-ops (~1.6s worst legitimate verify)
+
 const PIN_PATTERN = /^\d{4}$/; // exactly 4 ASCII digits — Unicode digits rejected
 
 export class PinFormatError extends Error {
@@ -113,6 +120,11 @@ function parseStoredHash(storedHash: string): ScryptParams | null {
     if (parts.length !== 6 || parts[0] !== "scrypt") {
         return null;
     }
+    // Params must be plain decimal digits — Number() alone would accept
+    // "0x10", "1e2", "+16", or padded forms.
+    if (!/^\d+$/.test(parts[1]) || !/^\d+$/.test(parts[2]) || !/^\d+$/.test(parts[3])) {
+        return null;
+    }
     const N = Number(parts[1]);
     const r = Number(parts[2]);
     const p = Number(parts[3]);
@@ -124,6 +136,11 @@ function parseStoredHash(storedHash: string): ScryptParams | null {
     }
     // Single memory rule — reject before touching scrypt.
     if (128 * N * r > SCRYPT_MAXMEM) {
+        return null;
+    }
+    // Total-work rule — see SCRYPT_MAX_WORK. Memory-legal but CPU-hostile
+    // parameter products are corrupt by definition.
+    if (N * r * p > SCRYPT_MAX_WORK) {
         return null;
     }
     if (!/^(?:[0-9a-f]{2})+$/i.test(parts[4]) || !/^(?:[0-9a-f]{2})+$/i.test(parts[5])) {
