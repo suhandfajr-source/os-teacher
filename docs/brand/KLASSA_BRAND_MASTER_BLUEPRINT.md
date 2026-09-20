@@ -103,8 +103,10 @@
 
 ## 5. Standar Tipografi & Gaya Tulisan (*Typography Standards*)
 
-* **Font Keluarga Resmi:** **Plus Jakarta Sans** (Google Fonts).
-* **Karakter Tipografi:** Geometris modern, humanis, sangat mudah dibaca pada angka nilai dan tabel kurikulum.
+* **Font Keluarga Resmi (UI & Web App):** **Figtree** (Google Fonts).
+* **Font Sekunder / Brand Heading:** **Plus Jakarta Sans** (Google Fonts).
+* **Font Monospace (Nilai & Kode):** **JetBrains Mono** / System Mono.
+* **Karakter Tipografi:** Friendly Modernist, bukaan kurva proporsional, keterbacaan tinggi pada ukuran teks kecil (11–13px) serta kestabilan angka nilai desimal pada tabel raport.
 
 | Elemen Teks | Ukuran / Weight | Case & Tracking | Contoh Penerapan |
 | :--- | :--- | :--- | :--- |
