@@ -43,8 +43,5 @@
 # Review 1c pass 1 — defer entries (2026-09-20)
 
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
-  summary: Deklarasikan `dotenv` sebagai devDependency — `vitest.config.ts:1` mengimpor `dotenv/config` tapi hanya tersedia phantom via transitive (prisma→c12, shadcn→dotenvx); seluruh mekanisme warisan `DATABASE_URL` test integrasi (termasuk 1c, elicitation F1) bertumpu dependency tak terdeklarasi.
-  evidence: VG-other3 review 1c (pre-existing, bukan caused-by 1c); hilangnya phantom = 48 file test merah environmental.
-- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
   summary: Putuskan field `engines` di package.json (mis. `node >= 20.12` — syarat `--env-file-if-exists` script seed) — kebijakan manifest seluruh app, bukan keputusan seeder sendirian; sementara ini terdokumentasi di `.env.example` + header CLI.
   evidence: VG-other5 review 1c; tanpa engines, Node 18–20.11 mati "bad option" tanpa penjelasan.
