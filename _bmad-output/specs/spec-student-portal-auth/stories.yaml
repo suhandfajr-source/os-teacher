@@ -1,0 +1,123 @@
+# Derivasi Story Breakdown — spec-student-portal-auth
+# 9 story, 1:1 dengan tahap eksekusi blueprint. Urutan = urutan jalannya list.
+- id: "1"
+  title: Fondasi Database & Primitif Keamanan
+  description: >-
+    Migrasi fondasi untuk seluruh spec (CAP-1…11): kolom Student (accessPinHash,
+    accountStatus, failedAttempts, lockedUntil, dst.), Class.joinCode,
+    User.platformRole, model AuditLog, seeder superadmin, dan util PIN scrypt.
+    Detail lingkup di execution-stages.md Tahap 1.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    N1: semua kolom migrasi baru nullable/ber-default; User.platformRole default
+    non-admin; nol drop/rename. N4: AuditLog minimal
+    actorType/actorId/action/targetType/targetId/metadata(Json)/ip/createdAt,
+    append-only tanpa jalur update/delete, index [actorId, createdAt] dan
+    [targetType, targetId]. Seeder superadmin hanya dari env allowlist.
+- id: "2"
+  title: Gerbang Dedup Sekolah & Penguatan Alur Guru
+  description: >-
+    Menutup CAP-2 (gerbang dedup 4 skenario, searchSchools v2 nama/NPSN) dan
+    CAP-3 (panel guru sekolah, notifikasi, revoke antar-guru, saklar sekolah
+    aktif, edit NIS). Detail di execution-stages.md Tahap 2.
+  invoke_dev_with: >-
+    N2: backfill recompute School.normalizedName dengan normalisasi v2 (+alias
+    smpn≡smp negeri) untuk baris lama — tanpa ini gerbang dedup (c)
+    membandingkan format baru vs lama.
+- id: "3"
+  title: Mesin Autentikasi Siswa
+  description: >-
+    Membangun CAP-1: modul student-auth (hash/verify PIN, sesi terpisah,
+    verifyStudentSession), actions registerStudent 4 cabang / loginStudent
+    (+lockout) / logoutStudent, serta generate/rotasi/lock kode rombel.
+    Detail di execution-stages.md Tahap 3.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    GATE N3: backfill NIS kanonik (trim+uppercase) + laporan duplikat WAJIB
+    selesai sebelum actions siswa aktif. B3: semua limiter persisten di DB
+    (bukan in-memory) — per-akun 5x salah → kunci 15 mnt dengan eskalasi
+    15m→1j→24j, per-IP+sekolah, kode rombel 10x/jam/IP; pesan error generik
+    "NIS atau PIN salah" + dummy-verify agar timing seragam. B4:
+    STUDENT_SESSION_SECRET fail-fast di production, tanpa fallback. Sesi siswa
+    cookie terpisah klassa_student_session ko-eksis dengan sesi guru.
+- id: "4"
+  title: Portal Siswa Gelombang 1 & Integrasi Quiz
+  description: >-
+    Mewujudkan CAP-5 (dashboard harian, jadwal mingguan, profil & ganti PIN,
+    layar pending, bottom nav 5 item) dan CAP-6 (quiz atas nama sesi → nilai
+    otomatis di leger guru, riwayat & pembahasan). Detail di execution-stages.md
+    Tahap 4 dan portal-modules.md Gelombang 1.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    B1: portal wajib action terpisah berbasis sesi (mis.
+    startQuizAttemptFromSessionAction); studentId di-derive dari
+    verifyStudentSession(), parameter identitas dari klien diabaikan
+    sepenuhnya; signature startQuizAttemptAction lama TIDAK boleh berubah;
+    accessMode CLASSROOM_PIN di-skip portal dengan kendali tetap via status
+    PUBLISHED + validFrom + deadline (catat sebagai pengecualian disengaja di
+    kode). N7: rantai E2E memuat langkah guru publish quiz sebelum siswa
+    mengerjakan. Regresi nol: alur /q/[token] tetap hijau.
+- id: "5"
+  title: Panel Persetujuan Guru & Superadmin
+  description: >-
+    Menuntaskan CAP-4 dan CAP-7: panel siswa pending L1 per-rombel + L2
+    sekolah-wide, approve/reject/batch, highlight eskalasi, pindah rombel;
+    area /admin/* backstop superadmin ter-audit. Detail di execution-stages.md
+    Tahap 5.
+  invoke_dev_with: >-
+    N5: pindah rombel = UPDATE classId pada row ClassStudent existing
+    (menghormati @@unique([studentId, academicPeriodId])). N6: batch approve =
+    $transaction atomic + laporan baris gagal + AuditLog per-baris. B2: reset
+    PIN siswa HANYA pengampu rombel aktif/superadmin; approve L2 memicu
+    notifikasi semua guru + AuditLog. B5: ban/reset password guru → revoke
+    SEMUA sesi via revokeUserSessions (pasang admin plugin Better Auth di
+    src/lib/auth.ts); nonaktif sekolah → semua login gagal + sesi
+    di-invalidate + clear npsn.
+- id: "6"
+  title: Pengerasan, Rollover TA & Dokumentasi
+  description: >-
+    Menutup CAP-8: playbook rollover tahun ajaran (impor ulang roster, klaim
+    ulang L0, NIS & PIN tetap), update MASTER_CONTEXT.md, smoke test dan review
+    keamanan akhir. Detail di execution-stages.md Tahap 6.
+  invoke_dev_with: >-
+    N8: playbook rollover memuat langkah guru isi NIS siswa yang belum
+    ber-NIS SEBELUM klaim ulang L0 (siswa tanpa NIS tidak punya jalur klaim).
+    DoD: playbook tertulis, review keamanan lolos.
+- id: "7"
+  title: Student Progress (Gelombang 2)
+  description: >-
+    Mewujudkan CAP-9: pohon ketuntasan TP per mapel, nilai hanya FINAL,
+    presensi rekap bulanan H/S/I/A, daftar tugas read-only, widget ketuntasan
+    beranda. Detail di execution-stages.md Tahap 7 dan portal-modules.md
+    Gelombang 2.
+  spec_checkpoint: true
+  invoke_dev_with: >-
+    Nilai hanya FINAL kanonik (glossary.md): query wajib join Assessment
+    (status COMPLETED) DAN AssessmentResult (status GRADED) — memfilter
+    AssessmentResult saja tidak cukup. WAJIB keputusan open question ① (skor
+    flat vs GradePolicy/KKTP) sebelum agregasi diimplementasi. Semua query
+    di-scope ke periode aktif; unit test membuktikan nilai non-FINAL tidak
+    bocor.
+- id: "8"
+  title: Submission, Materi & Mode Keluarga (Gelombang 3)
+  description: >-
+    Mewujudkan CAP-10: model AssignmentSubmission (teks/tautan) + antrean
+    koreksi guru dengan umpan balik, materi belajar dari AiContentDraft
+    publish, dan Mode Keluarga tab pantauan ortu read-only. Detail di
+    execution-stages.md Tahap 8.
+  invoke_dev_with: >-
+    Submission teks/tautan dulu — unggah berkas out of scope. Mode Keluarga:
+    reuse layanan baca parent, tanpa jalur tulis apa pun dari portal siswa.
+- id: "9"
+  title: AI Tutor & Gamifikasi (Gelombang 4)
+  description: >-
+    Mewujudkan CAP-11: AI tutor tanya-jawab terkurasi materi publish + TP guru
+    dengan rate-limit dan audit log; gamifikasi mikro opsional. Detail di
+    execution-stages.md Tahap 9 dan portal-modules.md Gelombang 4.
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Grounding ketat: AI hanya menjawab dalam konteks materi publish + TP guru;
+    guardrail "AI membantu, guru menentukan". Gamifikasi mikro go/no-go
+    berbasis data pemakaian nyata, bukan asumsi.
