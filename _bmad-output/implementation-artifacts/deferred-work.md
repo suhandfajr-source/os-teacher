@@ -30,9 +30,6 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
   summary: Verifikasi invariant "Better Auth selalu menyimpan email lowercase" ATAU pakai lookup insensitive di seeder; tambah baris matriks stored-mixed-case.
   evidence: BH8 maybe-false: bila DB menyimpan mixed-case, lookup normalized miss (laporan "tidak dikenal" palsu); disetel dengan membaca normalisasi email better-auth versi 1.6.29.
-- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1b-primitif-pin.md`
-  summary: Patok nilai fallback PIN_PEPPER dev/test sebagai konstanta deterministik + assert di test spec 1b.
-  evidence: BH9: fallback acak per proses membuat hash run sebelumnya tak terverifikasi — login dev gagal misterius lintas restart.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
   summary: Tambah test integrasi seeder ke spec 1c: idempotensi (run 2× → 0 entri audit baru) + transaksi-rollback (email tak dikenal → nol row berubah).
   evidence: BH12: jaminan inti keamanan (all-or-nothing, idempotent) hanya diverifikasi manual via Verification commands.

@@ -1,0 +1,20 @@
+[
+  {
+    "location": "src/lib/student-pin.ts:150-153",
+    "trigger_condition": "verifyPin called with null/undefined storedHash (DB row without PIN hash)",
+    "guard_snippet": "if (typeof storedHash !== \"string\") return false;",
+    "potential_consequence": "storedHash.split throws TypeError outside try — login hot-path crash"
+  },
+  {
+    "location": "src/lib/student-pin.ts:76-85",
+    "trigger_condition": "NODE_ENV unset or outside {production,development,test} (e.g. staging, \"Production\")",
+    "guard_snippet": "if (nodeEnv !== \"development\" && nodeEnv !== \"test\") throw new Error(\"PIN_PEPPER required outside development/test\");",
+    "potential_consequence": "server silently runs with public known dev pepper — offline brute-force protection void"
+  },
+  {
+    "location": "src/lib/student-pin.ts:122-130",
+    "trigger_condition": "corrupt hash with multi-megabyte hex salt/hash segment passes parse unchecked",
+    "guard_snippet": "if (salt.length > 16 || hash.length > 64) return null;",
+    "potential_consequence": "keylen = parsed.hash.length drives unbounded Buffer/scrypt allocation — memory spike/OOM"
+  }
+]
