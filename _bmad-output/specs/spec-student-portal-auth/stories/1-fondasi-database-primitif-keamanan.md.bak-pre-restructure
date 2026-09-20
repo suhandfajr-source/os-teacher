@@ -1,0 +1,148 @@
+---
+title: 'Story 1 — Fondasi Database & Primitif Keamanan'
+type: 'feature'
+created: '2026-09-19'
+status: 'draft'
+route: 'full'
+review_loop_iteration: 0
+context:
+  - '{project-root}/_bmad-output/specs/spec-student-portal-auth/SPEC.md'
+  - '{project-root}/_bmad-output/specs/spec-student-portal-auth/security-amendum.md'
+  - '{project-root}/_bmad-output/specs/spec-student-portal-auth/execution-stages.md'
+---
+
+<frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
+
+## Intent
+
+**Problem:** Siswa masih data pasif tanpa kolom akun/keamanan, tidak ada jejak audit, kode rombel, peran platform, maupun jalur superadmin — Tahap 3–5 (auth siswa, persetujuan, admin) tidak dapat dibangun tanpa fondasi ini.
+
+**Approach:** Migrasi skema **aditif murni** (kolom akun di `Student`, kode join di `Class`, `platformRole` di `User`, model `AuditLog` baru), util PIN `scrypt` dengan verify constant-time, dan seeder superadmin dari env allowlist. (Guard `requireSuperAdmin()` di-defer ke Story 5 — lihat Spec Change Log 2026-09-20.)
+
+## Boundaries & Constraints
+
+**Always:**
+- N1: semua kolom baru nullable/ber-default; `User.platformRole` default `"USER"` (non-admin); **nol drop/rename** kolom existing.
+- N4: `AuditLog` field minimal `actorType, actorId, action, targetType, targetId, metadata(Json), ip, createdAt`; append-only — hanya jalur create, tidak ada service update/delete; index `@@index([actorId, createdAt])` dan `@@index([targetType, targetId])`.
+- PIN memakai `node:crypto` scrypt; verifikasi constant-time (`timingSafeEqual`); format hash self-describing (params terenkode) agar parameter bisa dieskalasi tanpa rehash massal.
+- Seeder: superadmin HANYA dari env `SUPERADMIN_EMAILS` (allowlist, dipisah koma); idempotent (re-run aman); setiap aksi tercatat di `AuditLog`.
+- Nilai status string kanonik: `accountStatus ∈ {PENDING, ACTIVE, REJECTED}` (default `PENDING`), `platformRole ∈ {USER, ADMIN}` — konsisten pola `String` existing (lihat `AcademicPeriod.status`), glosarium §9.2.
+- Door criteria: `tsc` bersih + seluruh test lama (475 saat story ditulis) hijau + test baru hijau.
+
+**Never:**
+- Tidak mengubah kolom existing / alur tabel Better Auth (`user`, `session`, `account`, `verification`) maupun alur auth guru. **Pengecualian disengaja (N1, direnegosiasi 2026-09-20):** kolom aditif ber-default `User.platformRole` pada tabel `user` diizinkan — adapter Prisma Better Auth mengabaikan field asing, jadi aman.
+- Tidak implementasi login/register siswa, actions, cookie sesi (Story 3); tidak menyentuh `quiz.actions.ts`/`quiz.service.ts`.
+- Tidak drop/rename/kolom wajib baru pada tabel existing (migrasi destruktif dilarang).
+- Tidak menambah limiter in-memory apa pun.
+
+## I/O & Edge-Case Matrix
+
+| Scenario | Input / State | Expected Output / Behavior | Error Handling |
+|----------|--------------|---------------------------|----------------|
+| PIN hash | PIN `"1234"` | string hash self-describing (salt+params terenkode) | — |
+| PIN verify benar | hash dari `"1234"`, input `"1234"` | `true` | — |
+| PIN verify salah | hash dari `"1234"`, input `"5678"` | `false` (timing seragam) | — |
+| PIN verify: input format invalid | hash valid dari `"1234"`, input `"56a8"` / `""` | `false` (bukan throw) — kontrak boolean hot-path login | — |
+| PIN format invalid | `"123"` / `"12a4"` / `""` | ditolak sebelum hashing | `PinFormatError` dengan pesan |
+| PIN format invalid (>4 digit) | `"12345"` / `"123456"` | ditolak sebelum hashing — kebijakan tepat 4 digit (`/^\d{4}$/`) | `PinFormatError` dengan pesan |
+| PIN verify: hash korup | `"not-a-hash"` / hash ber-param yang menuntut memori > `maxmem` | `false` tanpa throw/OOM | — |
+| Seeder: allowlist berisi email user | `SUPERADMIN_EMAILS="a@b.c"` | `platformRole="ADMIN"` + entri `AuditLog` | — |
+| Seeder: env kosong/whitespace/unset | `SUPERADMIN_EMAILS=""` / undefined | exit non-zero, DB tak tersentuh | pesan fail-fast jelas |
+| Seeder: entri bukan email valid | `"not-an-email"` di allowlist | ditolak saat parse (sebelum DB disentuh), exit non-zero | daftar entri invalid dicetak |
+| Seeder: email tidak dikenal | email tanpa row `User` | validasi semua dulu → DB tak tersentuh (all-or-nothing), laporan lengkap di stdout, exit non-zero | daftar email gagal dicetak |
+| Seeder: email campuran case | `"Admin@Sekolah.ID"` vs DB `admin@sekolah.id` | dinormalisasi (trim+lowercase) sebelum match → ditemukan | — |
+| Seeder: email belum verified | user allowlist `emailVerified=false` | abort default + profil user di laporan (anti perebutan email); `--allow-unverified` melewati sadar | pesan eksplisit profil & opsi |
+
+</frozen-after-approval>
+
+## Code Map
+
+- `prisma/schema.prisma` — target edit: `Student` (:263, tambah 8 kolom), `Class` (:357, tambah 3 kolom), `User` (:155, tambah `platformRole`), model `AuditLog` baru. Enum `EntityStatus` (:26) jangan diubah.
+- `prisma/migrations/` — konvensi folder `YYYYMMDDHHMMSS_name`; hasilkan via `npx prisma migrate dev --name ...`; periksa SQL hasil = murni `ALTER TABLE ... ADD COLUMN` + `CREATE TABLE` + `CREATE INDEX`.
+- `scripts/create-shadow-db.js` — helper shadow DB existing (hardcoded `localhost:51214`, bekas luka tim); jalankan bila `migrate dev` gagal karena shadow database tak bisa dibuat — file existing, jangan diubah; jangan improvise `db push`.
+- `src/lib/auth.ts` — **referensi pola, jangan diubah**: `PrismaPg` adapter (:5,:23), `PrismaClient` init (:27), `getAuthSecret()` fail-fast (:53). Seeder mengikuti pola init client ini.
+- `scripts/seed-superadmin.ts` — file baru; jalankan `npm run seed:superadmin` (tsx devDependency + script di `package.json`); ikuti keberadaan `scripts/` (mix util, tidak ada konvensi khusus).
+- `src/lib/student-pin.ts` + `src/lib/superadmin-allowlist.ts` — file baru (pure util, mudah dites).
+- `src/lib/__tests__/auth.security.test.ts` — referensi gaya vitest (`describe/it/expect`, folder `__tests__`).
+- `.env.example` — tambah blok `SUPERADMIN_EMAILS` + `PIN_PEPPER` dengan komentar; **jangan** sentuh entri lain.
+- DB live tersedia (test suite 475 hijau mengonfirmasi koneksi pg).
+
+## Tasks & Acceptance
+
+**Execution:**
+- [ ] `prisma/schema.prisma` — tambah kolom `Student`: `accessPinHash String?`, `accountStatus String @default("PENDING")`, `pinUpdatedAt DateTime?`, `lastLoginAt DateTime?`, `failedAttempts Int @default(0)`, `lockedUntil DateTime?`, `approvedById String?`, `approvedAt DateTime?`; `Class`: `joinCode String? @unique`, `joinCodeLocked Boolean @default(false)`, `joinCodeUpdatedAt DateTime?`; `User`: `platformRole String @default("USER")`; model `AuditLog` sesuai N4 — fondasi Tahap 3–5, semua aditif.
+- [ ] migrasi Prisma — `npx prisma migrate dev --name student_portal_foundation` (nama deskriptif mengikuti 5 migrasi terakhir; `stage11` tanpa akar — history berakhir di `stage_09` lalu beralih deskriptif) — periksa SQL: nol drop/rename.
+- [ ] `src/lib/student-pin.ts` — `validatePinFormat` (tepat 4 digit numerik ASCII `/^\d{4}$/`), `hashPin` (memanggil `validatePinFormat` dulu — defense in depth; invalid → throw `PinFormatError`), `verifyPin` (input format invalid → `false`, bukan throw — kontrak boolean hot-path login; pepper `PIN_PEPPER` → scrypt → `timingSafeEqual`; format `scrypt:N:r:p:salt:hash`; aturan memori tunggal: `maxmem` eksplisit mis. 64 MB, param yang menuntut memori `128×N×r` di atasnya ditolak saat parse, error scrypt apa pun saat verify → `false`; pre-check panjang buffer sebelum `timingSafeEqual`) — primitif Story 3. `PIN_PEPPER` di-resolve saat module load (fail-fast di boot), bukan per-panggilan.
+- [ ] `src/lib/superadmin-allowlist.ts` — parser pure `parseSuperadminEmails(env)`: trim, lowercase, dedupe, validasi sintaks email (entri invalid ditolak saat parse), deteksi kosong (termasuk unset dan `,,,`) — dipakai seeder.
+- [ ] `package.json` — tambah `tsx` devDependency + script `"seed:superadmin": "tsx scripts/seed-superadmin.ts"` (tsx belum terpasang — Assumption Audit 2026-09-20).
+- [ ] `scripts/seed-superadmin.ts` — seeder env-allowlist idempotent (validasi semua email dulu → all-or-nothing dalam satu transaksi; cek `emailVerified`: belum verified → abort default dengan profil user di laporan, `--allow-unverified` melewati secara sadar — anti perebutan email; mode `--dry-run` mencetak rencana + profil user — nama, emailVerified, createdAt — tanpa menulis; output selalu mencantumkan identitas DB target — host+dbname — sebelum apply) + `AuditLog` per aksi — jalur lahir superadmin satu-satunya.
+- [ ] `.env.example` — dokumentasikan `SUPERADMIN_EMAILS` + `PIN_PEPPER` (komentar peringatan: pepper dev-fallback aktif bila NODE_ENV bukan production — pastikan terisi di deploy).
+- [ ] `src/lib/__tests__/student-pin.test.ts` — seluruh baris PIN pada I/O matrix (termasuk >4 digit, hash korup, param menuntut memori > `maxmem`, digit Unicode `"١٢٣٤"`/`"１２３４"` ditolak, `verifyPin` input invalid → `false`).
+- [ ] `src/lib/__tests__/superadmin-allowlist.test.ts` — parsing/normalisasi: env kosong/whitespace/unset, duplikat, campuran case, koma ganda/`,,,`, entri bukan email valid.
+
+**Acceptance Criteria:**
+- Given schema existing, when migrasi dijalankan, then SQL hanya `ADD COLUMN`/`CREATE TABLE`/`CREATE INDEX` (termasuk `CREATE UNIQUE INDEX` untuk `joinCode`) dan `prisma validate` bersih.
+- Given `AuditLog`, when operasi dicatat, then hanya jalur `create` yang tersedia (tidak ada update/delete API).
+- Given matriks PIN di atas, when test dijalankan, then semua baris lulus persis.
+- Given `SUPERADMIN_EMAILS` kosong, when seeder dijalankan, then exit non-zero dan nol row berubah.
+- Given allowlist berisi email tak dikenal, when seeder dijalankan, then nol row berubah (all-or-nothing) dan exit non-zero dengan laporan lengkap.
+- Given hash akses korup, ber-param menuntut memori > `maxmem`, atau input kandidat format invalid, when `verifyPin` dipanggil, then return `false` tanpa throw.
+- Given email allowlist valid, when seeder dijalankan ulang, then idempotent (tidak duplikat entri audit untuk state sama).
+
+## Implementation Notes
+
+- Baseline terverifikasi 2026-09-20 (Assumption Audit): `npx tsc --noEmit` exit 0; `npx prisma migrate status` → "Database schema is up to date!" (18 migrasi); line number Code Map eksak (`:263/:357/:155/:26`); `AcademicPeriod.status` bertipe String ✓; `tsx` belum terpasang (lihat task `package.json`).
+
+## Spec Change Log
+
+- **2026-09-20 — Elicitation #1 (Advanced Elicitation · Security Audit Personas; renegosiasi frozen disetujui human):**
+  - *Frozen:* Never-block diklarifikasi — kolom aditif `User.platformRole` pada tabel Better Auth `user` adalah pengecualian disengaja (kontradiksi D2 ditutup). Matriks I/O: + baris PIN >4 digit (tepat-4-digit dipatok), + baris hash korup/param oversized, baris seeder email-tak-dikenal diubah ke all-or-nothing, + baris email campuran case (normalisasi trim+lowercase).
+  - *Non-frozen:* pepper `PIN_PEPPER` + cap parameter parse + `maxmem` eksplisit + pre-check panjang buffer pada `student-pin.ts`; `joinCode @unique`; parser allowlist dipisah ke `src/lib/superadmin-allowlist.ts` (+test); parameter scrypt dipatok (N=16384, r=8, p=1, keyLen=32, salt 16B); `AuditLog.actorId String?` + aturan redaksi metadata; `.env.example` + `PIN_PEPPER`; Verification + run seeder env-valid 2× (idempotensi).
+- **2026-09-20 — Elicitation #2 (Advanced Elicitation · Boundary & Edge Case Sweep; renegosiasi frozen disetujui human):**
+  - *Frozen:* matriks + baris verifyPin input invalid → `false`; + baris guard tanpa sesi & nilai `platformRole` asing → denied; + baris seeder entri bukan email valid; baris env kosong diperluas `"" / unset`; baris hash korup dialihkan ke aturan memori (konsekuensi S4).
+  - *Non-frozen:* aturan memori tunggal `maxmem` menggantikan cap angka magic (koreksi lubang `N≤2^20, r=8` = 1 GB); `hashPin` memanggil validator dulu (defense in depth); kontrak asimetris hash/verify; `PIN_PEPPER` resolve saat module load; guard deny-by-default `=== "ADMIN"`; validasi sintaks email di parser allowlist; nullability `AuditLog` lengkap (`targetId/ip/metadata`, `createdAt @default(now())`).
+- **2026-09-20 — Elicitation #3 (Advanced Elicitation · Assumption Audit; renegosiasi frozen disetujui human):**
+  - *Frozen:* door criteria "seluruh 475 test lama" → "seluruh test lama (475 saat story ditulis)" — tahan drift angka.
+  - *Non-frozen:* `tsx` devDependency + npm script `seed:superadmin` (tsx tidak ada di package.json — jalur lahir superadmin sempat bergantung unduhan on-the-fly); nama migrasi `stage11_foundation` → `student_portal_foundation` (angka 11 tanpa akar — history berakhir `stage_09` lalu beralih deskriptif); kebijakan rotasi pepper (A13); fallback guard `findUnique` (A15); manual check `platformRole` tak ter-reset (A4); baseline terverifikasi dicatat di Implementation Notes.
+- **2026-09-20 — Elicitation #4 (Advanced Elicitation · Pre-mortem Analysis; tanpa perubahan frozen):**
+  - *Non-frozen:* seeder `--dry-run` + cetak identitas DB target sebelum apply (blast-radius wrong-DB); peringatan Verification — `migrate dev` hanya DB lokal, prod via `migrate deploy`; referensi helper `scripts/create-shadow-db.js` bila shadow DB gagal + larangan eksplisit improvise `db push`; catatan `PIN_PEPPER` wajib di env prod sebelum deploy Story 3; retensi `AuditLog` dinyatakan keputusan upstream (tanpa purge di story ini).
+- **2026-09-20 — Token-gate Split (Build step-02; renegosiasi frozen disetujui human):**
+  - *Frozen:* 4 baris matriks Guard superadmin dihapus dari scope story ini; Approach tidak lagi menyebut guard.
+  - *Non-frozen:* task `require-super-admin.ts` + test-nya + 2 AC guard + design note guard dipindah keluar. Seluruh kontrak hasil elicitation (Ronde 2 S7/S8, Ronde 5 RT3, Ronde 3 A15) dipertahankan utuh di `_bmad-output/implementation-artifacts/deferred-work.md` untuk dikonsumsi Story 5 — deny-by-default `=== "ADMIN"`, kontrak tanpa sesi, satu jenis error tunggal anti enumerasi, fallback `findUnique`.
+- **2026-09-20 — Elicitation #5 (Advanced Elicitation · Red Team vs Blue Team; renegosiasi frozen disetujui human):**
+  - *Frozen:* matriks + baris seeder email belum verified → abort default + `--allow-unverified` (anti perebutan email).
+  - *Non-frozen:* cek `emailVerified` + cetak profil user di seeder (RT1 — registrasi terbuka membuat email-claim race nyata); larangan meniru preseden plaintext `QuizStudentAccess.pin`/`classroomPin` (RT2, utang amendum dicatat); satu jenis error guard tunggal anti enumerasi (RT3); opsi inverted NODE_ENV untuk pepper fallback (RT4). Pertahanan yang tahan divalidasi: pepper/maxmem, deny-by-default, all-or-nothing, migrasi aditif.
+
+## Review Triage Log
+
+## Design Notes
+
+- Format hash: `scrypt:{N}:{r}:{p}:{saltHex}:{hashHex}` — verify membaca params dari string, memungkinkan eskalasi parameter untuk entri baru tanpa memutus verifikasi entri lama.
+- Kontrak asimetris disengaja: `hashPin` throw `PinFormatError` untuk input invalid (jalur set-PIN ingin error keras dan tetap memvalidasi sendiri), `verifyPin` return `false` (hot-path login ingin boolean bersih).
+- Preseden berbahaya — JANGAN ditiru: `QuizStudentAccess.pin` dan `Quiz.classroomPin` tersimpan **plaintext** (verifikasi langsung; di luar scope story ini — Never melarang menyentuh quiz). `accessPinHash` wajib via `hashPin`/`verifyPin` saja; utang "hash PIN quiz" dicatat untuk amendum, bukan story ini.
+- Parameter scrypt dipatok: `N=16384, r=8, p=1, keyLen=32 byte, salt=16 byte`; aturan memori tunggal: `maxmem` eksplisit (mis. 64 MB) — param yang menuntut memori `128×N×r` di atasnya ditolak saat parse, error scrypt apa pun saat verify → `false` (tanpa cap angka magic terpisah; eskalasi `N` menuntut `maxmem` lebih besar).
+- Pepper: kandidat PIN di-HMAC dengan `PIN_PEPPER` sebelum scrypt — dump DB saja tidak cukup untuk brute-force offline PIN 4-digit. `PIN_PEPPER` di-resolve saat module load: fail-fast di boot production, mirror pola `getAuthSecret()` (fallback dev-only) — bukan crash runtime di login pertama. Rotasi pepper membatalkan SEMUA hash existing (verify selalu `false`): lakukan sebelum ada data produksi; pasca-produksi rotasi = re-issue PIN massal via jalur reset; opsi masa depan: versi pepper terenkode di format hash. `PIN_PEPPER` wajib terpasang di env produksi **sebelum deploy Story 3** — fail-fast module-load baru aktif saat kode app pertama kali mengimpor `student-pin.ts` (Story 1 tidak mengimpornya; boot tetap aman sekarang). Opsi pengerasan opsional: balik kondisi fallback — pepper dev hanya aktif bila `NODE_ENV === "development"` (melindungi deploy dengan NODE_ENV salah konfigurasi).
+- `AuditLog.actorType`: `"USER" | "SUPERADMIN" | "STUDENT" | "SYSTEM"` (String, bukan enum — N4 menyebut field minimal; fleksibel untuk Story 3+); nullability eksplisit: `actorId String?` (null untuk `SYSTEM`), `targetId String?` (aksi platform-wide), `ip String?` (aksi SYSTEM), `metadata Json?`; `createdAt DateTime @default(now())`.
+- Redaksi metadata: PIN/hash/secret tidak boleh masuk `AuditLog.metadata`; penegakan DB-level append-only (REVOKE/trigger) dicatat sebagai utang amendum — v1 ditegakkan via konvensi service-only-create.
+- Retensi `AuditLog` adalah keputusan upstream (open question di SPEC); story ini sengaja tidak menambah purge/TTL — jangan tambahkan di scope ini tanpa renegosiasi.
+- Normalisasi email seeder: trim + lowercase sebelum match — `@@unique([email])` di Postgres bersifat case-sensitive.
+- Ancaman perebutan email (email-claim race): registrasi Better Auth terbuka — pihak yang mendaftarkan email allowlist lebih dulu akan menerima promosi saat seeder jalan. Pertahanan: cek `emailVerified` (abort default, `--allow-unverified` sadar) + cetak profil user (nama, createdAt) untuk konfirmasi operator. Catatan: repo belum mengonfigurasi email verification (semua user `emailVerified=false` saat ini), maka escape hatch wajib ada agar seeder tetap dapat dijalankan.
+- `joinCode @unique`: Postgres mengizinkan banyak NULL pada unique index; join-by-code Story 3/4 unik & terindeks sejak awal.
+- Seeder membaca `DATABASE_URL` via pola `src/lib/auth.ts` (pg Pool + PrismaPg), lalu upsert role + tulis audit dalam satu transaksi.
+- `approvedById` menunjuk `User.id` (String) sebagai String lepas dulu — FK formal ditambahkan di Story 3/5 saat relasinya dipakai (menghindari migrasi relasional prematur).
+
+## Verification
+
+**Commands:**
+- `npx tsc --noEmit` — expected: exit 0, zero error.
+- `npm test` — expected: 475 existing + baru, semua hijau.
+- `npx prisma validate` — expected: schema valid.
+- `npx prisma migrate dev --name student_portal_foundation` — expected: migrasi applied bersih tanpa warning data-loss.
+- `npm run seed:superadmin` (tanpa env) — expected: fail-fast non-zero dengan pesan allowlist.
+- `npm run seed:superadmin -- --dry-run` (env valid) — expected: cetak rencana + identitas DB target, nol row berubah.
+- `npm run seed:superadmin` (env valid, dijalankan 2×) — expected: idempotent; run kedua tanpa entri `AuditLog` baru.
+- ⚠️ Semua perintah di atas hanya untuk DB lokal — pastikan `DATABASE_URL` menunjuk dev; produksi hanya via `npx prisma migrate deploy`, `migrate dev` tidak pernah dijalankan ke prod.
+
+**Manual checks (if no CLI):**
+- Baca SQL migrasi hasil: pastikan murni aditif (tidak ada `DROP`/`RENAME`) dan `CREATE UNIQUE INDEX` untuk `joinCode` hadir.
+- Pasca-migrasi + seeder: jalankan satu alur login guru; pastikan `platformRole="ADMIN"` tidak ter-reset oleh update user Better Auth.

@@ -1,20 +1,45 @@
 # Derivasi Story Breakdown — spec-student-portal-auth
-# 9 story, 1:1 dengan tahap eksekusi blueprint. Urutan = urutan jalannya list.
-- id: "1"
-  title: Fondasi Database & Primitif Keamanan
+# 11 story — Tahap 1 dipecah 3 arah (1a/1b/1c, 2026-09-20); sisanya 1:1 dengan tahap. Urutan = urutan list.
+- id: "1a"
+  title: Fondasi Skema & Migrasi
   description: >-
-    Migrasi fondasi untuk seluruh spec (CAP-1…11): kolom Student (accessPinHash,
-    accountStatus, failedAttempts, lockedUntil, dst.), Class.joinCode,
-    User.platformRole, model AuditLog, seeder superadmin, dan util PIN scrypt.
-    Detail lingkup di execution-stages.md Tahap 1.
+    Migrasi aditif fondasi untuk seluruh spec (CAP-1…11): kolom akun Student,
+    kode join Class, User.platformRole, dan model AuditLog sesuai N1/N4.
+    Detail di stories/1a-schema-fondasi-migrasi.md.
   spec_checkpoint: true
   done_checkpoint: true
   invoke_dev_with: >-
-    N1: semua kolom migrasi baru nullable/ber-default; User.platformRole default
-    non-admin; nol drop/rename. N4: AuditLog minimal
-    actorType/actorId/action/targetType/targetId/metadata(Json)/ip/createdAt,
-    append-only tanpa jalur update/delete, index [actorId, createdAt] dan
-    [targetType, targetId]. Seeder superadmin hanya dari env allowlist.
+    N1: semua kolom nullable/ber-default, nol drop/rename. N4: AuditLog
+    append-only + index [actorId, createdAt] & [targetType, targetId];
+    metadata wajib bebas PIN/hash/secret. joinCode String? @unique. SQL hasil
+    wajib murni aditif. JANGAN jalankan migrate dev terhadap Neon maupun
+    engine prisma-dev lokal (drift pra-existing → tuntutan RESET; P3005) —
+    apply migrasi via db execute (Neon wajib direct URL tanpa -pooler) +
+    migrate resolve --applied; prod via migrate deploy SETELAH migrasi
+    rekonsiliasi drift (deferred-work) lunas.
+- id: "1b"
+  title: Primitif PIN Siswa (scrypt + pepper)
+  description: >-
+    Pure util hash/verify PIN 4-digit (CAP-1, primitif Story 3): scrypt
+    constant-time, pepper PIN_PEPPER, aturan memori maxmem. Nol dependensi
+    DB — paralel dengan 1a. Detail di stories/1b-primitif-pin.md.
+  invoke_dev_with: >-
+    Kontrak asimetris: hashPin throw PinFormatError pada input invalid,
+    verifyPin return false (termasuk hash korup / param > maxmem). Pepper
+    resolve saat module load, fail-fast production mirror getAuthSecret().
+    Larangan meniru preseden plaintext QuizStudentAccess.pin/classroomPin.
+    PIN_PEPPER wajib di env produksi sebelum deploy Story 3.
+- id: "1c"
+  title: Allowlist & Seeder Superadmin
+  description: >-
+    Jalur lahir superadmin satu-satunya (CAP-7): parser allowlist pure +
+    seeder idempotent all-or-nothing dengan AuditLog. Prasyarat: 1a merged.
+    Detail di stories/1c-allowlist-seeder-superadmin.md.
+  invoke_dev_with: >-
+    Validasi semua email dulu → satu transaksi all-or-nothing; cek
+    emailVerified (abort default, --allow-unverified sadar); --dry-run +
+    identitas DB target (host+dbname) selalu dicetak; normalisasi
+    trim+lowercase; tsx devDependency + npm script seed:superadmin.
 - id: "2"
   title: Gerbang Dedup Sekolah & Penguatan Alur Guru
   description: >-

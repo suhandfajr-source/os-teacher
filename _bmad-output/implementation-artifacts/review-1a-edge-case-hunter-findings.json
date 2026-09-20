@@ -1,0 +1,22 @@
+[
+  {
+    "location": "_bmad-output/specs/spec-student-portal-auth/stories.yaml:2",
+    "trigger_condition": "Header and memlog claim 10 stories; actual list defines 11 (1a,1b,1c,2\u20139)",
+    "guard_snippet": "# 11 story \u2014 Tahap 1 dipecah 3 arah (1a/1b/1c, 2026-09-20); sisanya 1:1 dengan tahap.",
+    "potential_consequence": "Count-trusting validity audits and sprint planning mis-report the story total"
+  },
+  {
+    "location": "prisma/migrations/20260920135945_student_portal_foundation/migration.sql:2-3",
+    "trigger_condition": "Fresh environment replays all 19 migrations; f0be2d5 schedule/prosem schema never created",
+    "guard_snippet": "-- add reconciliation migration for f0be2d5 schedule/prosem drift (deferred-work.md backlog)",
+    "potential_consequence": "Fresh-DB schema mismatches generated client; schedule/prosem queries fail at runtime"
+  },
+  {
+    "location": "prisma/migrations/20260920135945_student_portal_foundation/migration.sql:2-3",
+    "trigger_condition": "Task [x] claims migration ran via 'npx prisma migrate dev --name student_portal_foundation'",
+    "guard_snippet": "SQL actually generated via 'prisma migrate diff' + applied via 'db execute' + 'migrate resolve --applied'; reword Task and Verification",
+    "potential_consequence": "Next developer re-runs migrate dev; hits reset demand or P3005",
+    "kind": "claim",
+    "confidence": "high"
+  }
+]

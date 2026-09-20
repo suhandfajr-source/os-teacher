@@ -160,6 +160,7 @@ model User {
   image         String?
   createdAt     DateTime
   updatedAt     DateTime
+  platformRole  String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
   sessions      Session[]
   accounts      Account[]
 
@@ -272,6 +273,16 @@ model Student {
   createdAt                 DateTime     @default(now())
   updatedAt                 DateTime     @updatedAt
 
+  // DEV STAGE 11 — akun portal siswa (Story 1a)
+  accessPinHash String?  // hash scrypt+pepper — hanya diisi via hashPin (Story 1b)
+  accountStatus String   @default("PENDING") // PENDING | ACTIVE | REJECTED (glosarium §9.2)
+  pinUpdatedAt  DateTime?
+  lastLoginAt   DateTime?
+  failedAttempts Int      @default(0)
+  lockedUntil   DateTime?
+  approvedById  String?  // User.id — FK formal di Story 3/5
+  approvedAt    DateTime?
+
   classMemberships  ClassStudent[]
   attendanceRecords AttendanceRecord[]
   assessmentResults AssessmentResult[]
@@ -362,6 +373,12 @@ model Class {
   normalizedName   String?
   gradeLevel       String?
   status           EntityStatus      @default(ACTIVE)
+
+  // DEV STAGE 11 — kode join rombel (Story 1a)
+  joinCode          String?    @unique // banyak NULL diizinkan Postgres — join-by-code unik & terindeks
+  joinCodeLocked    Boolean    @default(false)
+  joinCodeUpdatedAt DateTime?
+
   teachingContexts TeachingContext[]
   classStudents    ClassStudent[]
 
@@ -895,6 +912,28 @@ model ImportSession {
   @@index([teacherProfileId, schoolId])
   @@index([teachingContextId, category])
   @@map("import_session")
+}
+
+// -------------------------------------------------
+// AUDIT LOG (DEV STAGE 11 — Story 1a, amendum N4)
+// Append-only: hanya jalur create (konvensi service-only-create);
+// penegakan DB-level (REVOKE/trigger) + retensi = utang amendum upstream.
+// -------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorType  String // USER | SUPERADMIN | STUDENT | SYSTEM
+  actorId    String? // null untuk SYSTEM
+  action     String
+  targetType String
+  targetId   String? // null untuk aksi platform-wide
+  metadata   Json? // LARANGAN: PIN/hash/secret tidak boleh masuk sini
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_log")
 }
 
 // -------------------------------------------------
