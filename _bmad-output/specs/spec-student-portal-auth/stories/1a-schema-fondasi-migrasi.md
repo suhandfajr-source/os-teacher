@@ -67,6 +67,8 @@ context:
 
 ## Spec Change Log
 
+- 2026-09-21 — **Rekonsiliasi Drift Neon Lunas**: Migrasi `20260921000000_reconcile_schedule_prosem_drift` diterapkan di Neon via `migrate resolve --applied`. Gate verifikasi otomatis `npm run verify:migrations` aktif (exit 0). Neon kini 20 migrasi up-to-date, replay chain = schema.prisma identik. Utang VG1, BH5, EC2 lunas penuh.
+
 - 2026-09-20 — **Loopback bad_spec #1** (review pass 1; temuan BH2/BH3/BH4/EC3/VG-other1, verdict high): prosedur migrasi terdokumentasi basi — Verification/Task memerintahkan `migrate dev` yang realitasnya menuntut RESET (drift pra-existing), serta invoke_dev_with stories.yaml menyuruh target yang tak aman. **Amendemen:** Task #2 & Verification 1a ditulis ulang ke prosedur aktual (migrate diff → db execute → migrate resolve, direct URL Neon, larangan migrate dev hingga rekonsiliasi); klarifikasi state bookkeeping lokal; invoke_dev_with 1a di stories.yaml dikoreksi; Never 1c diperketat. **Known-bad yang dihindari:** developer mengikuti Verification lama → prompt reset → data Neon hilang. **KEEP (wajib bertahan re-derivasi):** (1) seluruh perubahan schema.prisma & file migrasi 20260920135945 — byte-identik, re-derivasi dari spec teramendemen menghasilkan kode yang sama (nol delta kode); (2) seluruh entri Implementation Notes insiden; (3) larangan db push terhadap Neon.
 
 - 2026-09-20 — Pecahan 3 arah Story 1 (Build step-02 token-gate, disetujui human): scope schema+migrasi menjadi story ini; primitif PIN → 1b, allowlist+seeder → 1c. Seluruh pengerasan elicitation dipindah utuh; sejarah lengkap: `1-fondasi-database-primitif-keamanan.elicitation-report.md` (file selevel).

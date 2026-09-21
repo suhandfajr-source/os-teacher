@@ -10,17 +10,17 @@
   summary: Allowlist parser + seeder superadmin (`superadmin-allowlist.ts`, `seed-superadmin.ts`, tsx + npm script, `SUPERADMIN_EMAILS` env) dipecah menjadi Story 1c — kontrak elicitation utuh di `stories/1c-allowlist-seeder-superadmin.md`.
   evidence: Pecahan 3 arah Story 1 (token-gate Build step-02, disetujui human 2026-09-20); prasyarat 1a merged (kolom platformRole + tabel AuditLog).
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
-  summary: Rekonsiliasi drift Neon existing — perubahan schedule/prosem (commit f0be2d5: teaching_schedule, academic_plan_item, learning_objective, academic_context_profile, teaching_session.teachingScheduleId) ada di schema.prisma + Neon (via db push masa lalu) TAPI tidak punya file migrasi; perlu migrasi rekonsiliasi agar `migrate deploy`/fresh-local replay menghasilkan schema identik.
-  evidence: Ditemukan saat Build 1a 2026-09-20 (migrate dev menuntut reset karena history ≠ schema); utang pra-existing, sengaja dikecualikan dari file migrasi 1a demi scope discipline.
+  summary: [SETTLED 2026-09-21 via spec-neon-drift-reconciliation] Rekonsiliasi drift Neon existing — migrasi `20260921000000_reconcile_schedule_prosem_drift` dibuat via diff shadow, diterapkan di Neon via `migrate resolve --applied`. Chain 20 file kini sinkron 100% dengan schema.prisma.
+  evidence: Ditemukan saat Build 1a 2026-09-20; dilunasi 2026-09-21 (gate exit 0, migrate status 20 up-to-date).
 
 # Review 1a pass 1 — defer entries (2026-09-20)
 
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
-  summary: Migrasi rekonsiliasi drift schedule/prosem (f0be2d5) WAJIB land sebelum `migrate deploy` pertama ke env fresh/CI dan sebelum migrasi apa pun yang menyentuh tabel drift.
-  evidence: Replay 19 file ≠ schema.prisma ≠ Neon (db push masa lalu); fresh env gagal senyap saat client hasil generate INSERT kolom hilang (dibuktikan insiden 2 suite merah 2026-09-20).
+  summary: [SETTLED 2026-09-21 via spec-neon-drift-reconciliation] Migrasi rekonsiliasi drift schedule/prosem (f0be2d5) sudah land sebagai `20260921000000_reconcile_schedule_prosem_drift`.
+  evidence: Replay 20 file = schema.prisma = Neon. Gate verify:migrations exit 0.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
-  summary: Gate verifikasi otomatis file migrasi (`migrate diff --from-migrations --to-schema --exit-code`) diaktifkan segera setelah rekonsiliasi drift lunas.
-  evidence: VG1 pre-verified: menghapus baris migrasi tetap hijau di semua verifikasi 1a (test menyentuh Neon yang sudah dimigrasi, bukan file); gate hari ini merah karena drift pra-existing.
+  summary: [SETTLED 2026-09-21 via spec-neon-drift-reconciliation] Gate verifikasi otomatis file migrasi (`npm run verify:migrations`) diaktifkan via `scripts/verify-migrations.mjs` pasca-rekonsiliasi drift lunas.
+  evidence: VG1 pre-verified; aktif 2026-09-21, exit 0 pada chain bersih, mendeteksi drift secara otomatis.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
   summary: Proyeksikan kolom (select) di getStudents/updateStudent/archiveStudent SEBELUM Story 3 mengisi accessPinHash — jika tidak, hash PIN terkirim ke klien via server action.
   evidence: VG-other2: students.actions.ts:94 tanpa select; hari ini kolom null (aman), begitu terisi = kebocoran hash.
