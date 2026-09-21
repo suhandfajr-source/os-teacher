@@ -11,6 +11,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
+import { verifyStudentSession } from "@/modules/student-auth/student-session";
 import {
   createQuizSchema,
   quizQuestionSchema,
@@ -1469,5 +1470,601 @@ export async function getAttemptResultAction(
     };
   } catch (error: unknown) {
     return { success: false, error: formatActionError(error, "Gagal memuat hasil") };
+  }
+}
+
+// ============================================================================
+// STUDENT PORTAL QUIZ ACTIONS (CAP-6, B1, F3, F4, F6, F7, D1, D3, D4)
+// ============================================================================
+
+/**
+ * Mengambil daftar kuis untuk portal siswa: kuis aktif dan riwayat selesai.
+ */
+export async function getStudentQuizListAction(): Promise<{
+  success: boolean;
+  data?: {
+    activeQuizzes: Array<{
+      id: string;
+      title: string;
+      shareToken: string;
+      subjectName: string;
+      teacherName: string;
+      durationMinutes: number | null;
+      deadline: string | null;
+      attemptStatus: "IN_PROGRESS" | "SUBMITTED" | "NEEDS_GRADING" | null;
+      score: number | null;
+    }>;
+    completedQuizzes: Array<{
+      id: string;
+      title: string;
+      shareToken: string;
+      subjectName: string;
+      teacherName: string;
+      score: number | null;
+      submittedAt: string | null;
+    }>;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await verifyStudentSession();
+    if (!session) {
+      return { success: false, error: "Sesi tidak valid." };
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: session.studentId },
+      include: {
+        classMemberships: {
+          include: {
+            academicPeriod: { select: { status: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    const activeMembership = student?.classMemberships.find(
+      (cm) => cm.academicPeriod.status === "ACTIVE"
+    ) || student?.classMemberships[0];
+
+    if (!activeMembership) {
+      return { success: true, data: { activeQuizzes: [], completedQuizzes: [] } };
+    }
+
+    const quizzes = await prisma.quiz.findMany({
+      where: {
+        status: "PUBLISHED",
+        teachingContext: {
+          classId: activeMembership.classId,
+          academicPeriodId: activeMembership.academicPeriodId,
+        },
+      },
+      include: {
+        teachingContext: {
+          include: {
+            subject: { select: { name: true } },
+            teacherProfile: {
+              include: {
+                user: { select: { name: true } },
+              },
+            },
+          },
+        },
+        attempts: {
+          where: { studentId: session.studentId },
+          select: {
+            id: true,
+            status: true,
+            score: true,
+            submittedAt: true,
+          },
+          take: 1,
+        },
+      },
+      orderBy: [
+        { deadline: "asc" },
+        { createdAt: "desc" },
+      ],
+    });
+
+    const activeQuizzes: any[] = [];
+    const completedQuizzes: any[] = [];
+
+    for (const q of quizzes) {
+      const attempt = q.attempts[0];
+      const isCompleted = attempt && (attempt.status === "SUBMITTED" || attempt.status === "NEEDS_GRADING");
+
+      if (isCompleted) {
+        completedQuizzes.push({
+          id: q.id,
+          title: q.title,
+          shareToken: q.shareToken,
+          subjectName: q.teachingContext.subject.name,
+          teacherName: q.teachingContext.teacherProfile.user.name || "Guru Pengampu",
+          score: attempt.score ? Number(attempt.score) : null,
+          submittedAt: attempt.submittedAt ? attempt.submittedAt.toISOString() : null,
+        });
+      } else {
+        activeQuizzes.push({
+          id: q.id,
+          title: q.title,
+          shareToken: q.shareToken,
+          subjectName: q.teachingContext.subject.name,
+          teacherName: q.teachingContext.teacherProfile.user.name || "Guru Pengampu",
+          durationMinutes: q.durationMinutes,
+          deadline: q.deadline ? q.deadline.toISOString() : null,
+          attemptStatus: attempt ? attempt.status : null,
+          score: attempt?.score ? Number(attempt.score) : null,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      data: { activeQuizzes, completedQuizzes },
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal memuat daftar kuis.",
+    };
+  }
+}
+
+/**
+ * Memulai atau melanjutkan attempt kuis dari portal siswa.
+ * Identitas siswa diderivasi murni dari sesi server (Amendum B1).
+ * Parameter client diabaikan, bypass classroom PIN, sanitasi kunci jawaban (F6),
+ * proteksi P2002 double-start via upsert/catch (D1).
+ */
+export async function startQuizAttemptFromSessionAction(token: string): Promise<{
+  success: boolean;
+  data?: {
+    attemptId: string;
+    quizTitle: string;
+    durationMinutes: number | undefined;
+    startedAt: string;
+    isRemedial: boolean;
+    questions: StudentQuizQuestionView[];
+    savedAnswers: Array<{ questionId: string; selectedIndex: number | null; essayAnswer: string | null }>;
+  };
+  alreadySubmitted?: boolean;
+  error?: string;
+}> {
+  try {
+    const session = await verifyStudentSession();
+    if (!session) {
+      return { success: false, error: "Sesi tidak valid atau telah berakhir." };
+    }
+
+    const studentId = session.studentId;
+
+    if (!token || token.length < 10) {
+      return { success: false, error: "Token kuis tidak valid." };
+    }
+
+    const quiz = await getPublishedQuizByToken(token);
+    if (!quiz) return { success: false, error: "Kuis tidak ditemukan." };
+    if (quiz.status !== "PUBLISHED") {
+      return { success: false, error: "Kuis belum dibuka atau sudah ditutup oleh guru." };
+    }
+    if (quiz.validFrom && quiz.validFrom.getTime() > Date.now()) {
+      return { success: false, error: "Ujian belum dimulai. Silakan tunggu jadwal mulai ujian." };
+    }
+    if (quiz.deadline && quiz.deadline.getTime() < Date.now()) {
+      return { success: false, error: "Batas waktu kuis sudah terlewat." };
+    }
+
+    // Roster Check: Pastikan siswa terdaftar di rombel kuis pada periode akademik yang sama
+    const isOnRoster = quiz.teachingContext.class.classStudents.some(
+      (cs) =>
+        cs.academicPeriodId === quiz.teachingContext.academicPeriodId &&
+        cs.student.id === studentId
+    );
+    if (!isOnRoster) {
+      return { success: false, error: "Nama siswa tidak terdaftar di kelas untuk kuis ini." };
+    }
+
+    // Cek attempt yang sudah ada
+    let attempt = await prisma.quizAttempt.findUnique({
+      where: { quizId_studentId: { quizId: quiz.id, studentId } },
+      include: {
+        answers: { select: { questionId: true, selectedIndex: true, essayAnswer: true } },
+      },
+    });
+
+    if (attempt?.status === "SUBMITTED" || attempt?.status === "NEEDS_GRADING") {
+      return {
+        success: false,
+        alreadySubmitted: true,
+        error: "Kamu sudah mengumpulkan kuis ini. Silakan lihat pembahasan.",
+      };
+    }
+
+    // D1: Concurrency Protection double-click / multi-tab start
+    if (!attempt) {
+      try {
+        attempt = await prisma.quizAttempt.create({
+          data: { quizId: quiz.id, studentId, questionOrder: {} },
+          include: {
+            answers: { select: { questionId: true, selectedIndex: true, essayAnswer: true } },
+          },
+        });
+      } catch (err: unknown) {
+        // Jika terjadi Prisma unique constraint violation (P2002), load attempt yang baru saja dibuat
+        if (
+          typeof err === "object" &&
+          err !== null &&
+          "code" in err &&
+          (err as { code: string }).code === "P2002"
+        ) {
+          attempt = await prisma.quizAttempt.findUnique({
+            where: { quizId_studentId: { quizId: quiz.id, studentId } },
+            include: {
+              answers: { select: { questionId: true, selectedIndex: true, essayAnswer: true } },
+            },
+          });
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (!attempt) {
+      return { success: false, error: "Gagal membuat sesi ujian." };
+    }
+
+    // Snapshot soal yang stabil
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[]; questionIds?: string[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+
+    if (!stored?.questions?.length) {
+      const liveQuestions = await prisma.quizQuestion.findMany({
+        where: { quizId: quiz.id },
+        orderBy: { order: "asc" },
+      });
+      const snapshot = buildAttemptSnapshot(
+        liveQuestions.map((q) => ({
+          id: q.id,
+          type: q.type,
+          text: q.text,
+          options: q.options as string[],
+          correctIndex: q.correctIndex,
+          points: Number(q.points),
+          explanation: q.explanation ?? undefined,
+        })),
+        quiz.shuffleQuestions,
+        quiz.shuffleOptions
+      );
+      await prisma.quizAttempt.update({
+        where: { id: attempt.id },
+        data: { questionOrder: { questions: snapshot } as unknown as Prisma.InputJsonValue },
+      });
+      stored!.questions = snapshot;
+    }
+
+    // F6: Sanitasi Kunci Jawaban! correctIndex dan explanation DIBUANG dari respons
+    const sanitizedQuestions: StudentQuizQuestionView[] = stored!.questions!.map((q, idx) => ({
+      id: q.id,
+      order: idx + 1,
+      type: q.type ?? "MULTIPLE_CHOICE",
+      text: q.text,
+      options: q.options,
+      points: q.points,
+    }));
+
+    // Server-Authoritative Duration Clamping
+    let effectiveDuration = quiz.durationMinutes ?? undefined;
+    if (quiz.deadline) {
+      const msLeft = quiz.deadline.getTime() - attempt.startedAt.getTime();
+      const minutesLeft = Math.max(1, Math.floor(msLeft / 60_000));
+      if (effectiveDuration) {
+        effectiveDuration = Math.min(effectiveDuration, minutesLeft);
+      } else {
+        effectiveDuration = minutesLeft;
+      }
+    }
+
+    const savedAnswers = attempt.answers
+      .filter((a): a is typeof a & { questionId: string } => typeof a.questionId === "string")
+      .map((a) => ({
+        questionId: a.questionId,
+        selectedIndex: a.selectedIndex,
+        essayAnswer: a.essayAnswer,
+      }));
+
+    return {
+      success: true,
+      data: {
+        attemptId: attempt.id,
+        quizTitle: quiz.title,
+        durationMinutes: effectiveDuration,
+        startedAt: attempt.startedAt.toISOString(),
+        isRemedial: attempt.isRemedial,
+        questions: sanitizedQuestions,
+        savedAnswers,
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal memulai kuis") };
+  }
+}
+
+/**
+ * Autosave jawaban kuis per butir soal terproteksi sesi siswa.
+ */
+export async function saveQuizAnswerFromSessionAction(
+  attemptId: string,
+  questionId: string,
+  selectedIndex?: number | null,
+  essayAnswer?: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await verifyStudentSession();
+    if (!session) {
+      return { success: false, error: "Sesi tidak valid." };
+    }
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        quiz: { select: { durationMinutes: true, deadline: true } },
+      },
+    });
+
+    if (!attempt) return { success: false, error: "Attempt tidak ditemukan." };
+    if (attempt.studentId !== session.studentId) {
+      return { success: false, error: "Akses tidak diizinkan." };
+    }
+
+    if (attempt.status === "SUBMITTED" || attempt.status === "NEEDS_GRADING") {
+      return { success: false, error: "Kuis sudah selesai dikumpulkan." };
+    }
+
+    // F7: Cek apakah durasi sudah habis
+    if (isAttemptExpired(attempt.startedAt, attempt.quiz.durationMinutes, attempt.quiz.deadline)) {
+      return { success: false, error: "Waktu kuis telah berakhir." };
+    }
+
+    await prisma.quizAnswer.upsert({
+      where: { attemptId_questionId: { attemptId, questionId } },
+      create: {
+        attemptId,
+        questionId,
+        selectedIndex: selectedIndex ?? undefined,
+        essayAnswer: essayAnswer ?? undefined,
+      },
+      update: {
+        selectedIndex: selectedIndex ?? undefined,
+        essayAnswer: essayAnswer ?? undefined,
+      },
+    });
+
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal menyimpan jawaban." };
+  }
+}
+
+/**
+ * Mengumpulkan kuis dari sesi portal siswa dengan kalkulasi skor atomik.
+ * Nilai PG otomatis tersimpan ke QuizAttempt.score (Activity Generates Data).
+ */
+export async function submitQuizAttemptFromSessionAction(
+  attemptId: string,
+  answers: Array<{ questionId: string; selectedIndex?: number | null; essayAnswer?: string | null }>
+): Promise<{
+  success: boolean;
+  data?: {
+    score: number;
+    totalPoints: number;
+    passed: boolean;
+    isRemedial: boolean;
+    needsGrading: boolean;
+    submittedAt: string;
+  };
+  alreadySubmitted?: boolean;
+  error?: string;
+}> {
+  try {
+    const session = await verifyStudentSession();
+    if (!session) {
+      return { success: false, error: "Sesi tidak valid." };
+    }
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        quiz: {
+          select: {
+            id: true,
+            durationMinutes: true,
+            deadline: true,
+            standardScore: true,
+          },
+        },
+      },
+    });
+
+    if (!attempt) return { success: false, error: "Attempt tidak ditemukan." };
+    if (attempt.studentId !== session.studentId) {
+      return { success: false, error: "Akses ditolak." };
+    }
+
+    if (attempt.status === "SUBMITTED" || attempt.status === "NEEDS_GRADING") {
+      const standard = attempt.quiz.standardScore ? Number(attempt.quiz.standardScore) : null;
+      const score = attempt.score ? Number(attempt.score) : 0;
+      return {
+        success: true,
+        alreadySubmitted: true,
+        data: {
+          score,
+          totalPoints: 100,
+          passed: standard === null ? true : score >= standard,
+          isRemedial: attempt.isRemedial,
+          needsGrading: attempt.status === "NEEDS_GRADING",
+          submittedAt: attempt.submittedAt?.toISOString() ?? new Date().toISOString(),
+        },
+      };
+    }
+
+    // Resolusi snapshot soal yang disimpan
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    if (!stored?.questions?.length) {
+      return { success: false, error: "Data soal tidak sinkron. Silakan muat ulang halaman." };
+    }
+    const snapshot = stored.questions;
+
+    // Hitung skor via gradeAttempt
+    const { score, totalPoints, hasEssays, perQuestion } = gradeAttempt(
+      snapshot.map((q) => ({
+        id: q.id,
+        type: q.type,
+        correctIndex: q.correctIndex,
+        points: q.points,
+      })),
+      answers
+    );
+
+    const normalized = normalizeScore(score, totalPoints);
+
+    // Simpan semua jawaban dan finalisasi attempt secara atomik
+    await prisma.$transaction([
+      ...perQuestion.map((pq) =>
+        prisma.quizAnswer.upsert({
+          where: { attemptId_questionId: { attemptId: attempt.id, questionId: pq.questionId } },
+          create: {
+            attemptId: attempt.id,
+            questionId: pq.questionId,
+            selectedIndex: pq.selectedIndex ?? undefined,
+            essayAnswer: pq.essayAnswer ?? undefined,
+            isCorrect: pq.isCorrect ?? undefined,
+          },
+          update: {
+            selectedIndex: pq.selectedIndex ?? undefined,
+            essayAnswer: pq.essayAnswer ?? undefined,
+            isCorrect: pq.isCorrect ?? undefined,
+          },
+        })
+      ),
+      prisma.quizAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: hasEssays ? "NEEDS_GRADING" : "SUBMITTED",
+          submittedAt: new Date(),
+          score: normalized,
+        },
+      }),
+    ]);
+
+    const standard = attempt.quiz.standardScore ? Number(attempt.quiz.standardScore) : null;
+
+    return {
+      success: true,
+      data: {
+        score: normalized,
+        totalPoints,
+        passed: standard === null ? true : normalized >= standard,
+        isRemedial: attempt.isRemedial,
+        needsGrading: hasEssays,
+        submittedAt: new Date().toISOString(),
+      },
+    };
+  } catch (err: unknown) {
+    return { success: false, error: formatActionError(err, "Gagal mengumpulkan kuis.") };
+  }
+}
+
+/**
+ * Mengambil lembar pembahasan kuis pasca submit untuk portal siswa.
+ * Hanya diizinkan jika status attempt adalah SUBMITTED atau NEEDS_GRADING.
+ */
+export async function getQuizReviewFromSessionAction(token: string): Promise<{
+  success: boolean;
+  data?: {
+    quizTitle: string;
+    score: number;
+    standardScore: number | null;
+    passed: boolean;
+    submittedAt: string;
+    questions: Array<{
+      id: string;
+      order: number;
+      type: string;
+      text: string;
+      options: string[];
+      selectedIndex: number | null;
+      essayAnswer: string | null;
+      correctIndex: number | null;
+      isCorrect: boolean | null;
+      explanation?: string | null;
+      pointsEarned: number;
+      pointsMax: number;
+    }>;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await verifyStudentSession();
+    if (!session) {
+      return { success: false, error: "Sesi tidak valid." };
+    }
+
+    const quiz = await prisma.quiz.findUnique({
+      where: { shareToken: token },
+      select: { id: true, title: true, standardScore: true },
+    });
+    if (!quiz) return { success: false, error: "Kuis tidak ditemukan." };
+
+    const attempt = await prisma.quizAttempt.findUnique({
+      where: { quizId_studentId: { quizId: quiz.id, studentId: session.studentId } },
+      include: { answers: true },
+    });
+
+    if (!attempt || (attempt.status !== "SUBMITTED" && attempt.status !== "NEEDS_GRADING")) {
+      return { success: false, error: "Hasil dan pembahasan belum tersedia." };
+    }
+
+    const snapshot = await resolveAttemptSnapshot(attempt, quiz.id);
+    const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a]));
+
+    const questionsReview = snapshot.map((q, idx) => {
+      const ans = answerMap.get(q.id);
+      const sel = ans?.selectedIndex ?? null;
+      const isCorrect = q.correctIndex !== null && sel === q.correctIndex;
+      return {
+        id: q.id,
+        order: idx + 1,
+        type: q.type ?? "MULTIPLE_CHOICE",
+        text: q.text,
+        options: q.options,
+        selectedIndex: sel,
+        essayAnswer: ans?.essayAnswer ?? null,
+        correctIndex: q.correctIndex,
+        isCorrect,
+        explanation: q.explanation ?? null,
+        pointsEarned: isCorrect ? q.points : 0,
+        pointsMax: q.points,
+      };
+    });
+
+    const standard = quiz.standardScore ? Number(quiz.standardScore) : null;
+    const score = attempt.score ? Number(attempt.score) : 0;
+
+    return {
+      success: true,
+      data: {
+        quizTitle: quiz.title,
+        score,
+        standardScore: standard,
+        passed: standard === null ? true : score >= standard,
+        submittedAt: attempt.submittedAt?.toISOString() ?? "",
+        questions: questionsReview,
+      },
+    };
+  } catch (err: unknown) {
+    return { success: false, error: formatActionError(err, "Gagal memuat pembahasan kuis.") };
   }
 }

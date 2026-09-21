@@ -6,6 +6,14 @@ export const STUDENT_SESSION_COOKIE_NAME = "klassa_student_session";
 export const DEV_ONLY_STUDENT_SESSION_SECRET =
   "dev-only-student-session-secret-min-32-chars-long-do-not-use-in-production";
 
+/**
+ * Dummy Hash untuk perlindungan Timing Attack (B3 & F5).
+ * Memiliki parameter scrypt valid (N=16384, r=8, p=1).
+ * Dijamin berjalan asinkron ~50ms agar timing seragam saat NIS tidak ditemukan.
+ */
+export const DUMMY_HASH =
+  "scrypt:16384:8:1:0123456789abcdef0123456789abcdef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 

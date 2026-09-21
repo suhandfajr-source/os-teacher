@@ -2,15 +2,11 @@
 
 import { prisma } from "@/lib/auth";
 import { validatePinFormat, hashPin, verifyPin } from "@/lib/student-pin";
-import { setStudentSessionCookie, clearStudentSessionCookie } from "./student-session";
-
-/**
- * Dummy Hash untuk perlindungan Timing Attack (B3 & F5).
- * Memiliki parameter scrypt valid (N=16384, r=8, p=1).
- * Dijamin berjalan asinkron ~50ms agar timing seragam saat NIS tidak ditemukan.
- */
-export const DUMMY_HASH =
-  "scrypt:16384:8:1:0123456789abcdef0123456789abcdef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+import { 
+  setStudentSessionCookie, 
+  clearStudentSessionCookie,
+  DUMMY_HASH 
+} from "./student-session";
 
 const SAFE_STUDENT_SELECT = {
   id: true,
@@ -82,8 +78,21 @@ export async function lookupJoinCode(code: string) {
   };
 }
 
+export type JoinCodeContext = {
+  classId: string;
+  className: string;
+  gradeLevel: string | null;
+  schoolId: string;
+  schoolName: string;
+  city: string | null;
+  academicPeriodId: string | null;
+  academicYear: string;
+  semester: string;
+  teacherName: string;
+};
+
 export type RegisterStudentResult =
-  | { success: true; status: "ACTIVE"; student: any; message: string }
+  | { success: true; status: "ACTIVE"; student: any; message: string; redirect?: string }
   | { success: true; status: "PENDING"; reason: "MISMATCH_NAME" | "NEW_STUDENT"; student: any; message: string }
   | { success: false; message: string };
 
@@ -230,6 +239,7 @@ export async function registerStudent(data: {
       success: true,
       status: "ACTIVE",
       student: updatedStudent,
+      redirect: "/siswa/portal",
       message: "Pendaftaran berhasil! Akun Anda aktif otomatis.",
     };
   }
@@ -316,7 +326,14 @@ export async function registerStudent(data: {
 
 export type LoginStudentResult =
   | { success: true; redirect: string }
-  | { success: false; message: string; code?: "ACCOUNT_LOCKED" | "ACCOUNT_PENDING" | "ACCOUNT_REJECTED" };
+  | { 
+      success: false; 
+      message: string; 
+      code?: "ACCOUNT_LOCKED" | "ACCOUNT_PENDING" | "ACCOUNT_REJECTED";
+      status?: "PENDING" | "REJECTED";
+      studentName?: string;
+      schoolName?: string;
+    };
 
 /**
  * Login harian siswa dengan NIS + PIN ter-scope sekolah (F2),
@@ -349,6 +366,11 @@ export async function loginStudent(data: {
       schoolId: data.schoolId,
       nis: { equals: cleanNis, mode: "insensitive" },
     },
+    include: {
+      school: {
+        select: { id: true, name: true },
+      },
+    },
   });
 
   // F5 Dummy-Verify Defense: Jika NIS tidak ada atau belum set PIN, eksekusi scrypt tiruan
@@ -375,6 +397,9 @@ export async function loginStudent(data: {
     return {
       success: false,
       code: "ACCOUNT_PENDING",
+      status: "PENDING",
+      studentName: student.fullName,
+      schoolName: student.school?.name || "Sekolah",
       message: "Akun Anda masih menunggu persetujuan guru.",
     };
   }
@@ -384,6 +409,9 @@ export async function loginStudent(data: {
     return {
       success: false,
       code: "ACCOUNT_REJECTED",
+      status: "REJECTED",
+      studentName: student.fullName,
+      schoolName: student.school?.name || "Sekolah",
       message: "Pendaftaran akun Anda ditolak oleh guru.",
     };
   }
@@ -463,5 +491,5 @@ export async function loginStudent(data: {
  */
 export async function logoutStudent() {
   await clearStudentSessionCookie();
-  return { success: true, redirect: "/siswa" };
+  return { success: true, redirect: "/portal-siswa" };
 }

@@ -36,17 +36,17 @@ vi.mock("@/lib/student-pin", () => ({
 vi.mock("../student-session", () => ({
   setStudentSessionCookie: vi.fn(),
   clearStudentSessionCookie: vi.fn(),
+  DUMMY_HASH: "scrypt:16384:8:1:0123456789abcdef0123456789abcdef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 }));
 
 import { prisma } from "@/lib/auth";
 import { verifyPin } from "@/lib/student-pin";
-import { setStudentSessionCookie, clearStudentSessionCookie } from "../student-session";
+import { setStudentSessionCookie, clearStudentSessionCookie, DUMMY_HASH } from "../student-session";
 import {
   lookupJoinCode,
   registerStudent,
   loginStudent,
   logoutStudent,
-  DUMMY_HASH,
 } from "../student-auth.actions";
 
 describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
@@ -450,10 +450,10 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
   });
 
   describe("logoutStudent", () => {
-    it("clears student session cookie and redirects", async () => {
+    it("clears student session cookie and redirects to portal-siswa", async () => {
       const res = await logoutStudent();
       expect(res.success).toBe(true);
-      expect(res.redirect).toBe("/siswa");
+      expect(res.redirect).toBe("/portal-siswa");
       expect(clearStudentSessionCookie).toHaveBeenCalled();
     });
   });

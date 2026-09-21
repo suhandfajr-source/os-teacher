@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { hashPin, verifyPin } from "@/lib/student-pin";
-import { DUMMY_HASH } from "../student-auth.actions";
 import {
   signStudentSessionToken,
   verifyStudentSessionToken,
   STUDENT_SESSION_COOKIE_NAME,
+  DUMMY_HASH,
 } from "../student-session";
 
 describe("Student Auth Security & Invariant Verification (B3, B4, F1, F5, F6)", () => {

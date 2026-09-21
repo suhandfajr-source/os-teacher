@@ -10,12 +10,12 @@ export default function proxy(request: NextRequest) {
     const studentCookie = request.cookies.get(STUDENT_SESSION_COOKIE_NAME);
 
     if (!studentCookie?.value) {
-      return NextResponse.redirect(new URL("/siswa", request.url));
+      return NextResponse.redirect(new URL("/portal-siswa", request.url));
     }
 
     const payload = verifyStudentSessionToken(studentCookie.value);
     if (!payload) {
-      const response = NextResponse.redirect(new URL("/siswa", request.url));
+      const response = NextResponse.redirect(new URL("/portal-siswa", request.url));
       response.cookies.delete(STUDENT_SESSION_COOKIE_NAME);
       return response;
     }
