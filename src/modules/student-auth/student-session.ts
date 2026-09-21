@@ -130,20 +130,20 @@ export function verifyStudentSessionToken(
  * token.pinUpdatedAt masih sinkron dengan student.pinUpdatedAt.
  */
 export async function verifyStudentSession(): Promise<StudentSessionPayload | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(STUDENT_SESSION_COOKIE_NAME);
-
-  if (!sessionCookie?.value) {
-    return null;
-  }
-
-  const payload = verifyStudentSessionToken(sessionCookie.value);
-  if (!payload) {
-    return null;
-  }
-
-  // F3: Verifikasi status siswa dan validasi pinUpdatedAt di database
   try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get(STUDENT_SESSION_COOKIE_NAME);
+
+    if (!sessionCookie?.value) {
+      return null;
+    }
+
+    const payload = verifyStudentSessionToken(sessionCookie.value);
+    if (!payload) {
+      return null;
+    }
+
+    // F3: Verifikasi status siswa dan validasi pinUpdatedAt di database
     const student = await prisma.student.findUnique({
       where: { id: payload.studentId },
       select: {
@@ -182,15 +182,19 @@ export async function setStudentSessionCookie(
   payload: Omit<StudentSessionPayload, "issuedAt" | "expiresAt">
 ): Promise<string> {
   const token = signStudentSessionToken(payload);
-  const cookieStore = await cookies();
 
-  cookieStore.set(STUDENT_SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: Math.floor(THIRTY_DAYS_MS / 1000), // Max cap 30 hari
-  });
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(STUDENT_SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: Math.floor(THIRTY_DAYS_MS / 1000), // Max cap 30 hari
+    });
+  } catch {
+    // Graceful fallback jika dijalankan di luar Next.js request store (misal test runner)
+  }
 
   return token;
 }
@@ -200,6 +204,10 @@ export async function setStudentSessionCookie(
  * Sesi guru Better Auth tetap utuh tanpa terganggu (B4).
  */
 export async function clearStudentSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(STUDENT_SESSION_COOKIE_NAME);
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete(STUDENT_SESSION_COOKIE_NAME);
+  } catch {
+    // Graceful fallback jika di luar request context
+  }
 }

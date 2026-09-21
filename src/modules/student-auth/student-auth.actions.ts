@@ -136,27 +136,6 @@ export async function registerStudent(data: {
     return { success: false, message: "Rombel belum terhubung dengan tahun ajaran aktif." };
   }
 
-  // Skenario (d): Cek apakah siswa sudah terdaftar di rombel lain pada periode aktif yang sama
-  const existingEnrollment = await prisma.classStudent.findFirst({
-    where: {
-      academicPeriodId,
-      student: {
-        schoolId: classRecord.schoolId,
-        nis: { equals: cleanNis, mode: "insensitive" },
-      },
-    },
-    include: {
-      class: { select: { name: true } },
-    },
-  });
-
-  if (existingEnrollment) {
-    return {
-      success: false,
-      message: `Siswa dengan NIS ${cleanNis} sudah terdaftar di rombel "${existingEnrollment.class.name}" pada tahun ajaran ini. Minta guru untuk memindahkan rombel jika ada perubahan kelas.`,
-    };
-  }
-
   // Cari apakah row Student dengan NIS ini sudah ada di sekolah ini
   const existingStudent = await prisma.student.findFirst({
     where: {
@@ -170,6 +149,27 @@ export async function registerStudent(data: {
     return {
       success: false,
       message: `Akun siswa dengan NIS ${cleanNis} sudah terdaftar. Silakan login langsung menggunakan NIS dan PIN Anda, atau hubungi guru pengampu untuk mereset PIN jika lupa.`,
+    };
+  }
+
+  // Skenario (d): Cek apakah siswa sudah terdaftar di rombel lain pada periode aktif yang sama
+  const existingEnrollment = await prisma.classStudent.findFirst({
+    where: {
+      academicPeriodId,
+      student: {
+        schoolId: classRecord.schoolId,
+        nis: { equals: cleanNis, mode: "insensitive" },
+      },
+    },
+    include: {
+      class: { select: { id: true, name: true } },
+    },
+  });
+
+  if (existingEnrollment && existingEnrollment.class.id !== classRecord.id) {
+    return {
+      success: false,
+      message: `Siswa dengan NIS ${cleanNis} sudah terdaftar di rombel "${existingEnrollment.class.name}" pada tahun ajaran ini. Minta guru untuk memindahkan rombel jika ada perubahan kelas.`,
     };
   }
 
