@@ -10,7 +10,8 @@
     "test": "vitest run",
     "postinstall": "prisma generate",
     "seed:superadmin": "tsx --env-file-if-exists=.env scripts/seed-superadmin.ts",
-    "verify:migrations": "node scripts/verify-migrations.mjs"
+    "verify:migrations": "node scripts/verify-migrations.mjs",
+    "backfill:schools": "tsx --env-file-if-exists=.env scripts/backfill-school-normalized-names.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

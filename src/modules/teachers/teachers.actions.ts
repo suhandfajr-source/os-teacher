@@ -3,6 +3,11 @@
 import { prisma } from "@/lib/auth";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import {
+  normalizeSchoolName,
+  evaluateSchoolDedup,
+  type ExistingSchoolCandidate,
+} from "@/lib/school-dedup";
 
 async function validateSession() {
   const session = await auth.api.getSession({
@@ -18,10 +23,23 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, '-');
 }
 
+export type SubmitOnboardingResult = {
+  success: boolean;
+  context?: { id: string } | null;
+  code?: "NPSN_EXISTS" | "EXACT_NAME_EXISTS" | "SIMILAR_NAME_FOUND" | "CREATE_FAILED";
+  message?: string;
+  existingSchool?: ExistingSchoolCandidate;
+  matchedSchool?: ExistingSchoolCandidate;
+  similarity?: number;
+};
+
 export async function submitOnboarding(data: {
   fullName: string;
   schoolId?: string;
   schoolName?: string;
+  city?: string;
+  npsn?: string;
+  forceCreate?: boolean;
   preferredName?: string;
   academicYear: string;
   semester: string;
@@ -29,7 +47,7 @@ export async function submitOnboarding(data: {
   subjectShortName?: string;
   className: string;
   gradeLevel?: string;
-}): Promise<{ success: boolean; context?: { id: string } | null }> {
+}): Promise<SubmitOnboardingResult> {
   const session = await validateSession();
 
   // 1. Update User Name
@@ -66,12 +84,62 @@ export async function submitOnboarding(data: {
     // 3. Resolve School Workspace
     let targetSchoolId = data.schoolId;
     if (!targetSchoolId && data.schoolName) {
+      const rawSchoolName = data.schoolName.trim();
+      const rawNpsn = data.npsn?.trim() || null;
+      const rawCity = data.city?.trim() || null;
+      const normalizedSchool = normalizeSchoolName(rawSchoolName);
+
+      // Candidate pre-filtering
+      const candidateConditions: any[] = [{ normalizedName: normalizedSchool }];
+      if (rawNpsn) candidateConditions.push({ npsn: rawNpsn });
+      if (rawCity) candidateConditions.push({ city: { contains: rawCity, mode: "insensitive" } });
+
+      const candidateRows = await tx.school.findMany({
+        where: { OR: candidateConditions },
+        take: 50,
+        select: { id: true, name: true, normalizedName: true, npsn: true, city: true },
+      });
+
+      const dedupResult = evaluateSchoolDedup(
+        { name: rawSchoolName, npsn: rawNpsn, forceCreate: data.forceCreate },
+        candidateRows
+      );
+
+      if (dedupResult.match === "NPSN_EXISTS") {
+        return {
+          success: false,
+          code: "NPSN_EXISTS",
+          message: `Sekolah dengan NPSN ${rawNpsn} sudah terdaftar (${dedupResult.school.name}). Silakan bergabung ke sekolah tersebut.`,
+          existingSchool: dedupResult.school,
+        };
+      }
+
+      if (dedupResult.match === "EXACT_NAME_EXISTS") {
+        return {
+          success: false,
+          code: "EXACT_NAME_EXISTS",
+          message: `Sekolah "${dedupResult.school.name}" sudah terdaftar di sistem. Silakan bergabung ke sekolah tersebut.`,
+          existingSchool: dedupResult.school,
+        };
+      }
+
+      if (dedupResult.match === "SIMILAR_NAME_FOUND") {
+        return {
+          success: false,
+          code: "SIMILAR_NAME_FOUND",
+          message: `Ditemukan sekolah dengan nama serupa (${dedupResult.school.name}). Apakah maksud Anda sekolah ini?`,
+          matchedSchool: dedupResult.school,
+          similarity: dedupResult.similarity,
+        };
+      }
+
       // Create new school
-      const normalizedSchool = normalizeName(data.schoolName);
       const newSchool = await tx.school.create({
         data: {
-          name: data.schoolName,
-          normalizedName: normalizedSchool
+          name: rawSchoolName,
+          normalizedName: normalizedSchool,
+          city: rawCity,
+          npsn: rawNpsn,
         }
       });
       targetSchoolId = newSchool.id;
@@ -96,6 +164,10 @@ export async function submitOnboarding(data: {
         }
       });
 
+      if (existingMembership?.status === "REVOKED") {
+        throw new Error("Keanggotaan Anda di sekolah ini telah dinonaktifkan. Hubungi pengelola sekolah.");
+      }
+
       if (!existingMembership) {
         await tx.teacherSchoolMembership.create({
           data: {
@@ -104,11 +176,6 @@ export async function submitOnboarding(data: {
             status: "ACTIVE",
             workspaceRole: "MEMBER"
           }
-        });
-      } else if (existingMembership.status === "REVOKED") {
-        await tx.teacherSchoolMembership.update({
-          where: { id: existingMembership.id },
-          data: { status: "ACTIVE" }
         });
       }
     } else {

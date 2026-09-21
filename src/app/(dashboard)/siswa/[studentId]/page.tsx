@@ -8,6 +8,7 @@ import { ArrowLeft, Award, FileText } from "lucide-react";
 import { getStudentAssessmentHistory } from "@/modules/assessment/assessment.actions";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { EditStudentDialog } from "./EditStudentDialog";
 
 export default async function SiswaDetailPage({
   params,
@@ -101,10 +102,17 @@ export default async function SiswaDetailPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle>Data Pribadi</CardTitle>
+            <EditStudentDialog
+              student={{
+                id: student.id,
+                fullName: student.fullName,
+                nis: student.nis,
+              }}
+            />
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-2">
             <div>
               <div className="text-sm font-medium text-muted-foreground">Nama Lengkap</div>
               <div className="text-lg font-semibold">{student.fullName}</div>

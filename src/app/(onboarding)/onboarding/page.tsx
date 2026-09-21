@@ -4,13 +4,30 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { submitOnboarding } from "@/modules/teachers/teachers.actions";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
-import { searchSchools } from "@/modules/schools/schools.actions";
+import { searchSchools, createSchool } from "@/modules/schools/schools.actions";
 import { useDebounce } from "use-debounce";
+
+interface SchoolSearchResult {
+  id: string;
+  name: string;
+  city: string | null;
+  npsn: string | null;
+  activeTeacherCount: number;
+  classCount: number;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -24,6 +41,8 @@ export default function OnboardingPage() {
     fullName: "",
     schoolId: "",
     schoolName: "",
+    city: "",
+    npsn: "",
     preferredName: "",
     academicYear: "2026/2027",
     semester: "Semester Ganjil",
@@ -35,9 +54,16 @@ export default function OnboardingPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 500);
-  const [searchResults, setSearchResults] = useState<Array<{id: string, name: string, city: string | null}>>([]);
+  const [searchResults, setSearchResults] = useState<SchoolSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isCreatingNewSchool, setIsCreatingNewSchool] = useState(false);
+
+  // Dedup states
+  const [dedupBlocked, setDedupBlocked] = useState<{ id: string; name: string; city?: string | null; npsn?: string | null } | null>(null);
+  const [similarConfirmation, setSimilarConfirmation] = useState<{
+    matched: { id: string; name: string; city?: string | null; npsn?: string | null };
+    similarity: number;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -59,18 +85,68 @@ export default function OnboardingPage() {
     }
   }, [session, formData.fullName]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setError("");
+    setDedupBlocked(null);
+
     if (step === 1) {
-      if (!formData.fullName) {
+      if (!formData.fullName.trim()) {
         setError("Nama Lengkap wajib diisi");
         return;
       }
-      if (!formData.schoolId && !formData.schoolName) {
+      if (!formData.schoolId && !formData.schoolName.trim()) {
         setError("Silakan pilih sekolah atau buat sekolah baru");
         return;
       }
+
+      // Validasi gerbang dedup saat membuat sekolah baru
+      if (isCreatingNewSchool && !formData.schoolId) {
+        setLoading(true);
+        try {
+          const res = await createSchool({
+            name: formData.schoolName,
+            city: formData.city || undefined,
+            npsn: formData.npsn || undefined,
+            forceCreate: false,
+          });
+
+          if (!res.success) {
+            if (res.code === "NPSN_EXISTS" || res.code === "EXACT_NAME_EXISTS") {
+              setDedupBlocked(res.existingSchool || null);
+              setError(res.message);
+              setLoading(false);
+              return;
+            }
+            if (res.code === "SIMILAR_NAME_FOUND" && res.matchedSchool) {
+              setSimilarConfirmation({
+                matched: res.matchedSchool,
+                similarity: res.similarity || 0,
+              });
+              setLoading(false);
+              return;
+            }
+            setError(res.message);
+            setLoading(false);
+            return;
+          }
+
+          // Lolos dedup dan sukses dibuat
+          setFormData(prev => ({
+            ...prev,
+            schoolId: res.school.id,
+            schoolName: res.school.name,
+          }));
+          setIsCreatingNewSchool(false);
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : "Gagal memproses sekolah");
+          setLoading(false);
+          return;
+        } finally {
+          setLoading(false);
+        }
+      }
     }
+
     if (step === 2 && (!formData.academicYear || !formData.semester)) {
       setError("Tahun Akademik dan Semester wajib diisi");
       return;
@@ -96,7 +172,27 @@ export default function OnboardingPage() {
     setError("");
     
     try {
-      await submitOnboarding(formData);
+      const res = await submitOnboarding({
+        fullName: formData.fullName,
+        schoolId: formData.schoolId || undefined,
+        schoolName: formData.schoolName || undefined,
+        city: formData.city || undefined,
+        npsn: formData.npsn || undefined,
+        preferredName: formData.preferredName || undefined,
+        academicYear: formData.academicYear,
+        semester: formData.semester,
+        subjectName: formData.subjectName,
+        subjectShortName: formData.subjectShortName || undefined,
+        className: formData.className,
+        gradeLevel: formData.gradeLevel || undefined,
+      });
+
+      if (!res.success) {
+        setError(res.message || "Gagal menyelesaikan setup awal.");
+        setLoading(false);
+        return;
+      }
+
       toast.success("Setup berhasil diselesaikan!");
       router.push("/");
       router.refresh();
@@ -111,211 +207,366 @@ export default function OnboardingPage() {
   };
 
   return (
-    <Card className="shadow-lg border-2">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-2xl font-bold">Setup Awal Guru</CardTitle>
-            <CardDescription>
-              Langkah {step} dari 4: Lengkapi profil dan konteks mengajar dasar Anda
-            </CardDescription>
+    <>
+      <Card className="shadow-lg border-2">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-2xl font-bold">Setup Awal Guru</CardTitle>
+              <CardDescription>
+                Langkah {step} dari 4: Lengkapi profil dan konteks mengajar dasar Anda
+              </CardDescription>
+            </div>
+            <a
+              href="/onboarding/mid-semester"
+              className="text-xs font-semibold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+            >
+              Setup Tengah Semester
+            </a>
           </div>
-          <a
-            href="/onboarding/mid-semester"
-            className="text-xs font-semibold px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-          >
-            Setup Tengah Semester
-          </a>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {step === 1 && (
-          <div className="space-y-4 animate-in fade-in zoom-in-95">
-            <h3 className="font-semibold text-lg">Profil Guru</h3>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Lengkap</label>
-              <Input 
-                value={formData.fullName} 
-                onChange={e => setFormData({...formData, fullName: e.target.value})} 
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Panggilan (Opsional)</label>
-              <Input 
-                value={formData.preferredName} 
-                onChange={e => setFormData({...formData, preferredName: e.target.value})} 
-                placeholder="Pak Budi" 
-              />
-            </div>
-            <div className="space-y-2 relative">
-              <label className="text-sm font-medium">Sekolah Tempat Mengajar</label>
-              
-              {!formData.schoolId && !isCreatingNewSchool ? (
-                <>
-                  <Input 
-                    value={searchQuery} 
-                     onChange={e => {
-                       const val = e.target.value;
-                       setSearchQuery(val);
-                       if (val.length < 3) {
-                         setSearchResults([]);
-                         setIsSearching(false);
-                       } else {
-                         setIsSearching(true);
-                       }
-                       setFormData({...formData, schoolId: "", schoolName: ""});
-                    }} 
-                    placeholder="Cari nama sekolah (min 3 huruf)..." 
-                  />
-                  {isSearching && <div className="text-xs text-muted-foreground mt-1">Mencari...</div>}
-                  {searchResults.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-md max-h-60 overflow-y-auto">
-                      {searchResults.map(school => (
-                        <div 
-                          key={school.id} 
-                          className="p-2 hover:bg-gray-100 cursor-pointer text-sm border-b"
-                          onClick={() => {
-                            setFormData({...formData, schoolId: school.id, schoolName: school.name});
-                            setSearchQuery("");
-                            setSearchResults([]);
-                          }}
-                        >
-                          <div className="font-medium">{school.name}</div>
-                          {school.city && <div className="text-xs text-muted-foreground">{school.city}</div>}
-                        </div>
-                      ))}
+          {step === 1 && (
+            <div className="space-y-4 animate-in fade-in zoom-in-95">
+              <h3 className="font-semibold text-lg">Profil Guru</h3>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nama Lengkap</label>
+                <Input 
+                  value={formData.fullName} 
+                  onChange={e => setFormData({...formData, fullName: e.target.value})} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nama Panggilan (Opsional)</label>
+                <Input 
+                  value={formData.preferredName} 
+                  onChange={e => setFormData({...formData, preferredName: e.target.value})} 
+                  placeholder="Pak Budi" 
+                />
+              </div>
+              <div className="space-y-2 relative">
+                <label className="text-sm font-medium">Sekolah Tempat Mengajar</label>
+                
+                {!formData.schoolId && !isCreatingNewSchool ? (
+                  <>
+                    <Input 
+                      value={searchQuery} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        setSearchQuery(val);
+                        if (val.length < 3) {
+                          setSearchResults([]);
+                          setIsSearching(false);
+                        } else {
+                          setIsSearching(true);
+                        }
+                        setFormData({...formData, schoolId: "", schoolName: ""});
+                      }} 
+                      placeholder="Cari nama sekolah atau NPSN (min 3 huruf/angka)..." 
+                    />
+                    {isSearching && <div className="text-xs text-muted-foreground mt-1">Mencari...</div>}
+                    {searchResults.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-md max-h-60 overflow-y-auto">
+                        {searchResults.map(school => (
+                          <div 
+                            key={school.id} 
+                            className="p-2.5 hover:bg-slate-50 cursor-pointer text-sm border-b flex items-center justify-between gap-2"
+                            onClick={() => {
+                              setFormData({...formData, schoolId: school.id, schoolName: school.name});
+                              setSearchQuery("");
+                              setSearchResults([]);
+                            }}
+                          >
+                            <div>
+                              <div className="font-semibold text-slate-800">{school.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {school.city ? `${school.city} • ` : ""}
+                                {school.npsn ? `NPSN: ${school.npsn}` : "NPSN: -"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                                {school.activeTeacherCount} Guru
+                              </span>
+                              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                                {school.classCount} Kelas
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
+                      <div className="text-sm text-muted-foreground mt-2">
+                        Sekolah tidak ditemukan.{" "}
+                        <Button variant="link" className="p-0 h-auto" onClick={() => {
+                          setIsCreatingNewSchool(true);
+                          setFormData({...formData, schoolName: searchQuery});
+                        }}>
+                          Buat Sekolah Baru
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="p-3 border rounded-md bg-slate-50 flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">{formData.schoolName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formData.schoolId ? "Bergabung dengan sekolah yang ada" : "Membuat sekolah baru"}
+                      </div>
                     </div>
-                  )}
-                  {searchQuery.length >= 3 && searchResults.length === 0 && !isSearching && (
-                    <div className="text-sm text-muted-foreground mt-2">
-                      Sekolah tidak ditemukan. <Button variant="link" className="p-0 h-auto" onClick={() => {
-                        setIsCreatingNewSchool(true);
-                        setFormData({...formData, schoolName: searchQuery});
-                      }}>Buat Sekolah Baru</Button>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setFormData({...formData, schoolId: "", schoolName: "", npsn: "", city: ""});
+                      setIsCreatingNewSchool(false);
+                      setSearchQuery("");
+                      setDedupBlocked(null);
+                    }}>
+                      Ubah
+                    </Button>
+                  </div>
+                )}
+
+                {/* Banner jika terblokir dedup persis / NPSN */}
+                {dedupBlocked && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-2">
+                    <div>
+                      <div className="font-semibold">{dedupBlocked.name}</div>
+                      <div className="text-xs text-amber-700">
+                        {dedupBlocked.city ? `${dedupBlocked.city} • ` : ""}
+                        {dedupBlocked.npsn ? `NPSN: ${dedupBlocked.npsn}` : ""}
+                      </div>
                     </div>
-                  )}
-                </>
-              ) : (
-                <div className="p-3 border rounded-md bg-slate-50 flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{formData.schoolName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formData.schoolId ? "Bergabung dengan sekolah yang ada" : "Membuat sekolah baru"}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-white border-amber-300 text-amber-900 hover:bg-amber-100 shrink-0"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          schoolId: dedupBlocked.id,
+                          schoolName: dedupBlocked.name,
+                        }));
+                        setIsCreatingNewSchool(false);
+                        setDedupBlocked(null);
+                        setError("");
+                      }}
+                    >
+                      Gunakan Sekolah Ini
+                    </Button>
+                  </div>
+                )}
+
+                {isCreatingNewSchool && (
+                  <div className="mt-3 space-y-3 p-3 bg-slate-50 border rounded-lg">
+                    <div className="font-medium text-xs text-slate-600 uppercase tracking-wide">
+                      Detail Sekolah Baru
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-slate-700">Nama Sekolah *</label>
+                      <Input 
+                        value={formData.schoolName}
+                        onChange={e => setFormData({...formData, schoolName: e.target.value})}
+                        placeholder="Contoh: SMP Negeri 1 Surabaya"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700">NPSN (Opsional)</label>
+                        <Input 
+                          value={formData.npsn}
+                          onChange={e => setFormData({...formData, npsn: e.target.value})}
+                          placeholder="8 Digit NPSN"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700">Kota / Kabupaten (Opsional)</label>
+                        <Input 
+                          value={formData.city}
+                          onChange={e => setFormData({...formData, city: e.target.value})}
+                          placeholder="Contoh: Kota Surabaya"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    setFormData({...formData, schoolId: "", schoolName: ""});
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+              <h3 className="font-semibold text-lg">Periode Akademik Aktif</h3>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tahun Akademik</label>
+                <Input 
+                  value={formData.academicYear} 
+                  onChange={e => setFormData({...formData, academicYear: e.target.value})} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Semester</label>
+                <Input 
+                  value={formData.semester} 
+                  onChange={e => setFormData({...formData, semester: e.target.value})} 
+                  required 
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+              <h3 className="font-semibold text-lg">Mata Pelajaran</h3>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nama Mata Pelajaran</label>
+                <Input 
+                  value={formData.subjectName} 
+                  onChange={e => setFormData({...formData, subjectName: e.target.value})} 
+                  placeholder="Ilmu Pengetahuan Alam" 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Singkatan (Opsional)</label>
+                <Input 
+                  value={formData.subjectShortName} 
+                  onChange={e => setFormData({...formData, subjectShortName: e.target.value})} 
+                  placeholder="IPA" 
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+              <h3 className="font-semibold text-lg">Kelas Pertama</h3>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nama Kelas</label>
+                <Input 
+                  value={formData.className} 
+                  onChange={e => setFormData({...formData, className: e.target.value})} 
+                  placeholder="7A" 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tingkat / Grade (Opsional)</label>
+                <Input 
+                  value={formData.gradeLevel} 
+                  onChange={e => setFormData({...formData, gradeLevel: e.target.value})} 
+                  placeholder="7" 
+                />
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex justify-between">
+          {step > 1 ? (
+            <Button variant="outline" onClick={handleBack} disabled={loading}>
+              Kembali
+            </Button>
+          ) : <div />}
+
+          {step < 4 ? (
+            <Button onClick={handleNext} disabled={loading}>
+              {loading ? "Memproses..." : "Lanjut"}
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90">
+              {loading ? "Menyimpan..." : "Selesaikan Setup"}
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
+
+      {/* Dialog Konfirmasi Kemiripan (Skenario C: "Maksud Anda?") */}
+      <Dialog
+        open={!!similarConfirmation}
+        onOpenChange={(open) => !open && setSimilarConfirmation(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Nama Sekolah</DialogTitle>
+            <DialogDescription>
+              Sistem mendeteksi sekolah dengan nama yang sangat mirip di database:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-xl space-y-1 my-2">
+            <div className="font-semibold text-teal-950 text-base">
+              {similarConfirmation?.matched.name}
+            </div>
+            <div className="text-xs text-teal-700">
+              {similarConfirmation?.matched.city ? `${similarConfirmation?.matched.city} • ` : ""}
+              {similarConfirmation?.matched.npsn ? `NPSN: ${similarConfirmation?.matched.npsn} • ` : ""}
+              Tingkat Kemiripan: {Math.round((similarConfirmation?.similarity || 0) * 100)}%
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const res = await createSchool({
+                    name: formData.schoolName,
+                    city: formData.city || undefined,
+                    npsn: formData.npsn || undefined,
+                    forceCreate: true, // Bypass sadar
+                  });
+                  if (res.success) {
+                    setFormData(prev => ({
+                      ...prev,
+                      schoolId: res.school.id,
+                      schoolName: res.school.name,
+                    }));
                     setIsCreatingNewSchool(false);
-                    setSearchQuery("");
-                  }}>
-                    Ubah
-                  </Button>
-                </div>
-              )}
-
-              {isCreatingNewSchool && (
-                <div className="mt-2 space-y-2">
-                   <Input 
-                     value={formData.schoolName}
-                     onChange={e => setFormData({...formData, schoolName: e.target.value})}
-                     placeholder="Masukkan nama sekolah lengkap"
-                     required
-                   />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-            <h3 className="font-semibold text-lg">Periode Akademik Aktif</h3>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tahun Akademik</label>
-              <Input 
-                value={formData.academicYear} 
-                onChange={e => setFormData({...formData, academicYear: e.target.value})} 
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Semester</label>
-              <Input 
-                value={formData.semester} 
-                onChange={e => setFormData({...formData, semester: e.target.value})} 
-                required 
-              />
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-            <h3 className="font-semibold text-lg">Mata Pelajaran</h3>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Mata Pelajaran</label>
-              <Input 
-                value={formData.subjectName} 
-                onChange={e => setFormData({...formData, subjectName: e.target.value})} 
-                placeholder="Ilmu Pengetahuan Alam" 
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Singkatan (Opsional)</label>
-              <Input 
-                value={formData.subjectShortName} 
-                onChange={e => setFormData({...formData, subjectShortName: e.target.value})} 
-                placeholder="IPA" 
-              />
-            </div>
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
-            <h3 className="font-semibold text-lg">Kelas Pertama</h3>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nama Kelas</label>
-              <Input 
-                value={formData.className} 
-                onChange={e => setFormData({...formData, className: e.target.value})} 
-                placeholder="VIII A" 
-                required 
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tingkat / Grade (Opsional)</label>
-              <Input 
-                value={formData.gradeLevel} 
-                onChange={e => setFormData({...formData, gradeLevel: e.target.value})} 
-                placeholder="8" 
-              />
-            </div>
-          </div>
-        )}
-      </CardContent>
-      
-      <CardFooter className="flex justify-between mt-4">
-        <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
-          Kembali
-        </Button>
-        {step < 4 ? (
-          <Button onClick={handleNext}>Lanjut</Button>
-        ) : (
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Menyimpan..." : "Selesai"}
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+                    setSimilarConfirmation(null);
+                    setStep(2);
+                  } else {
+                    setError(res.message);
+                  }
+                } catch (err: unknown) {
+                  setError(err instanceof Error ? err.message : "Gagal membuat sekolah");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Bukan, Tetap Buat Baru
+            </Button>
+            <Button
+              disabled={loading}
+              onClick={() => {
+                if (similarConfirmation) {
+                  setFormData(prev => ({
+                    ...prev,
+                    schoolId: similarConfirmation.matched.id,
+                    schoolName: similarConfirmation.matched.name,
+                  }));
+                  setIsCreatingNewSchool(false);
+                  setSimilarConfirmation(null);
+                  setStep(2);
+                }
+              }}
+            >
+              Ya, Gunakan Sekolah Ini
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

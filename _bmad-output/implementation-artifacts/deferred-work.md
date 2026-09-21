@@ -22,8 +22,8 @@
   summary: [SETTLED 2026-09-21 via spec-neon-drift-reconciliation] Gate verifikasi otomatis file migrasi (`npm run verify:migrations`) diaktifkan via `scripts/verify-migrations.mjs` pasca-rekonsiliasi drift lunas.
   evidence: VG1 pre-verified; aktif 2026-09-21, exit 0 pada chain bersih, mendeteksi drift secara otomatis.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1a-schema-fondasi-migrasi.md`
-  summary: Proyeksikan kolom (select) di getStudents/updateStudent/archiveStudent SEBELUM Story 3 mengisi accessPinHash — jika tidak, hash PIN terkirim ke klien via server action.
-  evidence: VG-other2: students.actions.ts:94 tanpa select; hari ini kolom null (aman), begitu terisi = kebocoran hash.
+  summary: [SETTLED 2026-09-21 via Story 2] Proyeksikan kolom (select) di getStudents/updateStudent/archiveStudent/addStudent SEBELUM Story 3 mengisi accessPinHash — terlunasi dengan SAFE_STUDENT_SELECT eksplisit di `src/modules/students/students.actions.ts`.
+  evidence: VG-other2: students.actions.ts kini memiliki proyeksi select aman di seluruh fungsi dan diverifikasi via unit test `students.actions.test.ts`.
 
 # Walkthrough 1b — improvement decisions (2026-09-20, human-delegated)
 
