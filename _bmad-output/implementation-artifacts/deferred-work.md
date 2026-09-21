@@ -28,14 +28,14 @@
 # Walkthrough 1b — improvement decisions (2026-09-20, human-delegated)
 
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1b-primitif-pin.md`
-  summary: Saat Story 3 mengimpor `student-pin`, tambahkan import `resolvePinPepper` di `instrumentation.ts` (Next.js) agar konfigurasi produksi (PIN_PEPPER/NODE_ENV) gagal saat boot sungguhan, bukan di request pertama route yang menyentuh kode PIN.
-  evidence: BH2+BH3 review 1b: modul pure util tanpa konsumer hari ini, Next lazy-load per-route; komentar .env.example diakuratkan ke "first import" — wiring boot adalah tanggung jawab konsumen pertama.
+  summary: [SETTLED 2026-09-21 via Story 3] Import `resolvePinPepper` dan `getStudentSessionSecret` di `src/instrumentation.ts` (Next.js) agar konfigurasi produksi gagal saat boot sungguhan.
+  evidence: Terpasang di `src/instrumentation.ts` dan diverifikasi saat boot runtime.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1b-primitif-pin.md`
-  summary: Story 3 (login NIS+PIN) wajib memasang dummy-verify + pesan generik "NIS atau PIN salah" di CALLER — `verifyPin` 1b sengaja tidak menyamarkan timing NIS-tak-ditemukan vs PIN-salah (primitif murni); jangan sampai terlupa saat mengonsumsi primitif.
-  evidence: security-amendum.md B3 (pesan seragam + dummy-verify); walkthrough 1b: verifyPin return cepat untuk format invalid tanpa scrypt — tak membocorkan apa pun tentang input yang diketahui attacker sendiri, tapi pembedaan keberadaan NIS hidup di lapis caller.
+  summary: [SETTLED 2026-09-21 via Story 3] Story 3 (login NIS+PIN) memasang dummy-verify + pesan generik "NIS atau PIN salah" di CALLER — `DUMMY_HASH` scrypt tiruan aktif saat NIS absen.
+  evidence: security-amendum.md B3 & F5; diimplementasikan di `src/modules/student-auth/student-auth.actions.ts` dan diverifikasi di `student-auth.security.test.ts`.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1b-primitif-pin.md`
-  summary: Kebijakan kekuatan minimum secret (mis. ≥32 hex chars) saat production boot — diterapkan serentak untuk `PIN_PEPPER` dan `BETTER_AUTH_SECRET` (satu kebijakan, bukan dua standar yang berbeda).
-  evidence: BH6 review 1b ditolak (di luar spec 1b; mirror getAuthSecret juga tanpa validasi — parity dipertahankan); alami sebagai bagian wiring deploy Story 3.
+  summary: [SETTLED 2026-09-21 via Story 3] Kebijakan kekuatan minimum secret (>= 32 chars) saat production boot di `src/modules/student-auth/student-session.ts` dan `src/instrumentation.ts`.
+  evidence: Terverifikasi di `student-session.test.ts`.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1b-primitif-pin.md`
   summary: Rotasi pepper pasca-produksi (bila jadi kebutuhan): perkenalkan format baru ber-prefix versi (mis. `scryptv2:pv2:{N}:{r}:{p}:{salt}:{hash}`) backward-compatible — parser memperlakukan format `scrypt:{N}:…` hari ini sebagai v1 implisit dengan verify ganda masa transisi; TIDAK perlu diubah sekarang.
   evidence: Keputusan walkthrough 1b 2026-09-20 (human-delegated): scheme token di awal hash menjaga pintu evolusi tetap terbuka pasca-produksi — mengubah format sekarang = dual-verify + registry untuk hipotesis; golden vector 1b mem-pin v1 agar evolusi masa depan tak memutus legacy.

@@ -11,7 +11,8 @@
     "postinstall": "prisma generate",
     "seed:superadmin": "tsx --env-file-if-exists=.env scripts/seed-superadmin.ts",
     "verify:migrations": "node scripts/verify-migrations.mjs",
-    "backfill:schools": "tsx --env-file-if-exists=.env scripts/backfill-school-normalized-names.ts"
+    "backfill:schools": "tsx --env-file-if-exists=.env scripts/backfill-school-normalized-names.ts",
+    "audit:nis": "tsx --env-file-if-exists=.env scripts/backfill-student-canonical-nis.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
