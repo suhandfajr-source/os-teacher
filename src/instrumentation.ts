@@ -1,6 +1,3 @@
-import { resolvePinPepper } from "@/lib/student-pin";
-import { getStudentSessionSecret } from "@/modules/student-auth/student-session";
-
 /**
  * Next.js Instrumentation Hook (Next.js 14+)
  * 
@@ -12,6 +9,8 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     // Fail-fast checks in production
     try {
+      const { resolvePinPepper } = await import("@/lib/student-pin");
+      const { getStudentSessionSecret } = await import("@/modules/student-auth/student-session");
       resolvePinPepper();
       getStudentSessionSecret();
     } catch (err: unknown) {
@@ -22,3 +21,4 @@ export async function register() {
     }
   }
 }
+
