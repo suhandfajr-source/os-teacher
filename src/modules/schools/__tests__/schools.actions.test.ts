@@ -171,6 +171,38 @@ describe("Schools Actions Unit Tests", () => {
       }
     });
 
+    it("Scenario C: robust pre-filter includes schools whose city is null but name contains the city token", async () => {
+      // Existing school in DB has city: null, but name has "Surabaya"
+      (prisma.school.findMany as any).mockResolvedValue([
+        {
+          id: "sch_null_city",
+          name: "SMP Negeri 1 Surabaya",
+          normalizedName: "smp negeri 1 surabaya",
+          npsn: null,
+          city: null,
+        },
+      ]);
+
+      const res = await createSchool({
+        name: "SMP Negeri 1 Surabayya",
+        city: "Surabaya",
+      });
+
+      // Verify that candidateConditions passed to findMany searched name for city
+      const queryCall = (prisma.school.findMany as any).mock.calls[0][0];
+      const conditions = queryCall.where.OR;
+      const searchesNameForCity = conditions.some(
+        (c: any) => c.name && c.name.contains === "Surabaya"
+      );
+      expect(searchesNameForCity).toBe(true);
+
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.code).toBe("SIMILAR_NAME_FOUND");
+        expect(res.matchedSchool?.id).toBe("sch_null_city");
+      }
+    });
+
     it("Scenario C Bypass: allows creation if forceCreate: true", async () => {
       (prisma.school.findMany as any).mockResolvedValue([
         {

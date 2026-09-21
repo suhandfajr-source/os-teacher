@@ -139,9 +139,8 @@ export async function createSchool(data: {
   const rawNpsn = data.npsn?.trim() || null;
   const normalized = normalizeSchoolName(rawName);
 
-  // 1. Candidate Pre-filtering (F4 Medium):
-  // Ambil kandidat spesifik (npsn sama, normalizedName sama) ATAU pre-filter max 50 berbasis kota/token
-  const firstToken = normalized.split(/\s+/)[0] || "";
+  // 1. Candidate Pre-filtering Anti-Bocor:
+  // Ambil kandidat spesifik (npsn sama, normalizedName sama), cari kota di kolom city & name, serta token penting
   const candidateConditions: Prisma.SchoolWhereInput[] = [
     { normalizedName: normalized },
   ];
@@ -150,9 +149,22 @@ export async function createSchool(data: {
     candidateConditions.push({ npsn: rawNpsn });
   }
 
+  // Jika kota diisi, cari di kolom city DAN di kolom name (menangani sekolah lama yang kolom city-nya null)
   if (rawCity) {
     candidateConditions.push({ city: { contains: rawCity, mode: "insensitive" } });
-  } else if (firstToken.length >= 3) {
+    candidateConditions.push({ name: { contains: rawCity, mode: "insensitive" } });
+  }
+
+  // Cari juga token kata penting dari nama sekolah (non stop-words jenjang)
+  const tokens = normalized.split(/\s+/).filter((t) => t.length >= 3);
+  for (const t of tokens.slice(0, 3)) {
+    if (!["smp", "sdn", "sma", "smk", "mts", "man", "min", "negeri", "swasta"].includes(t)) {
+      candidateConditions.push({ name: { contains: t, mode: "insensitive" } });
+    }
+  }
+
+  const firstToken = tokens[0] || "";
+  if (firstToken.length >= 3) {
     candidateConditions.push({ name: { contains: firstToken, mode: "insensitive" } });
   }
 
@@ -214,6 +226,28 @@ export async function createSchool(data: {
         onboardingCompleted: false,
       },
     });
+  }
+
+  // Mencegah sekolah hantu (ghost school) jika user bolak-balik di onboarding wizard
+  if (!profile.onboardingCompleted && profile.activeSchoolId) {
+    const currentUnfinishedSchool = await prisma.school.findUnique({
+      where: { id: profile.activeSchoolId },
+    });
+    if (
+      currentUnfinishedSchool &&
+      currentUnfinishedSchool.normalizedName === normalized &&
+      (!rawNpsn || currentUnfinishedSchool.npsn === rawNpsn)
+    ) {
+      return {
+        success: true,
+        school: {
+          id: currentUnfinishedSchool.id,
+          name: currentUnfinishedSchool.name,
+          npsn: currentUnfinishedSchool.npsn,
+          city: currentUnfinishedSchool.city,
+        },
+      };
+    }
   }
 
   try {

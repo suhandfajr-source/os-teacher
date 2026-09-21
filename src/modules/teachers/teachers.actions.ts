@@ -89,10 +89,25 @@ export async function submitOnboarding(data: {
       const rawCity = data.city?.trim() || null;
       const normalizedSchool = normalizeSchoolName(rawSchoolName);
 
-      // Candidate pre-filtering
+      // Candidate pre-filtering anti-bocor
       const candidateConditions: any[] = [{ normalizedName: normalizedSchool }];
       if (rawNpsn) candidateConditions.push({ npsn: rawNpsn });
-      if (rawCity) candidateConditions.push({ city: { contains: rawCity, mode: "insensitive" } });
+      if (rawCity) {
+        candidateConditions.push({ city: { contains: rawCity, mode: "insensitive" } });
+        candidateConditions.push({ name: { contains: rawCity, mode: "insensitive" } });
+      }
+
+      const tokens = normalizedSchool.split(/\s+/).filter((t) => t.length >= 3);
+      for (const t of tokens.slice(0, 3)) {
+        if (!["smp", "sdn", "sma", "smk", "mts", "man", "min", "negeri", "swasta"].includes(t)) {
+          candidateConditions.push({ name: { contains: t, mode: "insensitive" } });
+        }
+      }
+
+      const firstToken = tokens[0] || "";
+      if (firstToken.length >= 3) {
+        candidateConditions.push({ name: { contains: firstToken, mode: "insensitive" } });
+      }
 
       const candidateRows = await tx.school.findMany({
         where: { OR: candidateConditions },

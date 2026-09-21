@@ -15,7 +15,7 @@ const SCHOOL_ALIASES: Record<string, string> = {
   slb: "sekolah luar biasa",
 };
 
-// Angka Romawi umum (I sampai X)
+// Angka Romawi umum (I sampai XX)
 const ROMAN_NUMERALS: Record<string, string> = {
   i: "1",
   ii: "2",
@@ -27,6 +27,16 @@ const ROMAN_NUMERALS: Record<string, string> = {
   viii: "8",
   ix: "9",
   x: "10",
+  xi: "11",
+  xii: "12",
+  xiii: "13",
+  xiv: "14",
+  xv: "15",
+  xvi: "16",
+  xvii: "17",
+  xviii: "18",
+  xix: "19",
+  xx: "20",
 };
 
 /**
