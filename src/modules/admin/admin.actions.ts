@@ -277,17 +277,24 @@ export async function deactivateSchoolAction(schoolId: string) {
       where: { id: schoolId },
       select: { id: true, deactivatedAt: true },
     });
-    if (!school || school.deactivatedAt) {
+    if (!school) {
       return { success: false, message: GENERIC_ADMIN_ERROR };
     }
 
-    const now = new Date();
+    // P1 (elicitation walkthrough): aksi IDEMPOTEN menuju goal-state. Kegagalan
+    // di tengah urutan (mis. clear npsn) tidak boleh membuat retry mustahil —
+    // panggilan ulang pada sekolah yang sudah nonaktif MENYELESAIKAN langkah
+    // tersisa (revoke + clear npsn), bukan menolak dengan pesan generik.
+    const firstTransition = !school.deactivatedAt;
 
-    // (1) Tandai nonaktif dulu — menutup jendela re-klaim NPSN sejak detik ini.
-    await prisma.school.update({
-      where: { id: schoolId },
-      data: { deactivatedAt: now },
-    });
+    if (firstTransition) {
+      const now = new Date();
+      // (1) Tandai nonaktif dulu — menutup jendela re-klaim NPSN sejak detik ini.
+      await prisma.school.update({
+        where: { id: schoolId },
+        data: { deactivatedAt: now },
+      });
+    }
 
     // (2) Revoke SEMUA sesi Better Auth aktif: guru (membership) + parent (relasi siswa).
     const memberships = await prisma.teacherSchoolMembership.findMany({
@@ -326,17 +333,24 @@ export async function deactivateSchoolAction(schoolId: string) {
 
     // (5) AuditLog — langkah (3) fail-closed siswa/portal/parent berjalan
     //     per-request via choke point (verifyStudentSession & layanan parent),
-    //     bukan operasi di sini.
-    await writeAudit(prisma, {
-      actorType: "SUPERADMIN",
-      actorId: userId,
-      action: "SCHOOL_DEACTIVATED",
-      targetType: "SCHOOL",
-      targetId: schoolId,
-      metadata: { revokedSessionUserCount: userIds.length, failedRevocations },
-    });
+    //     bukan operasi di sini. Audit transisi hanya pada firstTransition;
+    //     retry idempoten tidak menulis duplikat.
+    if (firstTransition) {
+      await writeAudit(prisma, {
+        actorType: "SUPERADMIN",
+        actorId: userId,
+        action: "SCHOOL_DEACTIVATED",
+        targetType: "SCHOOL",
+        targetId: schoolId,
+        metadata: { revokedSessionUserCount: userIds.length, failedRevocations },
+      });
+    }
 
-    return { success: true, revokedSessionUserCount: userIds.length };
+    return {
+      success: true,
+      resumed: !firstTransition,
+      revokedSessionUserCount: userIds.length,
+    };
   } catch {
     return { success: false, message: GENERIC_ADMIN_ERROR };
   }

@@ -219,16 +219,22 @@ export async function registerStudent(data: {
     const oldPinValid = await verifyPin(data.pin, existingStudent.accessPinHash);
     if (!oldPinValid) {
       // G-1: tolak generik + AuditLog percobaan; row tidak berubah.
-      await prisma.auditLog.create({
-        data: {
-          actorType: "STUDENT",
-          actorId: existingStudent.id,
-          action: "STUDENT_RE_REGISTER_DENIED",
-          targetType: "STUDENT",
-          targetId: existingStudent.id,
-          metadata: redactMetadata({ reason: "OLD_PIN_MISMATCH" }) as Prisma.InputJsonValue,
-        },
-      });
+      // P2 (elicitation walkthrough): audit best-effort — kegagalan write audit
+      // tidak boleh mengubah penolakan menjadi error mentah ke klien.
+      try {
+        await prisma.auditLog.create({
+          data: {
+            actorType: "STUDENT",
+            actorId: existingStudent.id,
+            action: "STUDENT_RE_REGISTER_DENIED",
+            targetType: "STUDENT",
+            targetId: existingStudent.id,
+            metadata: redactMetadata({ reason: "OLD_PIN_MISMATCH" }) as Prisma.InputJsonValue,
+          },
+        });
+      } catch {
+        /* best-effort — penolakan tetap terjadi */
+      }
       return {
         success: false,
         message: "NIS, nama, atau PIN tidak cocok dengan data sekolah.",

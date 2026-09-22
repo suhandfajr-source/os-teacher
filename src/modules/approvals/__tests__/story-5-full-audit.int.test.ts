@@ -742,6 +742,14 @@ describe("Story 5 Deep Real-Database Integration & Security Audit (Neon PostgreS
     const log = await prisma.auditLog.findFirst({ where: { action: "SCHOOL_DEACTIVATED", targetId: schoolId } });
     expect(log).not.toBeNull();
 
+    // P1: retry idempoten pada sekolah yang sudah nonaktif → sukses (resume),
+    // tanpa duplikat audit transisi.
+    const retry = await deactivateSchoolAction(schoolId);
+    expect(retry.success).toBe(true);
+    expect((retry as { resumed?: boolean }).resumed).toBe(true);
+    const deactLogs = await prisma.auditLog.count({ where: { action: "SCHOOL_DEACTIVATED", targetId: schoolId } });
+    expect(deactLogs).toBe(1);
+
     // G-4: kuis publik fail-closed generik
     const after = await startQuizAttemptAction(`s5tok${ts}`, quizStudent.id, "1111");
     expect(after.success).toBe(false);
