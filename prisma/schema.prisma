@@ -161,26 +161,34 @@ model User {
   createdAt     DateTime
   updatedAt     DateTime
   platformRole  String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
+  // DEV STAGE 11 Story 5 — kolom plugin admin Better Auth (kanal otorisasi plugin; platformRole tetap kanonik untuk requireSuperAdmin)
+  role          String    @default("USER") // kanal plugin Better Auth: "admin" lowercase | "USER"
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
   sessions      Session[]
   accounts      Account[]
 
-  teacherProfile TeacherProfile?
-  parentProfile  ParentProfile?
+  teacherProfile   TeacherProfile?
+  parentProfile    ParentProfile?
+  approvedStudents Student[]       @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
+  notifications    Notification[]
 
   @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime
-  updatedAt DateTime
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime
+  updatedAt      DateTime
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String? // Story 5 — kolom plugin admin Better Auth
 
   @@unique([token])
   @@map("session")
@@ -230,7 +238,11 @@ model School {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  // DEV STAGE 11 Story 5 — penanda nonaktif (B5); null = aktif
+  deactivatedAt DateTime?
+
   memberships       TeacherSchoolMembership[]
+  notifications     Notification[]
   students          Student[]
   academicPeriods   AcademicPeriod[]
   subjects          Subject[]
@@ -274,14 +286,16 @@ model Student {
   updatedAt                 DateTime     @updatedAt
 
   // DEV STAGE 11 — akun portal siswa (Story 1a)
-  accessPinHash String?  // hash scrypt+pepper — hanya diisi via hashPin (Story 1b)
-  accountStatus String   @default("PENDING") // PENDING | ACTIVE | REJECTED (glosarium §9.2)
-  pinUpdatedAt  DateTime?
-  lastLoginAt   DateTime?
-  failedAttempts Int      @default(0)
-  lockedUntil   DateTime?
-  approvedById  String?  // User.id — FK formal di Story 3/5
-  approvedAt    DateTime?
+  accessPinHash      String? // hash scrypt+pepper — hanya diisi via hashPin (Story 1b)
+  accountStatus      String    @default("PENDING") // PENDING | ACTIVE | REJECTED (glosarium §9.2)
+  pinUpdatedAt       DateTime?
+  lastLoginAt        DateTime?
+  failedAttempts     Int       @default(0)
+  lockedUntil        DateTime?
+  approvedById       String? // User.id — FK formal (Story 5, OQ-5)
+  approvedAt         DateTime?
+  accountRequestedAt DateTime? // Story 5 F2 — waktu pengajuan akun (sumber tunggal eskalasi)
+  approvedBy         User?     @relation("StudentApprover", fields: [approvedById], references: [id])
 
   classMemberships  ClassStudent[]
   attendanceRecords AttendanceRecord[]
@@ -294,6 +308,7 @@ model Student {
 
   @@unique([schoolId, nis])
   @@index([fullName])
+  @@index([schoolId, accountStatus]) // Story 5 F9 — query panel pending
   @@map("student")
 }
 
@@ -366,17 +381,17 @@ model Subject {
 }
 
 model Class {
-  id               String            @id @default(cuid())
-  schoolId         String
-  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  name             String
-  normalizedName   String?
-  gradeLevel       String?
-  status           EntityStatus      @default(ACTIVE)
+  id             String       @id @default(cuid())
+  schoolId       String
+  school         School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name           String
+  normalizedName String?
+  gradeLevel     String?
+  status         EntityStatus @default(ACTIVE)
 
   // DEV STAGE 11 — kode join rombel (Story 1a)
-  joinCode          String?    @unique // banyak NULL diizinkan Postgres — join-by-code unik & terindeks
-  joinCodeLocked    Boolean    @default(false)
+  joinCode          String?   @unique // banyak NULL diizinkan Postgres — join-by-code unik & terindeks
+  joinCodeLocked    Boolean   @default(false)
   joinCodeUpdatedAt DateTime?
 
   teachingContexts TeachingContext[]
@@ -424,10 +439,10 @@ model TeachingContext {
 // -------------------------------------------------
 
 model TeachingSession {
-  id                   String          @id @default(cuid())
+  id                   String            @id @default(cuid())
   teachingContextId    String
-  teachingContext      TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
-  date                 DateTime        @db.Date
+  teachingContext      TeachingContext   @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  date                 DateTime          @db.Date
   startedAt            DateTime?
   endedAt              DateTime?
   attendanceRecordedAt DateTime?
@@ -435,11 +450,11 @@ model TeachingSession {
   actualTopic          String?
   activitySummary      String?
   reflection           String?
-  status               SessionStatus   @default(IN_PROGRESS)
+  status               SessionStatus     @default(IN_PROGRESS)
   teachingScheduleId   String?
   teachingSchedule     TeachingSchedule? @relation(fields: [teachingScheduleId], references: [id], onDelete: SetNull)
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   attendanceRecords      AttendanceRecord[]
   assignments            Assignment[]
@@ -461,16 +476,16 @@ model TeachingSchedule {
   id                String          @id @default(cuid())
   teachingContextId String
   teachingContext   TeachingContext @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
-  
-  dayOfWeek         Int             // 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu, 7 = Minggu
-  startTime         String          // Format 24h: "HH:mm" (contoh: "07:30")
-  endTime           String          // Format 24h: "HH:mm" (contoh: "09:00")
-  room              String?         // Opsional (contoh: "Ruang 8A", "Lab Komputer")
-  
-  teachingSessions  TeachingSession[]
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  dayOfWeek Int // 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu, 7 = Minggu
+  startTime String // Format 24h: "HH:mm" (contoh: "07:30")
+  endTime   String // Format 24h: "HH:mm" (contoh: "09:00")
+  room      String? // Opsional (contoh: "Ruang 8A", "Lab Komputer")
+
+  teachingSessions TeachingSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([teachingContextId, dayOfWeek])
   @@index([dayOfWeek, startTime])
@@ -722,8 +737,8 @@ model AcademicContextProfile {
   academicNote       String?         @db.Text
   cpText             String?         @db.Text
   hoursPerWeek       Int             @default(3)
-  effectiveWeeksSem1  Int             @default(18)
-  effectiveWeeksSem2  Int             @default(16)
+  effectiveWeeksSem1 Int             @default(18)
+  effectiveWeeksSem2 Int             @default(16)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
@@ -934,6 +949,22 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([targetType, targetId])
   @@map("audit_log")
+}
+
+// DEV STAGE 11 Story 5 — infrastruktur notifikasi aditif (OQ-3)
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt]) // Story 5 G-10 — baca badge unread
+  @@map("notification")
 }
 
 // -------------------------------------------------

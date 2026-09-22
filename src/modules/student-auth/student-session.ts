@@ -159,6 +159,7 @@ export async function verifyStudentSession(): Promise<StudentSessionPayload | nu
         status: true,
         accountStatus: true,
         pinUpdatedAt: true,
+        school: { select: { deactivatedAt: true } }, // Story 5 F7 — fail-closed sekolah nonaktif
       },
     });
 
@@ -168,6 +169,11 @@ export async function verifyStudentSession(): Promise<StudentSessionPayload | nu
 
     // Siswa wajib ACTIVE (glosarium §9.2)
     if (student.status !== "ACTIVE" || student.accountStatus !== "ACTIVE") {
+      return null;
+    }
+
+    // Story 5 F7: sekolah nonaktif → sesi existing siswa fail-closed seketika
+    if (student.school?.deactivatedAt) {
       return null;
     }
 

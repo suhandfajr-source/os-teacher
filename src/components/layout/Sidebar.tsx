@@ -14,6 +14,7 @@ import {
   FileQuestion,
   Settings,
   BookOpenCheck,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KlassaLogo } from "@/components/brand";
@@ -23,6 +24,7 @@ const mainNavItems = [
   { href: "/hari-ini", label: "Hari Ini", icon: Calendar },
   { href: "/kelas", label: "Kelas Saya", icon: Users },
   { href: "/siswa", label: "Daftar Siswa", icon: UserCircle },
+  { href: "/persetujuan", label: "Persetujuan", icon: ClipboardCheck },
   { href: "/ai-studio", label: "AI Studio", icon: Sparkles, isAi: true },
   { href: "/quiz", label: "Quiz & Ujian", icon: FileQuestion },
   { href: "/laporan", label: "Laporan & Nilai", icon: BarChart },

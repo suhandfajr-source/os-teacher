@@ -1,0 +1,98 @@
+[
+  {
+    "location": "src/modules/admin/admin.actions.ts:126 (banTeacherAction)",
+    "trigger_condition": "auth.api.banUser called without headers; plugin adminMiddleware resolves no session and throws UNAUTHORIZED",
+    "guard_snippet": "await auth.api.banUser({ body: { userId, banReason }, headers: await headers() })",
+    "potential_consequence": "Every ban attempt fails generically in production; ban feature is dead (tests mock the API)"
+  },
+  {
+    "location": "src/modules/admin/admin.actions.ts:157 (unbanTeacherAction)",
+    "trigger_condition": "auth.api.unbanUser called without headers; adminMiddleware requires a session",
+    "guard_snippet": "await auth.api.unbanUser({ body: { userId }, headers: await headers() })",
+    "potential_consequence": "Unban always fails generically; banned users cannot be restored via UI"
+  },
+  {
+    "location": "src/modules/admin/admin.actions.ts:208-209 (resetTeacherPasswordAction)",
+    "trigger_condition": "setUserPassword and revokeUserSessions called without headers; adminMiddleware requires session",
+    "guard_snippet": "const h = await headers(); await auth.api.setUserPassword({ body: {...}, headers: h }); await auth.api.revokeUserSessions({ body: {...}, headers: h });",
+    "potential_consequence": "Password reset always fails generically; feature dead outside mocked tests"
+  },
+  {
+    "location": "src/modules/admin/admin.actions.ts:208-213 (resetTeacherPasswordAction)",
+    "trigger_condition": "setUserPassword succeeds then revokeUserSessions throws; two calls not atomic, catch swallows partial state",
+    "guard_snippet": "try { await revokeUserSessions(...) } catch { await rollbackOrRetry }; or revoke before/inside one flow with compensation",
+    "potential_consequence": "New password active while target's old sessions remain valid; account not actually secured"
+  },
+  {
+    "location": "src/modules/admin/admin.actions.ts:271-275 (deactivateSchoolAction)",
+    "trigger_condition": "Per-user session deleteMany failure is silently skipped (continue); no retry or failure report",
+    "guard_snippet": "const failed: string[] = []; ... catch { failed.push(uid); } ... if (failed.length) report/retry in metadata",
+    "potential_consequence": "Teacher/parent with surviving session keeps full access; teacher reads do not fail-closed on deactivatedAt"
+  },
+  {
+    "location": "src/modules/approvals/approvals.actions.ts:77-85 (getActivePeriod)",
+    "trigger_condition": "Two ACTIVE academic periods exist; findMany unsorted and periods[0] returned silently despite 'max satu' comment",
+    "guard_snippet": "if (periods.length > 1) throw new Error('MULTIPLE_ACTIVE_PERIODS'); return periods[0];",
+    "potential_consequence": "Nondeterministic panel scope and pengampu-authority checks when data violates the invariant"
+  },
+  {
+    "location": "src/modules/approvals/approvals.actions.ts:255-260 (approveStudentAction)",
+    "trigger_condition": "approvalLevel resolved from latest enrollment row of any period, not the active period",
+    "guard_snippet": "const enrollment = await getStudentEnrollment(studentId, activePeriodId, tx);",
+    "potential_consequence": "Old-period pengampu approving an active-period student gets L1: L2 notification never sent"
+  },
+  {
+    "location": "src/modules/approvals/approvals.actions.ts:294-303 (approveStudentAction)",
+    "trigger_condition": "notifySchoolTeachers throws after transaction commit; outer catch converts committed approval into success:false",
+    "guard_snippet": "try { await notifySchoolTeachers(...) } catch { /* best-effort */ }",
+    "potential_consequence": "Teacher sees failure and retries an already-ACTIVE student; repeated generic failures"
+  },
+  {
+    "location": "src/modules/approvals/approvals.actions.ts:443-452 (batchApproveStudentsAction)",
+    "trigger_condition": "notifySchoolTeachers runs after committed transaction with no surrounding try/catch",
+    "guard_snippet": "try { await notifySchoolTeachers({...}) } catch { /* best-effort */ }",
+    "potential_consequence": "Action throws to client after rows were approved; reported failure despite success"
+  },
+  {
+    "location": "src/modules/approvals/approvals.actions.ts:546-560 (moveStudentClassAction)",
+    "trigger_condition": "sourceRow falls back to latest row of any period; old-period row's classId updated to active-period class",
+    "guard_snippet": "if (sourceRow.academicPeriodId !== activePeriod.id) return { ok: false as const };",
+    "potential_consequence": "Wrong-period enrollment mutated; class/period incoherent; student's active-period row unchanged"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:218 vs 306 (registerStudent)",
+    "trigger_condition": "REJECTED student with accessPinHash === null fails the REJECTED branch and falls through to scenario (a) L0",
+    "guard_snippet": "if (existingStudent?.accountStatus === \"REJECTED\" && !existingStudent.accessPinHash) return { success: false, message: genericErrorMessage };",
+    "potential_consequence": "Legacy/pre-migration REJECTED row auto-reactivates to ACTIVE without PIN proof or approval"
+  },
+  {
+    "location": "src/modules/admin/admin.actions.ts:414 (getAuditLogsAction)",
+    "trigger_condition": "params.from/params.to parsed with new Date() unvalidated; Invalid Date makes Prisma throw with no try/catch",
+    "guard_snippet": "const from = params.from && !Number.isNaN(Date.parse(params.from)) ? new Date(params.from) : undefined;",
+    "potential_consequence": "Malformed date in direct invocation crashes the server action with unhandled error"
+  },
+  {
+    "location": "src/lib/superadmin-seeder.ts:235-238",
+    "trigger_condition": "Claim: seeder writes role:'ADMIN' sinkron with platformRole:'ADMIN' (F6); willPromote is false when platformRole already 'ADMIN'",
+    "guard_snippet": "update also when user.platformRole === 'ADMIN' but user.role !== 'ADMIN' (backfill existing superadmins)",
+    "potential_consequence": "Pre-Story-5 superadmins keep role='USER'; admin plugin hasPermission denies their ban/reset calls (kind: claim, confidence: high)",
+    "kind": "claim",
+    "confidence": "high"
+  },
+  {
+    "location": "src/modules/approvals/approvals.actions.ts:618-628 (resetStudentPinAction)",
+    "trigger_condition": "Claim: reset PIN only by pengampu 'di periode aktif' or superadmin; authority checked on enrollment row of any period",
+    "guard_snippet": "authorise pengampu only via enrollment in active period (or explicitly document REJECTED/old-period recovery exception)",
+    "potential_consequence": "Old-period-only pengampu can reset PIN — broader authority than the frozen B2 contract (kind: claim, confidence: medium)",
+    "kind": "claim",
+    "confidence": "medium"
+  },
+  {
+    "location": "src/app/(dashboard)/siswa/page.tsx:90",
+    "trigger_condition": "Claim: escalation threshold 'konstanta terpusat, bukan angka tersebar'; 48h re-derived as ESCALATION_L1_MS and hardcoded '>48 jam' in SiswaListClient",
+    "guard_snippet": "import ESCALATION_L1_HOURS from approvals module and derive ms + label from it",
+    "potential_consequence": "Threshold change in approvals.actions desyncs L1 highlight and UI text (kind: claim, confidence: medium)",
+    "kind": "claim",
+    "confidence": "medium"
+  }
+]

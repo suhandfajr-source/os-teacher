@@ -492,6 +492,7 @@ export async function getParentAuthorizedContexts(parentProfileId: string): Prom
     where: {
       parentStudentRelation: {
         parentProfileId: parentProfileId,
+        student: { school: { deactivatedAt: null } }, // Story 5 F7 — fail-closed sekolah nonaktif
       },
       status: "ACTIVE",
     },

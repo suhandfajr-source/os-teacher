@@ -186,6 +186,27 @@ describe("Story 1c — superadmin seeder core (real DB)", () => {
         expect(report.plan[0].userId).toBe(user.id);
         expect(report.promoted).toBe(1);
         expect((await prisma.user.findUnique({ where: { id: user.id } }))?.platformRole).toBe("ADMIN");
+        // Story 5 VG-2/F6: kanal plugin admin (user.role) harus sinkron
+        expect((await prisma.user.findUnique({ where: { id: user.id } }))?.role).toBe("admin");
+    });
+
+    it("Story 5 EC-13: backfill role='ADMIN' untuk superadmin yang SUDAH ADMIN sebelum Story 5", async () => {
+        if (!dbAvailable) {
+            expect(true).toBe(true);
+            return;
+        }
+        // Superadmin lama (pra-Story 5): platformRole ADMIN, role masih default USER
+        const legacy = await createTestUser("1c-legacy-sa", { platformRole: "ADMIN" });
+        expect((await prisma.user.findUnique({ where: { id: legacy.id } }))?.role).toBe("USER");
+
+        const parsed = parseSuperadminEmails(legacy.email);
+        const report = await runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, allowUnverified: true });
+
+        // Tidak dihitung promote baru (sudah ADMIN) — tapi role di-backfill
+        expect(report.promoted).toBe(0);
+        const after = await prisma.user.findUnique({ where: { id: legacy.id } });
+        expect(after?.platformRole).toBe("ADMIN");
+        expect(after?.role).toBe("admin"); // EC-13 — kanal plugin admin tersinkron
     });
 
     it("is idempotent: second run promotes nothing and writes zero new audit entries (BH12)", async () => {
@@ -207,6 +228,8 @@ describe("Story 1c — superadmin seeder core (real DB)", () => {
         expect(second.auditEntries).toBe(0);
         expect(await auditCountFor(user.id)).toBe(auditAfterFirst); // no new entries
         expect((await prisma.user.findUnique({ where: { id: user.id } }))?.platformRole).toBe("ADMIN");
+        // Story 5 VG-2/F6: kanal plugin admin (user.role) harus sinkron
+        expect((await prisma.user.findUnique({ where: { id: user.id } }))?.role).toBe("admin");
     });
 
     it("reports ADMIN-not-in-allowlist as drift without demoting (BH7)", async () => {

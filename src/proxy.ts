@@ -4,7 +4,20 @@ import { STUDENT_SESSION_COOKIE_NAME, verifyStudentSessionToken } from "@/module
 
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
+  // 0. Proteksi optimistic area superadmin: /admin/* (Story 5 F3/G-9).
+  //    Proxy TIDAK menulis DB (edge runtime) — audit denial lahir dari
+  //    requireSuperAdmin() di layout/handler. Validasi role nyata di server.
+  if (pathname.startsWith("/admin")) {
+    const adminSessionCookie =
+      request.cookies.get("better-auth.session_token")?.value ||
+      request.cookies.get("__Secure-better-auth.session_token")?.value;
+
+    if (!adminSessionCookie) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
   // 1. Proteksi rute portal siswa: /siswa/portal/*
   if (pathname.startsWith("/siswa/portal")) {
     const studentCookie = request.cookies.get(STUDENT_SESSION_COOKIE_NAME);

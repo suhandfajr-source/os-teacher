@@ -229,14 +229,20 @@ export async function runSuperadminSeed(options: {
             }
 
             // --- Apply: promote + audit per actual state change.
+            // EC-13 (Story 5): superadmin yang SUDAH ADMIN sebelum Story 5 tidak
+            // akan pernah willPromote — tanpa backfill ini kolom `role` (kanal
+            // plugin admin) mereka tetap "USER" selamanya dan ban/reset password
+            // ditolak plugin. Update `role` idempoten untuk SEMUA allowlisted ADMIN.
             let promoted = 0;
             let auditEntries = 0;
             for (const entry of plan) {
-                if (!entry.willPromote || entry.userId === undefined) continue;
+                if (entry.userId === undefined) continue;
+                const wasAlreadyAdmin = !entry.willPromote;
                 await tx.user.update({
                     where: { id: entry.userId },
-                    data: { platformRole: "ADMIN" },
+                    data: { platformRole: "ADMIN", role: "admin" }, // Story 5 F6+G-11: kanal plugin lowercase
                 });
+                if (wasAlreadyAdmin) continue; // sudah ADMIN — hanya backfill role, bukan promote baru
                 promoted += 1;
                 await tx.auditLog.create({
                     data: {

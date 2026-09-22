@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
@@ -97,5 +98,28 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         autoSignIn: true
+    },
+    // Story 5 (F6): plugin admin untuk siklus hidup sesi (banUser/setUserPassword/
+    // revokeUserSessions). Kolom `user.role` dikelola plugin dengan konvensi
+    // lowercase ("admin"); `platformRole` tetap kanonik ("ADMIN") untuk
+    // requireSuperAdmin() — seeder menulis keduanya sinkron.
+    plugins: [
+        // G-11 (diperdalam test real-plugin): lookup permission plugin
+        // case-sensitive terhadap map roles bawaan ("admin"/"user") — kanal
+        // role wajib memakai nilai lowercase kanonik plugin.
+        admin(),
+    ],
+    // Story 5 (OQ-6 + G-5): fail-closed sekolah nonaktif pada pembuatan sesi BARU
+    // guru DAN parent. Sesi existing ditangani revoke saat deaktivasi (B5).
+    databaseHooks: {
+        session: {
+            create: {
+                async before(session): Promise<boolean> {
+                    // Logika resolusi persona diekstrak ke src/lib/session-guards.ts agar testable.
+                    const { assertSessionCreationAllowed } = await import("./session-guards");
+                    return assertSessionCreationAllowed(session?.userId);
+                },
+            },
+        },
     },
 });

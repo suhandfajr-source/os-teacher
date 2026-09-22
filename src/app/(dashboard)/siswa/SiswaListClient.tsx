@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  approveStudentAction,
+  rejectStudentAction,
+} from "@/modules/approvals/approvals.actions";
+import { ESCALATION_L1_HOURS } from "@/modules/approvals/approvals.constants";
 import {
   Users,
   Search,
   GraduationCap,
   ChevronRight,
   UserCircle,
+  Hourglass,
+  Check,
+  X,
 } from "lucide-react";
 
 interface StudentItem {
@@ -27,16 +37,62 @@ interface ClassGroup {
   students: StudentItem[];
 }
 
+/** Story 5 — Panel L1: siswa PENDING rombel yang diampu (periode aktif). */
+interface PendingStudentItem {
+  studentId: string;
+  fullName: string;
+  nis: string | null;
+  className: string;
+  escalated: boolean;
+  accountRequestedAt: string | null;
+}
+
 interface Props {
   classGroups: ClassGroup[];
   totalStudents: number;
+  pendingStudents?: PendingStudentItem[];
 }
 
-export function SiswaListClient({ classGroups, totalStudents }: Props) {
+export function SiswaListClient({ classGroups, totalStudents, pendingStudents = [] }: Props) {
+  const router = useRouter();
   const [selectedClassId, setSelectedClassId] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [pending, setPending] = useState<PendingStudentItem[]>(pendingStudents);
+  const [isPendingTransition, startTransition] = useTransition();
 
   const q = searchQuery.toLowerCase().trim();
+
+  const handleApprove = (studentId: string) => {
+    startTransition(async () => {
+      const res = await approveStudentAction(studentId);
+      if (res.success) {
+        toast.success("Siswa disetujui. Akun aktif seketika.");
+        setPending((prev) => prev.filter((p) => p.studentId !== studentId));
+        router.refresh(); // BH-11: roster & panel server-side ikut sinkron
+      } else {
+        toast.error(res.message || "Aksi gagal.");
+      }
+    });
+  };
+
+  const handleReject = (studentId: string) => {
+    const reason = window.prompt("Alasan penolakan (tercatat di jejak audit):");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      toast.error("Alasan penolakan wajib diisi.");
+      return;
+    }
+    startTransition(async () => {
+      const res = await rejectStudentAction(studentId, reason);
+      if (res.success) {
+        toast.success("Siswa ditolak. Siswa dapat mendaftar ulang.");
+        setPending((prev) => prev.filter((p) => p.studentId !== studentId));
+        router.refresh();
+      } else {
+        toast.error(res.message || "Aksi gagal.");
+      }
+    });
+  };
 
   // Filter classes & students
   const filteredGroups = classGroups
@@ -61,6 +117,61 @@ export function SiswaListClient({ classGroups, totalStudents }: Props) {
           Daftar seluruh siswa terkelompok rapi berdasarkan kelas yang Anda ampu.
         </p>
       </div>
+
+      {/* Story 5 — Panel L1: Menunggu Persetujuan (per-rombel pengampu) */}
+      {pending.length > 0 && (
+        <Card className="border-amber-300/60 bg-amber-50/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Hourglass className="h-4 w-4 text-amber-600" />
+              Menunggu Persetujuan ({pending.length})
+              <span className="text-xs font-normal text-muted-foreground">
+                akun siswa PENDING rombel Anda · merah = &gt;{ESCALATION_L1_HOURS} jam (eskalasi)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {pending.map((p) => (
+              <div
+                key={p.studentId}
+                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border p-3 ${
+                  p.escalated ? "border-red-300 bg-red-50/60" : "bg-white"
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium truncate">{p.fullName}</span>
+                    {p.nis && <Badge variant="outline">NIS {p.nis}</Badge>}
+                    <Badge variant="secondary">{p.className}</Badge>
+                    {p.escalated && (
+                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                        Eskalasi &gt;{ESCALATION_L1_HOURS} jam
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    disabled={isPendingTransition}
+                    onClick={() => handleApprove(p.studentId)}
+                  >
+                    <Check className="h-4 w-4 mr-1" /> Setujui
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isPendingTransition}
+                    onClick={() => handleReject(p.studentId)}
+                  >
+                    <X className="h-4 w-4 mr-1" /> Tolak
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">

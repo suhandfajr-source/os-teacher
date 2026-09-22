@@ -45,3 +45,21 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
   summary: Putuskan field `engines` di package.json (mis. `node >= 20.12` — syarat `--env-file-if-exists` script seed) — kebijakan manifest seluruh app, bukan keputusan seeder sendirian; sementara ini terdokumentasi di `.env.example` + header CLI.
   evidence: VG-other5 review 1c; tanpa engines, Node 18–20.11 mati "bad option" tanpa penjelasan.
+
+# Review Story 5 pass 1 — defer entries (2026-09-23)
+
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
+  summary: BH-6 — Eksplorasi AuditLog per-aktor dari konsol admin (link berfilter konsol→viewer) belum ada; admin harus menyalin cuid manual.
+  evidence: Viewer sudah berfilter aktor/aksi/target (dipakai index N4), tetapi tidak ada tautan navigasi dari baris konsol user/sekolah ke `/admin/audit?actorId=...`; peningkatan UX di luar kontrak viewer.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
+  summary: BH-12 — Polish NotificationBell: mark-read saat dropdown ditutup (bukan dibuka), polling ringan, dan render `payload.link` sebagai navigasi.
+  evidence: Fungsionalitas inti (aggregate per aksi + badge unread via index G-10) terpenuhi dan teruji; tiga poin ini polish UX tanpa kontrak frozen.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
+  summary: BH-16 — FK `notification.schoolId` belum ber-index; butuh migrasi aditif tambahan.
+  evidence: Tidak ada consumer yang mem-query notification per-sekolah saat ini (semua baca per-user via index `[userId, readAt]`); bundle-kan indeks dengan migrasi berikutnya yang menyentuh notifikasi.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
+  summary: VG-Other-2 — Flag `dbAvailable` pada int test tidak me-skip body `it` (kegagalan DB = loud assertion failures, bukan clean skip).
+  evidence: Pola `beforeAll` try/catch + flag hanya dikonsultasi di sebagian tempat; hygiene test-harness lintas file; kegagalan bersifat loud sehingga tidak menyembunyikan regresi.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
+  summary: Story-4 test "fetches today's live schedule" flaky time-of-day — jendela LIVE di-seed 07:00–23:59 WIB, gagal bila suite dijalankan di luar jendela itu.
+  evidence: DIBUKTIKAN bukan regresi Story 5 — `git stash` → run pada baseline bersih `efdff6b` → gagal di asersi `isLive` yang sama → `git stash pop`. Perbaikan: seed jadwal relatif terhadap waktu berjalan (bukan jam tetap) atau mock `vi.setSystemTime`.

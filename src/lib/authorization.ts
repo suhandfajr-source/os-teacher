@@ -41,6 +41,12 @@ export async function verifyActiveSchoolMembership() {
     throw new Error("Not an active member of the school workspace");
   }
 
+  // Story 5 BH-7/EC-5: fail-closed per-request — nonaktif sekolah memutus
+  // SEMUA aksi guru, bukan hanya mengandalkan penghapusan sesi saat deaktivasi.
+  if (activeMembership.school.deactivatedAt) {
+    throw new Error("Not an active member of the school workspace");
+  }
+
   return { session, profile, activeSchoolId: profile.activeSchoolId, activeSchool: activeMembership.school };
 }
 
@@ -471,6 +477,15 @@ export async function verifyParentStudentRelation(studentId: string) {
   });
 
   if (!relation) {
+    throw new Error("Forbidden: Anda tidak memiliki akses terhadap data siswa ini");
+  }
+
+  // Story 5 F7: sekolah nonaktif → semua layanan baca parent fail-closed.
+  const school = await prisma.school.findUnique({
+    where: { id: relation.student.schoolId },
+    select: { deactivatedAt: true },
+  });
+  if (school?.deactivatedAt) {
     throw new Error("Forbidden: Anda tidak memiliki akses terhadap data siswa ini");
   }
 

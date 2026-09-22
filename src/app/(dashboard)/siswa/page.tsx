@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/auth";
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { SiswaListClient } from "./SiswaListClient";
+import { getPendingStudentsForMyClassesAction } from "@/modules/approvals/approvals.actions";
 
 export default async function SiswaPage() {
   let authContext = null;
@@ -62,10 +63,29 @@ export default async function SiswaPage() {
     };
   });
 
+  // Story 5 — Panel L1 via action terpusat (BH-10: tanpa duplikasi query).
+  const pendingRes = await getPendingStudentsForMyClassesAction();
+  const pendingStudents = (pendingRes.pending ?? []).map((p: {
+    studentId: string;
+    fullName: string;
+    nis: string | null;
+    className: string;
+    escalated: boolean;
+    accountRequestedAt: string | null;
+  }) => ({
+    studentId: p.studentId,
+    fullName: p.fullName,
+    nis: p.nis,
+    className: p.className,
+    escalated: p.escalated,
+    accountRequestedAt: p.accountRequestedAt,
+  }));
+
   return (
     <SiswaListClient
       classGroups={classGroups}
       totalStudents={uniqueStudentIds.size}
+      pendingStudents={pendingStudents}
     />
   );
 }

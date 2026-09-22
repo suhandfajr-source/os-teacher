@@ -980,7 +980,7 @@ export async function gradeStudentEssayAction(
 // ============================================================================
 
 async function getPublishedQuizByToken(token: string) {
-  return prisma.quiz.findUnique({
+  const quiz = await prisma.quiz.findUnique({
     where: { shareToken: token },
     include: {
       _count: { select: { questions: true } },
@@ -989,6 +989,7 @@ async function getPublishedQuizByToken(token: string) {
           academicPeriod: true,
           class: {
             include: {
+              school: { select: { deactivatedAt: true } }, // Story 5 G-4 — fail-closed
               classStudents: {
                 include: { student: { select: { id: true, fullName: true, status: true } } },
               },
@@ -998,6 +999,15 @@ async function getPublishedQuizByToken(token: string) {
       },
     },
   });
+
+  // Story 5 G-4: sekolah nonaktif → kuis publik /q/[token] fail-closed.
+  // Mengembalikan null = jalur "tidak ditemukan" generik di semua pemanggil —
+  // tanpa membocorkan status sekolah.
+  if (quiz?.teachingContext?.class?.school?.deactivatedAt) {
+    return null;
+  }
+
+  return quiz;
 }
 
 export async function getPublicQuizAction(token: string): Promise<{
@@ -1260,9 +1270,20 @@ export async function getPublicAttemptResultAction(
   try {
     const quiz = await prisma.quiz.findUnique({
       where: { shareToken: token },
-      select: { id: true, standardScore: true },
+      select: {
+        id: true,
+        standardScore: true,
+        teachingContext: {
+          select: { class: { select: { school: { select: { deactivatedAt: true } } } } }, // Story 5 VG-5/G-4
+        },
+      },
     });
     if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+
+    // VG-5 (G-4): hasil/pembahasan publik juga fail-closed saat sekolah nonaktif.
+    if (quiz.teachingContext?.class?.school?.deactivatedAt) {
+      return { success: false, error: "Quiz tidak ditemukan" };
+    }
 
     const attempt = await prisma.quizAttempt.findUnique({
       where: { quizId_studentId: { quizId: quiz.id, studentId } },
@@ -1426,9 +1447,20 @@ export async function getAttemptResultAction(
   try {
     const quiz = await prisma.quiz.findUnique({
       where: { shareToken: token },
-      select: { id: true, standardScore: true },
+      select: {
+        id: true,
+        standardScore: true,
+        teachingContext: {
+          select: { class: { select: { school: { select: { deactivatedAt: true } } } } }, // Story 5 VG-5/G-4
+        },
+      },
     });
     if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
+
+    // VG-5 (G-4): hasil/pembahasan publik juga fail-closed saat sekolah nonaktif.
+    if (quiz.teachingContext?.class?.school?.deactivatedAt) {
+      return { success: false, error: "Quiz tidak ditemukan" };
+    }
 
     const attempt = await prisma.quizAttempt.findUnique({
       where: { quizId_studentId: { quizId: quiz.id, studentId } },

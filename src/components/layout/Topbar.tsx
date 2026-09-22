@@ -20,6 +20,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { KlassaLogo } from "@/components/brand";
+import { NotificationBell } from "./NotificationBell";
 
 const mainNavItems = [
   { href: "/", label: "Beranda", icon: Home, exact: true },
@@ -82,6 +83,7 @@ export function Topbar() {
             <Sparkles className="h-3.5 w-3.5 text-indigo-600 animate-pulse" />
             <span>AI Studio</span>
           </Link>
+          <NotificationBell />
           <Link
             href="/pengaturan/setup"
             aria-label="Pengaturan Akun dan Sekolah"

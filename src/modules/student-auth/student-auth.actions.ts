@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/auth";
 import { validatePinFormat, hashPin, verifyPin } from "@/lib/student-pin";
+import { redactMetadata } from "@/lib/audit-metadata";
+import type { Prisma } from "@prisma/client";
 import { 
   setStudentSessionCookie, 
   clearStudentSessionCookie,
@@ -33,7 +35,7 @@ export async function lookupJoinCode(code: string) {
     where: { joinCode: cleanCode },
     include: {
       school: {
-        select: { id: true, name: true, city: true },
+        select: { id: true, name: true, city: true, deactivatedAt: true }, // Story 5 F7
       },
       teachingContexts: {
         include: {
@@ -52,6 +54,12 @@ export async function lookupJoinCode(code: string) {
   });
 
   if (!classRecord) {
+    return { success: false, message: "Kode rombel tidak ditemukan." };
+  }
+
+  // Story 5 F7: sekolah nonaktif → lookup fail-closed (pesan generik identik,
+  // tidak membocorkan status sekolah).
+  if (classRecord.school?.deactivatedAt) {
     return { success: false, message: "Kode rombel tidak ditemukan." };
   }
 
@@ -125,6 +133,9 @@ export async function registerStudent(data: {
   const classRecord = await prisma.class.findUnique({
     where: { joinCode: cleanCode },
     include: {
+      school: {
+        select: { id: true, name: true, deactivatedAt: true }, // Story 5 F7 — fail-closed
+      },
       teachingContexts: {
         select: { academicPeriodId: true },
         take: 1,
@@ -133,6 +144,11 @@ export async function registerStudent(data: {
   });
 
   if (!classRecord) {
+    return { success: false, message: "Kode rombel tidak ditemukan." };
+  }
+
+  // Story 5 F7: sekolah nonaktif → semua gerbang pendaftaran fail-closed (pesan generik).
+  if (classRecord.school?.deactivatedAt) {
     return { success: false, message: "Kode rombel tidak ditemukan." };
   }
 
@@ -153,15 +169,23 @@ export async function registerStudent(data: {
     },
   });
 
-  // F1 CRITICAL Anti-Takeover: Jika akun sudah memiliki accessPinHash aktif, tolak keras registrasi ulang!
-  if (existingStudent && existingStudent.accessPinHash !== null) {
+  // F1 CRITICAL Anti-Takeover (Story 4): akun ber-PIN selain REJECTED ditolak keras.
+  // Story 5 F1 + G-1: jalur daftar ulang REJECTED diizinkan dengan verifikasi
+  // PIN lama wajib (bukti kepemilikan satu-satunya) — cabang khusus ada di bawah.
+  if (
+    existingStudent &&
+    existingStudent.accessPinHash !== null &&
+    existingStudent.accountStatus !== "REJECTED"
+  ) {
     return {
       success: false,
       message: `Akun siswa dengan NIS ${cleanNis} sudah terdaftar. Silakan login langsung menggunakan NIS dan PIN Anda, atau hubungi guru pengampu untuk mereset PIN jika lupa.`,
     };
   }
 
-  // Skenario (d): Cek apakah siswa sudah terdaftar di rombel lain pada periode aktif yang sama
+  // Skenario (d): Cek apakah siswa sudah terdaftar di rombel lain pada periode aktif yang sama.
+  // Story 5 G-2: siswa REJECTED daftar ulang ke rombel berbeda diarahkan ke UPDATE
+  // classId pada row ClassStudent existing (N5) — bukan ditolak.
   const existingEnrollment = await prisma.classStudent.findFirst({
     where: {
       academicPeriodId,
@@ -175,7 +199,11 @@ export async function registerStudent(data: {
     },
   });
 
-  if (existingEnrollment && existingEnrollment.class.id !== classRecord.id) {
+  if (
+    existingEnrollment &&
+    existingEnrollment.class.id !== classRecord.id &&
+    existingStudent?.accountStatus !== "REJECTED"
+  ) {
     return {
       success: false,
       message: `Siswa dengan NIS ${cleanNis} sudah terdaftar di rombel "${existingEnrollment.class.name}" pada tahun ajaran ini. Minta guru untuk memindahkan rombel jika ada perubahan kelas.`,
@@ -185,9 +213,111 @@ export async function registerStudent(data: {
   const pinHash = await hashPin(data.pin);
   const now = new Date();
 
+  // Story 5 F1 + G-1 — Jalur daftar ulang REJECTED:
+  // PIN lama wajib cocok (bukti kepemilikan satu-satunya); row TIDAK disentuh bila salah.
+  if (existingStudent && existingStudent.accountStatus === "REJECTED" && existingStudent.accessPinHash) {
+    const oldPinValid = await verifyPin(data.pin, existingStudent.accessPinHash);
+    if (!oldPinValid) {
+      // G-1: tolak generik + AuditLog percobaan; row tidak berubah.
+      await prisma.auditLog.create({
+        data: {
+          actorType: "STUDENT",
+          actorId: existingStudent.id,
+          action: "STUDENT_RE_REGISTER_DENIED",
+          targetType: "STUDENT",
+          targetId: existingStudent.id,
+          metadata: redactMetadata({ reason: "OLD_PIN_MISMATCH" }) as Prisma.InputJsonValue,
+        },
+      });
+      return {
+        success: false,
+        message: "NIS, nama, atau PIN tidak cocok dengan data sekolah.",
+      };
+    }
+
+    const nameChanged = existingStudent.fullName.trim().toLowerCase() !== cleanFullName.toLowerCase();
+    const movedClass = existingEnrollment ? existingEnrollment.class.id !== classRecord.id : false;
+
+    const reRegistered = await prisma.$transaction(async (tx) => {
+      // Conditional update (F5): hanya bila masih REJECTED — kalah race dengan approve → gagal generik.
+      const updated = await tx.student.updateMany({
+        where: { id: existingStudent.id, accountStatus: "REJECTED" },
+        data: {
+          accessPinHash: pinHash,
+          fullName: cleanFullName,
+          accountStatus: "PENDING",
+          pinUpdatedAt: now,
+          failedAttempts: 0,
+          lockedUntil: null,
+          accountRequestedAt: now, // F2
+          approvedById: null,
+          approvedAt: null,
+        },
+      });
+      if (updated.count !== 1) return false;
+
+      // N5 + G-2: reuse row enrollment — pindah rombel = UPDATE classId, bukan delete-insert.
+      await tx.classStudent.upsert({
+        where: {
+          studentId_academicPeriodId: {
+            studentId: existingStudent.id,
+            academicPeriodId,
+          },
+        },
+        create: { studentId: existingStudent.id, classId: classRecord.id, academicPeriodId },
+        update: { classId: classRecord.id },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorType: "STUDENT",
+          actorId: existingStudent.id,
+          action: "STUDENT_RE_REGISTERED",
+          targetType: "STUDENT",
+          targetId: existingStudent.id,
+          metadata: redactMetadata({
+            attempt: 2,
+            nameChanged,
+            nameChangedFrom: nameChanged ? existingStudent.fullName : undefined,
+            movedClass,
+            classId: classRecord.id,
+          }) as Prisma.InputJsonValue,
+        },
+      });
+
+      return true;
+    });
+
+    if (!reRegistered) {
+      return { success: false, message: "Pendaftaran gagal. Coba beberapa saat lagi." };
+    }
+
+    return {
+      success: true,
+      status: "PENDING",
+      reason: "MISMATCH_NAME",
+      student: { id: existingStudent.id, fullName: cleanFullName, nis: cleanNis },
+      message: nameChanged
+        ? "Pendaftaran ulang terkirim. Perubahan nama akan diverifikasi guru pengampu."
+        : "Pendaftaran ulang terkirim. Akun menunggu persetujuan guru pengampu.",
+    };
+  }
+
+  // Story 5 EC-11: baris REJECTED tanpa hash (legacy/pramigrasi) TIDAK boleh
+  // auto-L0 — tangga persetujuan melarang reaktivasi otomatis tanpa bukti PIN.
+  // Jalur pulih: guru reset PIN (B2/G-1) → daftar ulang dengan PIN baru.
+  if (existingStudent && existingStudent.accountStatus === "REJECTED" && !existingStudent.accessPinHash) {
+    return {
+      success: false,
+      message:
+        "Pendaftaran ulang akun ini memerlukan verifikasi PIN. Hubungi guru pengampu untuk mereset PIN terlebih dahulu.",
+    };
+  }
+
   // Skenario (a): NIS ada, accessPinHash null, nama cocok exact (case-insensitive) -> L0 ACTIVE
   if (
     existingStudent &&
+    existingStudent.accountStatus !== "REJECTED" &&
     existingStudent.fullName.trim().toLowerCase() === cleanFullName.toLowerCase()
   ) {
     const updatedStudent = await prisma.$transaction(async (tx) => {
@@ -255,6 +385,7 @@ export async function registerStudent(data: {
           pinUpdatedAt: now,
           failedAttempts: 0,
           lockedUntil: null,
+          accountRequestedAt: now, // Story 5 F2 — sumber tunggal eskalasi
         },
         select: SAFE_STUDENT_SELECT,
       });
@@ -300,6 +431,7 @@ export async function registerStudent(data: {
         accountStatus: "PENDING",
         pinUpdatedAt: now,
         failedAttempts: 0,
+        accountRequestedAt: now, // Story 5 F2 — sumber tunggal eskalasi
       },
       select: SAFE_STUDENT_SELECT,
     });
@@ -368,7 +500,7 @@ export async function loginStudent(data: {
     },
     include: {
       school: {
-        select: { id: true, name: true },
+        select: { id: true, name: true, deactivatedAt: true }, // Story 5 F7
       },
     },
   });
@@ -478,6 +610,12 @@ export async function loginStudent(data: {
       lastLoginAt: now,
     },
   });
+
+  // Story 5 F7: sekolah nonaktif → login siswa gagal generik (timing seragam —
+  // dicek SETELAH verifikasi PIN agar tidak membocorkan status sekolah).
+  if (student.school?.deactivatedAt) {
+    return { success: false, message: genericErrorMessage };
+  }
 
   // Ambil rombel aktif siswa
   const classMembership = await prisma.classStudent.findFirst({

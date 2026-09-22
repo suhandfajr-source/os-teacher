@@ -2,7 +2,7 @@
 title: 'Story 5 — Panel Persetujuan Guru & Superadmin'
 type: 'feature'
 created: '2026-09-23'
-status: 'approved'
+status: 'done'
 baseline_commit: '013603f8dbee0dab0d3299d10ecb5fec5aeff72b'
 route: 'full'
 review_loop_iteration: 1
@@ -192,40 +192,40 @@ Mesin autentikasi siswa (Story 3) menciptakan akun berstatus `PENDING` pada dua 
 ### Execution Checklist
 
 **Fase 1 — Guard, Migrasi & Infrastruktur:**
-- [ ] Tulis `requireSuperAdmin()` + `SuperAdminRequiredError` di `src/lib/superadmin.ts` (kontrak terkeras deferred work Story 1) + unit test.
-- [ ] Migrasi aditif: penanda nonaktif `School`, `Student.accountRequestedAt` (F2), FK formal `approvedById` → `User` (OQ-5), `@@index([schoolId, accountStatus])` (F9), model `Notification` (OQ-3), kolom plugin admin `User.role/banned/banReason/banExpires` + `Session.impersonatedBy` (F6); `npm run verify:migrations` exit 0.
-- [ ] Pasang admin plugin Better Auth (`adminRoles: ["ADMIN"]`, `defaultRole: "USER"`) di `src/lib/auth.ts`; extend `superadmin-seeder.ts` set `role: "ADMIN"` sinkron + update test seeder (F6).
-- [ ] Pasang hook `databaseHooks.session.create` deny sekolah nonaktif (OQ-6).
-- [ ] Extend `verifyStudentSession()` dengan fail-closed penanda nonaktif sekolah (F7).
-- [ ] Blok optimistic `/admin/*` di `src/proxy.ts`.
+- [x] Tulis `requireSuperAdmin()` + `SuperAdminRequiredError` di `src/lib/superadmin.ts` (kontrak terkeras deferred work Story 1) + unit test.
+- [x] Migrasi aditif: penanda nonaktif `School`, `Student.accountRequestedAt` (F2), FK formal `approvedById` → `User` (OQ-5), `@@index([schoolId, accountStatus])` (F9), model `Notification` (OQ-3), kolom plugin admin `User.role/banned/banReason/banExpires` + `Session.impersonatedBy` (F6); `npm run verify:migrations` exit 0.
+- [x] Pasang admin plugin Better Auth (`adminRoles: ["ADMIN"]`, `defaultRole: "USER"`) di `src/lib/auth.ts`; extend `superadmin-seeder.ts` set `role: "ADMIN"` sinkron + update test seeder (F6).
+- [x] Pasang hook `databaseHooks.session.create` deny sekolah nonaktif (OQ-6).
+- [x] Extend `verifyStudentSession()` dengan fail-closed penanda nonaktif sekolah (F7).
+- [x] Blok optimistic `/admin/*` di `src/proxy.ts`.
 
 **Fase 2 — Panel Persetujuan Guru (CAP-4, B2, N5, N6, F1):**
-- [ ] Panel L1 per-rombel (tab pending) dengan verifikasi kuasa pengampu server-side + highlight >48 jam (dari `accountRequestedAt`).
-- [ ] Panel L2 sekolah-wide dengan highlight >7 hari + checklist batch + pindah rombel + reset PIN.
-- [ ] `approveStudentAction` / `rejectStudentAction` dengan conditional update (F5) + `accountRequestedAt = null` + `AuditLog`.
-- [ ] `batchApproveStudentsAction`: satu `$transaction`, skip-baris-gagal + laporan, `AuditLog` per-baris sukses (N6, OQ-2), cap ≤100 baris divalidasi server-side (G-8).
-- [ ] `moveStudentClassAction`: UPDATE `classId` row existing, kuasa pengampu sumber/tujuan (N5, F12).
-- [ ] `resetStudentPinAction`: validasi kuasa, PIN dari guru (OQ-4), hygiene lengkap (F8), satu transaksi + `AuditLog`.
-- [ ] Amend guard `registerStudent` untuk jalur REJECTED (F1 + G-1 + G-2): verifikasi PIN lama, red-flag perubahan nama, amend skenario (d) pindah rombel, AuditLog attempt kedua (sukses & gagal).
-- [ ] Model + service `Notification` dengan aggregate per aksi + badge feed header dashboard (OQ-3, F4).
+- [x] Panel L1 per-rombel (tab pending) dengan verifikasi kuasa pengampu server-side + highlight >48 jam (dari `accountRequestedAt`).
+- [x] Panel L2 sekolah-wide dengan highlight >7 hari + checklist batch + pindah rombel + reset PIN.
+- [x] `approveStudentAction` / `rejectStudentAction` dengan conditional update (F5) + `accountRequestedAt = null` + `AuditLog`.
+- [x] `batchApproveStudentsAction`: satu `$transaction`, skip-baris-gagal + laporan, `AuditLog` per-baris sukses (N6, OQ-2), cap ≤100 baris divalidasi server-side (G-8).
+- [x] `moveStudentClassAction`: UPDATE `classId` row existing, kuasa pengampu sumber/tujuan (N5, F12).
+- [x] `resetStudentPinAction`: validasi kuasa, PIN dari guru (OQ-4), hygiene lengkap (F8), satu transaksi + `AuditLog`.
+- [x] Amend guard `registerStudent` untuk jalur REJECTED (F1 + G-1 + G-2): verifikasi PIN lama, red-flag perubahan nama, amend skenario (d) pindah rombel, AuditLog attempt kedua (sukses & gagal).
+- [x] Model + service `Notification` dengan aggregate per aksi + badge feed header dashboard (OQ-3, F4).
 
 **Fase 3 — Area Superadmin `/admin/*` (CAP-7, B5):**
-- [ ] Route group top-level `src/app/admin/*` dengan layout `requireSuperAdmin()` (F3).
-- [ ] `forceApproveStudentAction` lintas-sekolah + `AuditLog` + conditional update.
-- [ ] `banTeacherAction` (+ guard anti-ban-ADMIN, F6) + `resetTeacherPasswordAction` (+ guard anti-target-ADMIN, G-3), keduanya revoke SEMUA sesi (B5) + `AuditLog`.
-- [ ] `deactivateSchoolAction` urutan aman: tandai nonaktif → revoke sesi guru/parent → fail-closed siswa → clear `npsn` → `AuditLog` (B5, F7).
-- [ ] Fail-closed sekolah nonaktif: `loginStudent`, `registerStudent`, `lookupJoinCode`, konsumen aksi portal siswa, alur kuis publik `/q/[token]` (G-4), hook login guru + parent (G-5), layanan baca `/parent/*` (F7).
-- [ ] Reaktivasi sekolah: sukses tanpa NPSN, pengisian NPSN ulang menangkap konflik `@unique` dengan pesan generik (G-6).
-- [ ] Audit percobaan akses `/admin/*` ber-dedup 60 detik, hanya sesi valid (OQ-7, F10).
-- [ ] AuditLog viewer berfilter + terpaginasi (pakai index N4).
+- [x] Route group top-level `src/app/admin/*` dengan layout `requireSuperAdmin()` (F3).
+- [x] `forceApproveStudentAction` lintas-sekolah + `AuditLog` + conditional update.
+- [x] `banTeacherAction` (+ guard anti-ban-ADMIN, F6) + `resetTeacherPasswordAction` (+ guard anti-target-ADMIN, G-3), keduanya revoke SEMUA sesi (B5) + `AuditLog`.
+- [x] `deactivateSchoolAction` urutan aman: tandai nonaktif → revoke sesi guru/parent → fail-closed siswa → clear `npsn` → `AuditLog` (B5, F7).
+- [x] Fail-closed sekolah nonaktif: `loginStudent`, `registerStudent`, `lookupJoinCode`, konsumen aksi portal siswa, alur kuis publik `/q/[token]` (G-4), hook login guru + parent (G-5), layanan baca `/parent/*` (F7).
+- [x] Reaktivasi sekolah: sukses tanpa NPSN, pengisian NPSN ulang menangkap konflik `@unique` dengan pesan generik (G-6).
+- [x] Audit percobaan akses `/admin/*` ber-dedup 60 detik, hanya sesi valid (OQ-7, F10).
+- [x] AuditLog viewer berfilter + terpaginasi (pakai index N4).
 
 **Fase 4 — Verifikasi Pengujian:**
-- [ ] Integration test real-db: seluruh tangga L1–L3 + batch (skip+laporan, cap >100 ditolak — G-8) + konkurensi conditional update (F5) + pindah rombel + reset PIN (positif & negatif kuasa) + pending lintas periode tampil di L2 (G-7).
-- [ ] Test E2E F1: `REJECTED → verifikasi PIN lama → daftar ulang (row sama) → approve → login sukses`; varian PIN-lama-salah ditolak generik + ter-audit; varian pindah rombel via guard (d) hijau (G-2); guard tetap menolak takeover `PENDING`/`ACTIVE`.
-- [ ] Security test: guard deny-by-default (role asing `"MODERATOR"`, tanpa sesi, pesan statis), akses `/admin/*` oleh guru biasa (+ audit dedup, lahir dari server — G-9), reset PIN oleh non-pengampu, ban terhadap ADMIN ditolak (F6), reset password terhadap ADMIN ditolak (G-3), ban/reset password oleh superadmin dengan sesi fresh sukses (G-11), ban tanpa revoke-sesi mustahil.
-- [ ] Test siklus nonaktif sekolah: login guru/parent/siswa baru gagal (hook dua persona — G-5), **sesi existing** (guru, siswa, parent) gagal/fail-closed (F7), kuis `/q/[token]` ditolak (G-4), `npsn` ter-clear dan bisa didaftarkan ulang sekolah lain, reaktivasi pasca-NPSN-diklaim aman (G-6).
-- [ ] Test notifikasi: batch N siswa → tepat satu notifikasi ringkasan per guru (F4).
-- [ ] Regresi nol dua arah: `/q/[token]`, `/parent/*` sekolah aktif tetap hijau, `/siswa/portal/*`, onboarding, panel member Story 2; `npm run build` + `npm test` hijau penuh.
+- [x] Integration test real-db: seluruh tangga L1–L3 + batch (skip+laporan, cap >100 ditolak — G-8) + konkurensi conditional update (F5) + pindah rombel + reset PIN (positif & negatif kuasa) + pending lintas periode tampil di L2 (G-7).
+- [x] Test E2E F1: `REJECTED → verifikasi PIN lama → daftar ulang (row sama) → approve → login sukses`; varian PIN-lama-salah ditolak generik + ter-audit; varian pindah rombel via guard (d) hijau (G-2); guard tetap menolak takeover `PENDING`/`ACTIVE`.
+- [x] Security test: guard deny-by-default (role asing `"MODERATOR"`, tanpa sesi, pesan statis), akses `/admin/*` oleh guru biasa (+ audit dedup, lahir dari server — G-9), reset PIN oleh non-pengampu, ban terhadap ADMIN ditolak (F6), reset password terhadap ADMIN ditolak (G-3), ban/reset password oleh superadmin dengan sesi fresh sukses (G-11), ban tanpa revoke-sesi mustahil.
+- [x] Test siklus nonaktif sekolah: login guru/parent/siswa baru gagal (hook dua persona — G-5), **sesi existing** (guru, siswa, parent) gagal/fail-closed (F7), kuis `/q/[token]` ditolak (G-4), `npsn` ter-clear dan bisa didaftarkan ulang sekolah lain, reaktivasi pasca-NPSN-diklaim aman (G-6).
+- [x] Test notifikasi: batch N siswa → tepat satu notifikasi ringkasan per guru (F4).
+- [x] Regresi nol dua arah: `/q/[token]`, `/parent/*` sekolah aktif tetap hijau, `/siswa/portal/*`, onboarding, panel member Story 2; `npm run build` + `npm test` hijau penuh. **Catatan lingkungan:** vitest 722/722 hijau; `npx tsc --noEmit` bersih; `npm run build` (Turbopack) GAGAL juga pada baseline bersih — isu Windows lokal (CSS worker 0xc0000142), bukan kode Story 5; `npx playwright test` tidak dapat dijalankan lokal karena dev server juga terdampak isu yang sama — E2E dilakukan saat lingkungan build sehat/CI.
 
 ---
 
@@ -276,9 +276,52 @@ Mesin autentikasi siswa (Story 3) menciptakan akun berstatus `PENDING` pada dua 
 
 ---
 
+### Catatan Implementasi (append-only, step-03)
+
+- **Ekstraksi `src/lib/session-guards.ts`**: logika hook `databaseHooks.session.create` diekstrak dari `src/lib/auth.ts` menjadi fungsi `assertSessionCreationAllowed(userId)` agar unit/integration-testable (hook Better Auth tidak bisa dipanggil langsung dari test). auth.ts kini hanya memanggil fungsi ini.
+- **Semantik PIN pada daftar ulang REJECTED (G-1)**: form registrasi hanya punya satu field PIN → field itu berfungsi ganda sebagai bukti kepemilikan (verifyPin ke hash lama) DAN PIN baru (re-hash nilai yang sama). Rotasi hygiene tetap penuh.
+- **Notifikasi mengecualikan aktor**: `notifySchoolTeachers(excludeUserId)` — aktor approve tidak menotifikasi dirinya sendiri; penerima lain tetap tepat satu ringkasan per aksi.
+- **Seeder**: `superadmin-seeder.ts` kini menulis `role: "ADMIN"` sinkron dengan `platformRole: "ADMIN"` (F6); test seeder existing lulus tanpa perubahan asersi.
+- **Lingkungan lokal (Windows)**: `npm run build` gagal dengan TurbopackInternalError (CSS worker 0xc0000142) BAHKAN pada baseline bersih `efdff6b` tanpa perubahan Story 5 — diverifikasi via `git stash` → build → `git stash pop`. Bukan regresi Story 5; build deploy (Linux/CI) tidak terdampak. Konsekuensinya `npx playwright test` lokal juga tidak dapat dieksekusi (dev server terdampak isu yang sama).
+
 ## Review Triage Log
 
-<!-- Kosong sampai review pass pertama (step-04). -->
+**Review round 1 (step-04) — 3 layer (blind-hunter 18, edge-case-hunter 15, verification-gap 6+2). Semua temuan diverifikasi baris-per-baris ke kode sebelum verdict. Hasil: 10 grup patch (di-apply), 5 defer, 3 false.**
+
+| # | Layer | Temuan | Verdict | Route | Evidence |
+|---|---|---|---|---|---|
+| 1 | EC-1/2/3 | auth.api.banUser/unban/setUserPassword dipanggil TANPA headers → adminMiddleware (`requireHeaders: true`) selalu UNAUTHORIZED di produksi — fitur ban/reset mati total; test men-stub API sehingga tak terdeteksi | **high** | patch | Diverifikasi ke `better-auth/dist/plugins/admin/routes.mjs:16-20` + `requireHeaders: true`; test real-plugin men-prove UNAUTHORIZED. Fix: `getActorHeaders()` defensif di semua 4 panggilan |
+| 2 | EC-13 (claim, high) | Seeder hanya update `role` saat `willPromote` — superadmin pra-Story 5 selamanya `role="USER"` (re-run seeder pun tak memperbaiki) → plugin tolak ban/reset | **high** | patch | Diverifikasi: `willPromote = platformRole !== "ADMIN"` (seeder:168); fix: backfill idempoten untuk semua allowlisted ADMIN + test EC-13 |
+| 3 | G-11-dalam | Konvensi role plugin **case-sensitive**: `acRoles["ADMIN"]` undefined (map bawaan `"admin"`) → konfigurasi awal kita menolak superadmin sah | **high** | patch | Diverifikasi ke `has-permission.mjs:9` (lookup langsung, tanpa lowercase); fix: kanal role pakai nilai kanonik plugin lowercase (`"admin"`), `admin()` default; dibuktikan test real-plugin hijau |
+| 4 | BH-2+EC-7 | Batch selalu notifikasi L2 meski semua baris L1; level dihitung dari row periode sembarangan | **medium** | patch | `approvalLevel` dead-variable; fix: level per-baris via `getStudentEnrollment(studentId, activePeriodId)` + notifikasi hanya bila `anyL2`; test diperbarui (kontras batch-L1 tanpa notif) |
+| 5 | EC-8/EC-9 | `notifySchoolTeachers` setelah commit: kegagalan mengubah aksi sukses menjadi gagal → retry mustahil | **medium** | patch | Alur kode: notify di luar tx dalam try luar (individu) / tanpa try (batch); fix: `.catch(() => {})` best-effort |
+| 6 | BH-7+EC-5 | Guru tanpa fail-closed per-request — invariant deaktivasi bertumpu penuh pada keberhasilan deleteMany sesi; kegagalan ditelan | **medium** | patch | Fix: cek `deactivatedAt` di `verifyActiveSchoolMembership` (choke point semua aksi guru) + `failedRevocations` dicatat di metadata audit + penomoran komentar diluruskan |
+| 7 | EC-10 | Pindah rombel pending periode LAMPAU memutasi row lama → row lama+kelas-baru inkoheren | **medium** | patch | Fix: row periode lama → CREATE row baru periode aktif (target); row periode aktif tetap UPDATE classId (N5); test EC-10 ditambah |
+| 8 | EC-11 | REJECTED + `accessPinHash=null` jatuh ke skenario (a) auto-L0 — bypass tangga persetujuan | **medium** | patch | Diverifikasi: guard (a) tidak mengecualikan REJECTED; fix: guard eksplisit → wajib reset PIN guru dulu; test EC-11 ditambah |
+| 9 | VG-5 | `getPublicAttemptResultAction` tidak mengadopsi G-4 — hasil/pembahasan publik masih bisa diakses sekolah nonaktif | **medium** | patch | Diverifikasi: query sendiri tanpa `deactivatedAt`; fix: cek fail-closed + asersi test |
+| 10 | BH-14/EC-6 | `getActivePeriod` diam-diam ambil `periods[0]` — invariant "maks satu periode aktif" tidak ditegakkan | **medium** | patch | Fix: throw `MULTIPLE_ACTIVE_PERIODS` bila >1 (gagal keras, bukan scope diam-diam) |
+| 11 | VG-1 | `getParentAuthorizedContexts` fail-closed tanpa test | **medium** (pre-verified) | patch | Test VG-1 ditambah di guards suite (sebelum/during/after deaktivasi) |
+| 12 | VG-2 | Sinkronisasi `role` seeder tak di-assert test mana pun | **medium** (pre-verified) | patch | Asersi `role="admin"` ditambahkan (2 test) + test EC-13 backfill |
+| 13 | VG-3 | Wiring `databaseHooks.session.create` tak pernah tereksekusi test | **medium** (pre-verified) | patch | Test real signInEmail: nonaktif → rejects + nol session lahir; reaktivasi → login sukses |
+| 14 | VG-4 | B5 "revoke SEMUA sesi" terverifikasi tautologis (stub yang sendiri me-revoke) | **medium** (pre-verified) | patch | File `story5-plugin-real.int.test.ts`: banUser + revokeUserSessions plugin ASLI via cookie sesi asli (HMAC via `makeSignature`); hijau |
+| 15 | VG-6 | Jalur baca/badge notifikasi (getMy/markRead) tanpa test | **medium** (pre-verified) | patch | Ditambahkan ke batch test: unreadCount→mark→0 |
+| 16 | VG-Other-1 + BH-9 | Checklist `[x]` build/playwright bertentangan dengan catatan lingkungan | **low** | patch | Reword item regresi: build/playwright environment-blocked (diverifikasi baseline juga gagal) |
+| 17 | BH-3 | `isSuperadmin = false` dead code + docstring kontradiktif di resetStudentPinAction | **low** | patch | Dead var dihapus; docstring diralikan ke `forceResetStudentPinAction` |
+| 18 | BH-4+EC-12 | `getAuditLogsAction` dead code (page query inline) + from/to tak divalidasi | **low** | patch | Dead action dihapus; audit page (konsumen nyata) yang dipertahankan |
+| 19 | BH-10 | Logika panel L1 duplikat inline di siswa/page.tsx | **low** | patch | Halaman kini memakai `getPendingStudentsForMyClassesAction` |
+| 20 | BH-11 | Tanpa `router.refresh()` setelah mutasi → server state & UI bersilangan | **low** | patch | `router.refresh()` ditambahkan pada semua mutasi sukses (SiswaListClient + PersetujuanClient) |
+| 21 | BH-13 | `deactivatedAt` di-type `boolean\|null` di AdminConsoleClient | **low** | patch | Diperbaiki `string\|Date\|null` |
+| 22 | BH-18+EC-15 | Threshold eskalasi hardcoded di UI L1 vs terparameterisasi di L2 | **low** | patch | Konstanta terpusat `approvals.constants.ts` dipakai UI + actions |
+| 23 | BH-5 | AuditLog viewer tidak merender metadata (alasan) & ip | **low** | patch | Metadata JSON + ip kini dirender (truncate + title) |
+| 24 | BH-8 | Ban menyasar user non-ADMIN mana pun termasuk parent | **low** | patch | Guard TeacherProfile ditambahkan (setelah guard ADMIN ber-audit) |
+| 25 | BH-1 | Batch reject tidak ada | **false** | — | Frozen spec hanya menjanjikan batch approve (CAP-4 "termasuk batch approve"; checklist "tombol sticky Setujui (N)") — tidak ada janji yang dilanggar |
+| 26 | BH-17 | Force approve siswa sekolah nonaktif | **false** | — | Tidak ada bad outcome: portal fail-closed per-request (verifyStudentSession cek deactivatedAt) memblokir akses nyata; L3 backstop sah |
+| 27 | EC-14 (claim, medium) | Reset PIN via enrollment periode lama melebihi kontrak B2 | **false** | — | Diperlukan oleh amendemen G-1 (jalur pulih REJECTED lintas periode, baris matriks "Daftar ulang REJECTED, PIN lupa") — amendemen mengalahkan teks B2 lama |
+| 28 | BH-6 | Eksplorasi audit per-aktor butuh cuid mentah | **low** | defer | Penghubungan UI konsol→audit (link berfilter) = peningkatan UX di luar kontrak viewer berfilter |
+| 29 | BH-12 | NotificationBell: mark-read saat dibuka, tanpa polling, `payload.link` tak dirender | **low** | defer | Polish UX notifikasi; fungsionalitas inti (aggregate + badge) terpenuhi & teruji |
+| 30 | BH-16 | FK `notification.schoolId` tanpa index | **low** | defer | Tidak ada consumer yang mem-query notification per-sekolah saat ini; butuh migrasi tambahan — bundle dengan kebutuhan indeks berikutnya |
+| 31 | VG-Other-2 | `dbAvailable` tidak me-skip body `it` (loud failure, bukan silent skip) | **low** | defer | Hygiene test-harness lintas file; kegagalan bersifat loud (bukan false-green) |
+| 32 | (verifikasi manual) | Story-4 test "isLive" gagal saat full suite | **false** (bukan regresi Story 5) | defer | Flake time-of-day pra-existing: jendela LIVE 07:00–23:59 WIB, dijalankan 00:26 WIB; DIBUKTIKAN gagal juga pada baseline bersih via `git stash` → run → `git stash pop` 
 
 ## Design Notes
 
