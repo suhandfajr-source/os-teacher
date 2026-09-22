@@ -383,11 +383,12 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
       expect(verifyPin).not.toHaveBeenCalled();
     });
 
-    it("blocks login if student accountStatus is PENDING", async () => {
+    it("blocks login if student accountStatus is PENDING and PIN is correct", async () => {
       (prisma.student.findFirst as any).mockResolvedValue({
         id: "std_1",
         schoolId: "sch_1",
         nis: "1001A",
+        fullName: "Budi Siswa",
         accessPinHash: "scrypt:...:1234",
         accountStatus: "PENDING",
       });
@@ -403,6 +404,36 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
         expect((res as any).code).toBe("ACCOUNT_PENDING");
         expect(res.message).toContain("menunggu persetujuan guru");
       }
+    });
+
+    it("rejects with generic error and does NOT leak student info if PIN is wrong for PENDING student", async () => {
+      (prisma.student.findFirst as any).mockResolvedValue({
+        id: "std_1",
+        schoolId: "sch_1",
+        nis: "1001A",
+        fullName: "Budi Siswa Rahasia",
+        accessPinHash: "scrypt:...:1234",
+        accountStatus: "PENDING",
+        failedAttempts: 0,
+      });
+
+      const res = await loginStudent({
+        schoolId: "sch_1",
+        nis: "1001A",
+        pin: "9999", // Wrong PIN
+      });
+
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.message).toBe("NIS atau PIN salah.");
+      }
+      expect((res as any).studentName).toBeUndefined();
+      expect(prisma.student.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "std_1" },
+          data: expect.objectContaining({ failedAttempts: 1 }),
+        })
+      );
     });
 
     it("successful login resets failedAttempts, updates lastLoginAt, and sets session cookie", async () => {

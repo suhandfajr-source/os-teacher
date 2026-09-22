@@ -415,7 +415,7 @@ export async function changeStudentPinAction(data: {
     const newHash = await hashPin(data.newPin);
 
     // Update PIN dan pinUpdatedAt di DB (membatalkan sesi perangkat lain)
-    await prisma.student.update({
+    const updated = await prisma.student.update({
       where: { id: student.id },
       data: {
         accessPinHash: newHash,
@@ -425,6 +425,8 @@ export async function changeStudentPinAction(data: {
       },
     });
 
+    const updatedIso = updated.pinUpdatedAt ? updated.pinUpdatedAt.toISOString() : now.toISOString();
+
     // F5 CRITICAL: Re-issue cookie sesi lokal dengan pinUpdatedAt baru agar siswa tidak terkunci sendiri!
     await setStudentSessionCookie({
       studentId: session.studentId,
@@ -433,7 +435,7 @@ export async function changeStudentPinAction(data: {
       academicPeriodId: session.academicPeriodId,
       nis: session.nis,
       fullName: session.fullName,
-      pinUpdatedAt: now.toISOString(),
+      pinUpdatedAt: updatedIso,
     });
 
     return {

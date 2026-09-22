@@ -1718,12 +1718,18 @@ export async function startQuizAttemptFromSessionAction(token: string): Promise<
     // Snapshot soal yang stabil
     type StoredOrder = { questions?: AttemptQuestionSnapshot[]; questionIds?: string[] };
     const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    let questionsSnapshot = stored?.questions;
 
-    if (!stored?.questions?.length) {
+    if (!questionsSnapshot?.length) {
       const liveQuestions = await prisma.quizQuestion.findMany({
         where: { quizId: quiz.id },
         orderBy: { order: "asc" },
       });
+
+      if (!liveQuestions.length) {
+        return { success: false, error: "Kuis ini belum memiliki butir soal yang aktif." };
+      }
+
       const snapshot = buildAttemptSnapshot(
         liveQuestions.map((q) => ({
           id: q.id,
@@ -1741,11 +1747,11 @@ export async function startQuizAttemptFromSessionAction(token: string): Promise<
         where: { id: attempt.id },
         data: { questionOrder: { questions: snapshot } as unknown as Prisma.InputJsonValue },
       });
-      stored!.questions = snapshot;
+      questionsSnapshot = snapshot;
     }
 
     // F6: Sanitasi Kunci Jawaban! correctIndex dan explanation DIBUANG dari respons
-    const sanitizedQuestions: StudentQuizQuestionView[] = stored!.questions!.map((q, idx) => ({
+    const sanitizedQuestions: StudentQuizQuestionView[] = questionsSnapshot.map((q, idx) => ({
       id: q.id,
       order: idx + 1,
       type: q.type ?? "MULTIPLE_CHOICE",
@@ -1827,6 +1833,13 @@ export async function saveQuizAnswerFromSessionAction(
       return { success: false, error: "Waktu kuis telah berakhir." };
     }
 
+    // Validasi bahwa questionId benar-benar ada di snapshot attempt ini (Finding 6: Injection Guard)
+    type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+    const stored = attempt.questionOrder as unknown as StoredOrder | null;
+    if (stored?.questions?.length && !stored.questions.some((q) => q.id === questionId)) {
+      return { success: false, error: "Soal tidak valid untuk kuis ini." };
+    }
+
     await prisma.quizAnswer.upsert({
       where: { attemptId_questionId: { attemptId, questionId } },
       create: {
@@ -1906,6 +1919,22 @@ export async function submitQuizAttemptFromSessionAction(
           needsGrading: attempt.status === "NEEDS_GRADING",
           submittedAt: attempt.submittedAt?.toISOString() ?? new Date().toISOString(),
         },
+      };
+    }
+
+    // F7 & Finding 1: Cek apakah waktu pengerjaan sudah habis (Late Submission Defense)
+    if (isAttemptExpired(attempt.startedAt, attempt.quiz.durationMinutes, attempt.quiz.deadline)) {
+      // Waktu habis: kunci attempt menjadi SUBMITTED secara sepihak, tolak jawaban susulan
+      await prisma.quizAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: "SUBMITTED",
+          submittedAt: new Date(),
+        },
+      });
+      return {
+        success: false,
+        error: "Batas waktu pengerjaan kuis telah habis. Jawaban tidak dapat dikirimkan melewati batas waktu.",
       };
     }
 
@@ -2014,7 +2043,7 @@ export async function getQuizReviewFromSessionAction(token: string): Promise<{
 
     const quiz = await prisma.quiz.findUnique({
       where: { shareToken: token },
-      select: { id: true, title: true, standardScore: true },
+      select: { id: true, title: true, standardScore: true, deadline: true },
     });
     if (!quiz) return { success: false, error: "Kuis tidak ditemukan." };
 
@@ -2026,6 +2055,9 @@ export async function getQuizReviewFromSessionAction(token: string): Promise<{
     if (!attempt || (attempt.status !== "SUBMITTED" && attempt.status !== "NEEDS_GRADING")) {
       return { success: false, error: "Hasil dan pembahasan belum tersedia." };
     }
+
+    // Anti-Cheat: Jika ujian kelas masih berlangsung (deadline belum lewat), sembunyikan kunci jawaban & pembahasan
+    const isExamStillActive = !!quiz.deadline && Date.now() < quiz.deadline.getTime();
 
     const snapshot = await resolveAttemptSnapshot(attempt, quiz.id);
     const answerMap = new Map(attempt.answers.map((a) => [a.questionId, a]));
@@ -2042,9 +2074,11 @@ export async function getQuizReviewFromSessionAction(token: string): Promise<{
         options: q.options,
         selectedIndex: sel,
         essayAnswer: ans?.essayAnswer ?? null,
-        correctIndex: q.correctIndex,
+        correctIndex: isExamStillActive ? null : q.correctIndex,
         isCorrect,
-        explanation: q.explanation ?? null,
+        explanation: isExamStillActive 
+          ? `Kunci jawaban dan pembahasan lengkap akan dibuka otomatis setelah seluruh sesi ujian berakhir pada ${quiz.deadline?.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB.`
+          : (q.explanation ?? null),
         pointsEarned: isCorrect ? q.points : 0,
         pointsMax: q.points,
       };

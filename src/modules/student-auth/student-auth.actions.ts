@@ -392,8 +392,18 @@ export async function loginStudent(data: {
   }
 
   // Cek accountStatus (PENDING atau REJECTED tidak boleh login portal)
+  // Benteng Keamanan: Wajib verifikasi PIN terlebih dahulu agar attacker tidak bisa
+  // mengintip nama siswa berstatus PENDING/REJECTED hanya dengan menebak NIS.
   if (student.accountStatus === "PENDING") {
-    await verifyPin(data.pin, student.accessPinHash);
+    const isPinValid = await verifyPin(data.pin, student.accessPinHash);
+    if (!isPinValid) {
+      const newFailed = student.failedAttempts + 1;
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { failedAttempts: newFailed },
+      });
+      return { success: false, message: genericErrorMessage };
+    }
     return {
       success: false,
       code: "ACCOUNT_PENDING",
@@ -405,7 +415,15 @@ export async function loginStudent(data: {
   }
 
   if (student.accountStatus === "REJECTED") {
-    await verifyPin(data.pin, student.accessPinHash);
+    const isPinValid = await verifyPin(data.pin, student.accessPinHash);
+    if (!isPinValid) {
+      const newFailed = student.failedAttempts + 1;
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { failedAttempts: newFailed },
+      });
+      return { success: false, message: genericErrorMessage };
+    }
     return {
       success: false,
       code: "ACCOUNT_REJECTED",

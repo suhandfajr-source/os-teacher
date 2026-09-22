@@ -288,6 +288,11 @@ describe("Student Portal Actions (CAP-5, B5, F5, F8, D2, D9)", () => {
         lockedUntil: null,
       } as any);
 
+      vi.mocked(prisma.student.update).mockResolvedValue({
+        id: "s-1",
+        pinUpdatedAt: new Date(),
+      } as any);
+
       const res = await changeStudentPinAction({ oldPin: "1234", newPin: "9876" });
       expect(res.success).toBe(true);
 

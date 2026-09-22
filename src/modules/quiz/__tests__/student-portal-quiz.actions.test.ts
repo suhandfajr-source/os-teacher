@@ -327,6 +327,44 @@ describe("Student Portal Quiz Actions (CAP-6, B1, F3, F4, F6, F7, D1, D4)", () =
       expect(res.data?.score).toBe(50); // 50 / 100
       expect(res.data?.passed).toBe(false); // 50 < 75
     });
+
+    it("rejects late submission if time is expired and locks attempt (Finding 1 & F7)", async () => {
+      vi.mocked(verifyStudentSession).mockResolvedValue({
+        studentId: "s-1",
+        schoolId: "sch-1",
+        classId: "c-1",
+        academicPeriodId: "ap-1",
+        nis: "202601",
+        fullName: "Ahmad",
+        pinUpdatedAt: null,
+        issuedAt: Date.now(),
+        expiresAt: Date.now() + 10000,
+      });
+
+      vi.mocked(prisma.quizAttempt.findUnique).mockResolvedValue({
+        id: "att-expired",
+        studentId: "s-1",
+        status: "IN_PROGRESS",
+        // Dimulai 2 jam lalu untuk kuis 30 menit
+        startedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+        quiz: {
+          id: "q-1",
+          durationMinutes: 30,
+          deadline: null,
+          standardScore: 75,
+        },
+      } as any);
+
+      const res = await submitQuizAttemptFromSessionAction("att-expired", []);
+      expect(res.success).toBe(false);
+      expect(res.error).toMatch(/Batas waktu pengerjaan kuis telah habis/);
+      expect(prisma.quizAttempt.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "att-expired" },
+          data: expect.objectContaining({ status: "SUBMITTED" }),
+        })
+      );
+    });
   });
 
   describe("getQuizReviewFromSessionAction", () => {
@@ -358,6 +396,61 @@ describe("Student Portal Quiz Actions (CAP-6, B1, F3, F4, F6, F7, D1, D4)", () =
       const res = await getQuizReviewFromSessionAction("token-1234567890");
       expect(res.success).toBe(false);
       expect(res.error).toMatch(/belum tersedia/);
+    });
+
+    it("withholds correctIndex & explanation if class exam deadline has not passed (Finding 3 Anti-Cheat)", async () => {
+      vi.mocked(verifyStudentSession).mockResolvedValue({
+        studentId: "s-1",
+        schoolId: "sch-1",
+        classId: "c-1",
+        academicPeriodId: "ap-1",
+        nis: "202601",
+        fullName: "Ahmad",
+        pinUpdatedAt: null,
+        issuedAt: Date.now(),
+        expiresAt: Date.now() + 10000,
+      });
+
+      // Deadline masih 30 menit ke depan
+      const futureDeadline = new Date(Date.now() + 30 * 60 * 1000);
+
+      vi.mocked(prisma.quiz.findUnique).mockResolvedValue({
+        id: "q-1",
+        title: "Kuis IPA Biologi",
+        standardScore: 75,
+        deadline: futureDeadline,
+      } as any);
+
+      vi.mocked(prisma.quizAttempt.findUnique).mockResolvedValue({
+        id: "att-1",
+        studentId: "s-1",
+        status: "SUBMITTED",
+        score: 100,
+        submittedAt: new Date(),
+        questionOrder: {
+          questions: [
+            {
+              id: "item-1",
+              type: "MULTIPLE_CHOICE",
+              text: "Pertanyaan 1",
+              options: ["A", "B"],
+              correctIndex: 0,
+              explanation: "Pembahasan rahasia",
+              points: 10,
+            },
+          ],
+        },
+        answers: [{ questionId: "item-1", selectedIndex: 0 }],
+      } as any);
+
+      const res = await getQuizReviewFromSessionAction("token-1234567890");
+      expect(res.success).toBe(true);
+      expect(res.data?.score).toBe(100);
+
+      const qReview = res.data?.questions[0];
+      // Anti-Cheat: correctIndex disembunyikan sampai batas waktu selesai!
+      expect(qReview?.correctIndex).toBeNull();
+      expect(qReview?.explanation).toContain("Kunci jawaban dan pembahasan lengkap akan dibuka otomatis");
     });
   });
 });

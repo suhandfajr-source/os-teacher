@@ -117,6 +117,16 @@ export function QuizRunnerClient({
     };
   }, [durationMinutes, syncTimer]);
 
+  // Peringatan saat tab / jendela hendak ditutup atau navigasi tidak sengaja (Finding 5)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Ujian sedang berlangsung. Yakin ingin meninggalkan halaman ini?";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   // --- AUTOSAVE DEBOUNCE (Temuan D4) ---
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
