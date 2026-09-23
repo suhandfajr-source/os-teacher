@@ -2,6 +2,8 @@
 
 import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership } from "@/lib/authorization";
+import { redactMetadata } from "@/lib/audit-metadata";
+import type { Prisma } from "@prisma/client";
 
 export async function getClassRoster(classId: string, academicPeriodId: string) {
   const { activeSchoolId } = await verifyActiveSchoolMembership();
@@ -102,6 +104,12 @@ export async function createClassAction(input: CreateClassActionInput) {
   const normalizedClassName = className.toUpperCase().replace(/\s+/g, " ");
 
   return await prisma.$transaction(async (tx) => {
+    // Story 6 (BH-7/EC-2): kunci row sekolah — serialisasi saklar periode antar
+    // createClassAction konkuren (READ COMMITTED tidak melihat ACTIVE uncommitted
+    // milik transaksi lain → tanpa lock, dua saklar paralel bisa meninggalkan dua
+    // periode ACTIVE dan menghidupkan kembali MULTIPLE_ACTIVE_PERIODS).
+    await tx.$queryRaw`SELECT id FROM "school" WHERE id = ${activeSchoolId} FOR UPDATE`;
+
     // 1. Find or create Class in the active school
     let classEntity = await tx.class.findFirst({
       where: {
@@ -136,6 +144,7 @@ export async function createClassAction(input: CreateClassActionInput) {
             },
           },
         });
+        let periodCreated = false;
         if (!period) {
           period = await tx.academicPeriod.create({
             data: {
@@ -145,8 +154,49 @@ export async function createClassAction(input: CreateClassActionInput) {
               status: "ACTIVE",
             },
           });
+          periodCreated = true;
         }
         periodId = period.id;
+        const wasActive = period.status === "ACTIVE";
+
+        // Story 6 — Saklar periode atomik (CAP-8; keputusan terkunci #1 + RC-2):
+        // jalur periode baru/reuse menegakkan invariant §9.4 (maks SATU periode
+        // ACTIVE per sekolah) — semua periode ACTIVE lain ditutup dalam transaksi
+        // yang sama dan event-nya ter-audit. Menjalankan remediasi legacy (EC-1):
+        // sekolah dengan lebih dari satu periode ACTIVE warisan ikut dibersihkan
+        // bahkan bila periode target sudah ACTIVE.
+        const closed = await tx.academicPeriod.updateMany({
+          where: { schoolId: activeSchoolId, status: "ACTIVE", id: { not: periodId } },
+          data: { status: "INACTIVE" },
+        });
+        if (!wasActive) {
+          await tx.academicPeriod.update({
+            where: { id: periodId },
+            data: { status: "ACTIVE" },
+          });
+        }
+        if (periodCreated || !wasActive || closed.count > 0) {
+          await tx.auditLog.create({
+            data: {
+              actorType: "USER",
+              actorId: profile.userId,
+              action: "ACADEMIC_PERIOD_SWITCHED",
+              targetType: "ACADEMIC_PERIOD",
+              targetId: periodId,
+              metadata: redactMetadata({
+                schoolId: activeSchoolId,
+                year,
+                semester,
+                source: periodCreated
+                  ? "new_period"
+                  : wasActive
+                    ? "reuse_active_remediation"
+                    : "reuse_inactive",
+                closedActivePeriods: closed.count,
+              }) as Prisma.InputJsonValue,
+            },
+          });
+        }
       } else {
         // Fallback to latest active period in school
         const activePeriod = await tx.academicPeriod.findFirst({
@@ -156,7 +206,10 @@ export async function createClassAction(input: CreateClassActionInput) {
         if (activePeriod) {
           periodId = activePeriod.id;
         } else {
-          // Default period if none exists
+          // Default period if none exists.
+          // Story 6: jalur ketiga pen-set ACTIVE (hasil elicitation) — ikut saklar
+          // + audit; menutup periode ACTIVE lain (defensif, harusnya nol) agar
+          // invariant satu-ACTIVE tetap ditegakkan dari SEMUA jalur.
           const defaultPeriod = await tx.academicPeriod.create({
             data: {
               schoolId: activeSchoolId,
@@ -166,6 +219,26 @@ export async function createClassAction(input: CreateClassActionInput) {
             },
           });
           periodId = defaultPeriod.id;
+          const closedLegacy = await tx.academicPeriod.updateMany({
+            where: { schoolId: activeSchoolId, status: "ACTIVE", id: { not: periodId } },
+            data: { status: "INACTIVE" },
+          });
+          await tx.auditLog.create({
+            data: {
+              actorType: "USER",
+              actorId: profile.userId,
+              action: "ACADEMIC_PERIOD_SWITCHED",
+              targetType: "ACADEMIC_PERIOD",
+              targetId: periodId,
+              metadata: redactMetadata({
+                schoolId: activeSchoolId,
+                year: "2024/2025",
+                semester: "Ganjil",
+                source: "fallback_default",
+                closedActivePeriods: closedLegacy.count,
+              }) as Prisma.InputJsonValue,
+            },
+          });
         }
       }
     }

@@ -1,0 +1,76 @@
+[
+  {
+    "location": "src/modules/classes/classes.actions.ts:160",
+    "trigger_condition": "createClass reuses period already ACTIVE while legacy second ACTIVE period exists",
+    "guard_snippet": "if (periodCreated || period.status !== \"ACTIVE\" || (await tx.academicPeriod.count({ where: { schoolId: activeSchoolId, status: \"ACTIVE\", id: { not: periodId } } })) > 0) { /* run switch */ }",
+    "potential_consequence": "Legacy MULTIPLE_ACTIVE_PERIODS persists unremediated and unaudited; approvals keep hard-failing"
+  },
+  {
+    "location": "src/modules/classes/classes.actions.ts:139-199",
+    "trigger_condition": "Two concurrent createClassAction for different new periods at same school",
+    "guard_snippet": "await tx.$queryRaw`SELECT id FROM \"School\" WHERE id = ${activeSchoolId} FOR UPDATE`; // first statement in tx",
+    "potential_consequence": "Neither transaction sees the other's uncommitted ACTIVE period; school ends with two ACTIVE periods"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:140-164",
+    "trigger_condition": "Class has teachingContexts in multiple periods; take:1 without orderBy picks arbitrary one",
+    "guard_snippet": "const ctx = classRecord.teachingContexts.find(t => t.academicPeriod?.status === \"ACTIVE\") ?? classRecord.teachingContexts[0];",
+    "potential_consequence": "Claim gate and enrollment period resolve to INACTIVE period; eligible students wrongly denied via F1 message"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:186-279",
+    "trigger_condition": "Enrollment created between classStudent.count outside tx and upsert inside tx",
+    "guard_snippet": "const stillZero = await tx.classStudent.count({ where: { studentId: existingStudent.id, academicPeriodId } }); if (stillZero > 0) return false; // before upsert",
+    "potential_consequence": "upsert update:{classId} silently moves student to join-code class, bypassing guru-only move (N5)"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:247-249",
+    "trigger_condition": "Guru resets PIN between verifyPin and claim transaction commit",
+    "guard_snippet": "where: { id: existingStudent.id, accountStatus: \"ACTIVE\", accessPinHash: existingStudent.accessPinHash }",
+    "potential_consequence": "Stale-PIN hash overwrites guru-issued PIN; reset defeated, old-PIN holder retains access"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:180-184",
+    "trigger_condition": "Student archived (status ARCHIVED) with accountStatus ACTIVE and PIN submits join code",
+    "guard_snippet": "existingStudent.status === \"ACTIVE\" // add to gate and updateMany where clause",
+    "potential_consequence": "Archived student mutated and enrolled; auto-login session instantly invalid; archive bypassed"
+  },
+  {
+    "location": "src/modules/student-auth/__tests__/story-6-rollover.int.test.ts:493",
+    "trigger_condition": "expect(verifyPin(...)).resolves used without await",
+    "guard_snippet": "await expect(verifyPin(pinBudi, db.accessPinHash!)).resolves.toBe(true);",
+    "potential_consequence": "Floating assertion: test passes even when old PIN no longer verifies; CAP-8 evidence unsound"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:242-243",
+    "trigger_condition": "Name matches except internal whitespace (double space) differs",
+    "guard_snippet": "const norm = (s: string) => s.trim().replace(/\\s+/g, \" \").toLowerCase(); // apply to both sides",
+    "potential_consequence": "Spec claims canonical trim/collapse/case-insensitive match; collapse missing so exact student routed to PENDING L1",
+    "kind": "claim",
+    "confidence": "high"
+  },
+  {
+    "location": "_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md (task: fallback portal orderBy)",
+    "trigger_condition": "Task claims student-portal.actions.ts given orderBy: { createdAt: \"desc\" }",
+    "guard_snippet": "Correct spec/security-review: file absent from diff; orderBy pre-existed at baseline 4f9f870 (line 77)",
+    "potential_consequence": "Auditor credits an unmade change; diff-scope evidence in final-security-review-story-6.md is inaccurate",
+    "kind": "claim",
+    "confidence": "high"
+  },
+  {
+    "location": "src/modules/student-auth/student-auth.actions.ts:336-345 (F1 fallback after INACTIVE gate)",
+    "trigger_condition": "ACTIVE+PIN student not enrolled submits join code of INACTIVE-period class",
+    "guard_snippet": "if (existingStudent && existingStudent.accessPinHash && !targetPeriodIsActive) return { success: false, message: \"Kode rombel tidak berlaku. Minta kode join periode aktif dari guru pengampu.\" };",
+    "potential_consequence": "Matrix promises reject + guru directive; actual F1 message says 'login langsung', landing student in dead old-period session",
+    "kind": "claim",
+    "confidence": "medium"
+  },
+  {
+    "location": "_bmad-output/implementation-artifacts/final-security-review-story-6.md:6-16",
+    "trigger_condition": "Review claims rollover suite contains 14 real-db tests",
+    "guard_snippet": "story-6-rollover.int.test.ts defines 16 it() blocks (A1-A5, B1-B11); correct count to 16",
+    "potential_consequence": "Evidence doc misstates suite size; cross-checks against spec's '16 test' line fail audit",
+    "kind": "claim",
+    "confidence": "high"
+  }
+]

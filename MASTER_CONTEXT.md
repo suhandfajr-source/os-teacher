@@ -335,6 +335,19 @@ Dev Stage 7 — Reporting & Academic Context
 Dev Stage 8 — Parent Portal
 Dev Stage 9 — Import & Mid-Semester Onboarding
 Dev Stage 10 — Polish, QA & Release
+Dev Stage 11 — Student Portal Auth (spec-student-portal-auth)
+```
+
+Stage 11 specification (student self-service access: join-code registration, NIS+PIN login, approval ladder, superadmin backstop, academic-year rollover) lives at:
+
+```text
+_bmad-output/specs/spec-student-portal-auth/
+```
+
+The academic-year rollover operator playbook (period switch, roster re-import, N8 NIS prerequisite, claim re-entry) lives at:
+
+```text
+docs/PLAYBOOK-ROLLOVER-TA.md
 ```
 
 Rule:
@@ -380,6 +393,16 @@ Playwright
 Node.js
 Nginx
 PM2
+```
+
+Student access baseline (Dev Stage 11):
+
+```text
+Student identity: canonical NIS (trim+uppercase, unique per school) + 4-digit scrypt PIN (peppered) — no email.
+Student session: separate HttpOnly signed cookie klassa_student_session; STUDENT_SESSION_SECRET fail-fast in production.
+Superadmin: platform-level, non-registrable; seeded from SUPERADMIN_EMAILS allowlist; all actions AuditLog-logged.
+Academic period: at most ONE ACTIVE period per school; creating a class for a new year/semester atomically switches the ACTIVE period (audited).
+AuditLog: append-only, metadata must never contain PIN/hash/secret (redactMetadata).
 ```
 
 Architecture:

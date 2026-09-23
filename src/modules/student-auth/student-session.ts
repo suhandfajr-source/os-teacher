@@ -225,3 +225,29 @@ export async function clearStudentSessionCookie(): Promise<void> {
     // Graceful fallback jika di luar request context
   }
 }
+
+/**
+ * Story 6 — Resolusi membership rombel untuk sesi siswa: prioritaskan enrollment
+ * pada periode AKTIF (invariant §9.4 maks satu periode aktif per sekolah),
+ * fallback row terbaru bila sekolah belum punya periode aktif.
+ *
+ * Dipakai loginStudent agar sesi pasca-rollover membawa periode baru, bukan
+ * sekadar row dengan createdAt terbaru. Pola referensi: getStudentEnrollment
+ * (src/modules/approvals/approvals.actions.ts).
+ */
+export async function resolveStudentSessionMembership(
+  studentId: string
+): Promise<{ classId: string; academicPeriodId: string } | null> {
+  const activePeriodMembership = await prisma.classStudent.findFirst({
+    where: { studentId, academicPeriod: { status: "ACTIVE" } },
+    orderBy: { createdAt: "desc" },
+    select: { classId: true, academicPeriodId: true },
+  });
+  if (activePeriodMembership) return activePeriodMembership;
+
+  return prisma.classStudent.findFirst({
+    where: { studentId },
+    orderBy: { createdAt: "desc" },
+    select: { classId: true, academicPeriodId: true },
+  });
+}

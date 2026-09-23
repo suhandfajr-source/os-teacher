@@ -33,15 +33,18 @@ vi.mock("@/lib/student-pin", () => ({
 }));
 
 // Mock ./student-session
+// Story 6: resolveStudentSessionMembership default null (loginStudent toleran
+// membership kosong); test yang butuh membership meng-override eksplisit.
 vi.mock("../student-session", () => ({
   setStudentSessionCookie: vi.fn(),
   clearStudentSessionCookie: vi.fn(),
+  resolveStudentSessionMembership: vi.fn(async () => null),
   DUMMY_HASH: "scrypt:16384:8:1:0123456789abcdef0123456789abcdef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 }));
 
 import { prisma } from "@/lib/auth";
 import { verifyPin } from "@/lib/student-pin";
-import { setStudentSessionCookie, clearStudentSessionCookie, DUMMY_HASH } from "../student-session";
+import { setStudentSessionCookie, clearStudentSessionCookie, resolveStudentSessionMembership, DUMMY_HASH } from "../student-session";
 import {
   lookupJoinCode,
   registerStudent,
@@ -449,7 +452,8 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
         pinUpdatedAt: new Date(),
       });
 
-      (prisma.classStudent.findFirst as any).mockResolvedValue({
+      // Story 6: membership kini di-resolve via helper (bukan classStudent.findFirst langsung)
+      vi.mocked(resolveStudentSessionMembership).mockResolvedValue({
         classId: "cls_1",
         academicPeriodId: "prd_1",
       });
@@ -477,6 +481,15 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
       );
 
       expect(setStudentSessionCookie).toHaveBeenCalled();
+      // VG-1 (review 6): payload sesi HARUS membawa membership hasil resolusi helper —
+      // tanpa ini, regresi ke pemilihan row-terbaru (periode lama) tak terdeteksi.
+      expect(setStudentSessionCookie).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: "std_1",
+          classId: "cls_1",
+          academicPeriodId: "prd_1",
+        })
+      );
     });
   });
 

@@ -63,3 +63,15 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
   summary: Story-4 test "fetches today's live schedule" flaky time-of-day — jendela LIVE di-seed 07:00–23:59 WIB, gagal bila suite dijalankan di luar jendela itu.
   evidence: DIBUKTIKAN bukan regresi Story 5 — `git stash` → run pada baseline bersih `efdff6b` → gagal di asersi `isLive` yang sama → `git stash pop`. Perbaikan: seed jadwal relatif terhadap waktu berjalan (bukan jam tetap) atau mock `vi.setSystemTime`.
+
+# Review Story 6 pass 1 — defer entries (2026-09-23)
+
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
+  summary: BH-9 — Formula eskalasi lockout (5→15m/6→1j/10→24j) terduplikasi antara `loginStudent` dan cabang klaim ulang, dan increment `failedAttempts` pada keduanya non-kondisional (read-modify-write bisa lost-update di bawa konkurensi).
+  evidence: Pola pre-existing `loginStudent` (baseline Story 3, sudah di-review); ekstraksi helper bersama = refactor lintas modul yang menyentuh jalur login produksi — bukan perbaikan terkecil untuk Story 6; komentar kode sudah mem-pin "identik loginStudent (B3/F6)" sebagai penanda drift.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
+  summary: VG-Other — Seluruh suite real-db (9 file, kini termasuk story-6) lulus "vakum" saat DB tak terjangkau (`dbAvailable=false` + early-return) sehingga bukti DoD bisa menguap senyap; cabang klaim ulang juga belum punya coverage unit (fixture unit test tak memodelkan periode/audit).
+  evidence: Konvensi mapan lintas 9 suite (preseden defer VG-Other-2 Story 5 — loud-failure harness); perbaikan = hygiene test-harness lintas file (mis. fail test saat dbAvailable false di CI), bukan bagian diff Story 6.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
+  summary: BH-5-l Lookup — `lookupJoinCode` masih `teachingContexts take:1` tanpa orderBy: class multi-periode bisa menampilkan tahun ajaran/semester lama pada kartu konteks join (display saja; jalur klaim registerStudent sudah deterministik pasca-patch).
+  evidence: Pre-existing sejak Story 3 (di luar diff Story 6 untuk fungsi ini); dampak kosmetik pada tampilan, tidak memengaruhi keputusan klaim; perbaikan mengikuti pola resolusi `find(ACTIVE) ?? [0]` yang sama.
