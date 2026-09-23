@@ -7,6 +7,7 @@ import {
   Home, 
   CalendarDays, 
   CheckSquare, 
+  TrendingUp,
   ClipboardList, 
   UserCircle 
 } from "lucide-react";
@@ -41,6 +42,12 @@ export function StudentBottomNav() {
       href: "/siswa/portal/quiz",
       label: "Kuis",
       icon: CheckSquare,
+      exact: false,
+    },
+    {
+      href: "/siswa/portal/nilai",
+      label: "Nilai",
+      icon: TrendingUp,
       exact: false,
     },
     {

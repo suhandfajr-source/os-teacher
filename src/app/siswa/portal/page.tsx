@@ -13,28 +13,57 @@ import {
   FileQuestion, 
   User, 
   MapPin, 
-  RefreshCw 
+  RefreshCw,
+  TrendingUp,
+  Award
 } from "lucide-react";
 import { 
   getStudentDashboardDataAction, 
   type StudentDashboardData 
 } from "@/modules/student-portal/student-portal.actions";
+import {
+  getStudentProgressWidgetAction,
+  type StudentProgressWidgetData,
+} from "@/modules/student-portal/student-progress.actions";
 import { Button } from "@/components/ui/button";
 
 export default function StudentPortalHomePage() {
   const [data, setData] = useState<StudentDashboardData | null>(null);
+  const [widget, setWidget] = useState<StudentProgressWidgetData | null>(null);
+  const [widgetError, setWidgetError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     setError(null);
+    setWidgetError(false);
     try {
-      const res = await getStudentDashboardDataAction();
-      if (res.success && res.data) {
-        setData(res.data);
+      // allSettled: kegagalan salah satu fetch tidak membuang hasil fetch lain
+      const [dashRes, widgetRes] = await Promise.allSettled([
+        getStudentDashboardDataAction(),
+        getStudentProgressWidgetAction(),
+      ]);
+      if (dashRes.status === "fulfilled") {
+        if (dashRes.value.success && dashRes.value.data) {
+          setData(dashRes.value.data);
+        } else {
+          setError(dashRes.value.error || "Gagal memuat informasi beranda.");
+        }
       } else {
-        setError(res.error || "Gagal memuat informasi beranda.");
+        setError("Gagal memuat informasi beranda.");
+        console.warn("[beranda] dashboard fetch gagal:", dashRes.reason);
+      }
+      if (widgetRes.status === "fulfilled" && widgetRes.value.success && widgetRes.value.data) {
+        setWidget(widgetRes.value.data);
+      } else {
+        // Widget gagal — jangan ditelan diam-diam; beri umpan balik kecil
+        const reason =
+          widgetRes.status === "rejected"
+            ? widgetRes.reason
+            : widgetRes.value?.error;
+        if (widget?.hasActivePeriod) setWidgetError(true);
+        console.warn("[beranda] widget capaian gagal dimuat:", reason);
       }
     } catch {
       setError("Terjadi kesalahan saat memuat data.");
@@ -71,6 +100,12 @@ export default function StudentPortalHomePage() {
   }
 
   const { student, today, urgentQuizzes, hasActivePeriod } = data;
+  // Mapel ber-nilai final didahulukan agar slice(0,4) tidak menyembunyikannya
+  const rankedSubjects = [...(widget?.subjects ?? [])].sort(
+    (a, b) => Number(b.hasFinalData) - Number(a.hasFinalData)
+  );
+  const visibleSubjects = rankedSubjects.slice(0, 4);
+  const hiddenCount = rankedSubjects.length - visibleSubjects.length;
 
   return (
     <div className="space-y-4">
@@ -262,6 +297,83 @@ export default function StudentPortalHomePage() {
           </div>
         )}
       </div>
+
+      {/* 4. WIDGET CAPAIAN BELAJAR (Gelombang 2) */}
+      {widget?.hasActivePeriod && (
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-[#0F766E]" />
+              <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                Capaian Belajar
+              </h2>
+            </div>
+            <Link
+              href="/siswa/portal/nilai"
+              className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
+            >
+              Lihat Detail <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {visibleSubjects.length === 0 && widget.subjects.length === 0 ? (
+            <div className="p-4 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1">
+              <p className="text-xs font-semibold text-slate-700">Belum ada mapel</p>
+              <p className="text-[11px] text-slate-400">
+                Mapel rombelmu akan muncul di sini setelah guru mengelolanya.
+              </p>
+            </div>
+          ) : visibleSubjects.length === 0 ? (
+            <div className="p-4 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1">
+              <p className="text-xs font-semibold text-slate-700">Belum ada nilai final</p>
+              <p className="text-[11px] text-slate-400">
+                Capaian per mapel muncul setelah guru memfinalisasi penilaian.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleSubjects.map((s) => (
+                <Link
+                  key={s.teachingContextId}
+                  href="/siswa/portal/nilai"
+                  className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs"
+                >
+                  <div className="min-w-0 space-y-0.5">
+                    <h4 className="text-xs font-bold text-slate-900 truncate">{s.subjectName}</h4>
+                    {s.assessedTpCount > 0 ? (
+                      <p className="text-[10px] text-slate-500">
+                        TP tuntas: {s.tuntasTpCount}/{s.assessedTpCount}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400">belum ada nilai</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {s.hasFinalData ? (
+                      <span className="text-lg font-black text-[#0F766E]">{s.runningScore ?? "–"}</span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-400">–</span>
+                    )}
+                    {s.assessedTpCount > 0 && s.tuntasTpCount === s.assessedTpCount && (
+                      <Award className="w-4 h-4 text-emerald-500" />
+                    )}
+                  </div>
+                </Link>
+              ))}
+              {hiddenCount > 0 && (
+                <p className="text-[10px] text-slate-400 text-center pt-0.5">
+                  +{hiddenCount} mapel lainnya — lihat detail di halaman Nilai
+                </p>
+              )}
+            </div>
+          )}
+          {widgetError && (
+            <p className="text-[10px] text-amber-600 text-center">
+              Widget capaian gagal dimuat — coba muat ulang beranda.
+            </p>
+          )}
+        </div>
+      )}
 
     </div>
   );

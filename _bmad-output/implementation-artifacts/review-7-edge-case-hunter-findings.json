@@ -1,0 +1,46 @@
+[
+  {
+    "location": "src/app/siswa/portal/page.tsx:40-48",
+    "trigger_condition": "Salah satu dari dua fetch action parallel reject (timeout/jaringan) saat lainnya sukses",
+    "guard_snippet": "const [r, w] = await Promise.allSettled([getStudentDashboardDataAction(), getStudentProgressWidgetAction()]); // tangani tiap hasil terpisah",
+    "potential_consequence": "Data dashboard yang sukses terbuang; seluruh beranda jadi error state"
+  },
+  {
+    "location": "src/app/siswa/portal/page.tsx:49-51",
+    "trigger_condition": "widgetRes.success === false (widget gagal) saat dashboard sukses",
+    "guard_snippet": "else { console.warn(widgetRes.error); setWidget(null); /* atau render hint kecil \"widget gagal dimuat\" */ }",
+    "potential_consequence": "Widget capaian menghilang diam-diam tanpa umpan balik ke siswa"
+  },
+  {
+    "location": "src/app/siswa/portal/page.tsx:87",
+    "trigger_condition": "Lebih dari 4 mapel; mapel ber-nilai final bukan 4 pertama urutan alfabetis",
+    "guard_snippet": "const ranked = [...(widget?.subjects ?? [])].sort((a, b) => Number(b.hasFinalData) - Number(a.hasFinalData)).slice(0, 4);",
+    "potential_consequence": "Widget penuh baris \"belum ada nilai\"; capaian mapel ber-data tak tampil"
+  },
+  {
+    "location": "src/modules/student-portal/student-progress.actions.ts:52-56",
+    "trigger_condition": "Dua periode ACTIVE di satu sekolah; siswa punya membership di keduanya",
+    "guard_snippet": "const actives = student.classMemberships.filter(m => m.academicPeriod.status === \"ACTIVE\").sort((a,b) => b.academicPeriod.year.localeCompare(a.academicPeriod.year)); const activeMembership = actives[0] ?? student.classMemberships[0] ?? null;",
+    "potential_consequence": "Data capaian periode arbitrer (createdAt terbaru) ditampilkan, bukan periode terkini"
+  },
+  {
+    "location": "src/modules/student-portal/student-progress.actions.ts:253-260,296-302",
+    "trigger_condition": "Exception Prisma/infrastruktur terlempar keluar try di kedua action",
+    "guard_snippet": "catch (err) { console.error(\"studentProgress\", err); return { success: false, error: \"Gagal memuat data capaian.\" }; }",
+    "potential_consequence": "Pesan error internal server/DB terekspos ke UI siswa"
+  },
+  {
+    "location": "src/modules/student-portal/student-progress.service.ts:265-273",
+    "trigger_condition": "Server berjalan di zona waktu bukan Asia/Jakarta; sesi bertanggal awal bulan",
+    "guard_snippet": "const ym = new Intl.DateTimeFormat(\"en-CA\", { timeZone: \"Asia/Jakarta\", year: \"numeric\", month: \"2-digit\" }).format(r.date); // kunci grup bulan",
+    "potential_consequence": "Rekap presensi tanggal 1 dst tergrup ke bulan sebelumnya (bulan salah)"
+  },
+  {
+    "location": "src/modules/student-portal/student-progress.service.ts:265-296",
+    "trigger_condition": "Klaim matriks spec: \"bulan tanpa AttendanceRecord → rekap H/S/I/A = 0\"",
+    "guard_snippet": "Sintesis baris rekap nol untuk tiap bulan dari record pertama hingga bulan berjalan (bukan hanya bulan ber-record)",
+    "potential_consequence": "Bulan tanpa presensi (termasuk bulan berjalan) tidak menampilkan rekap sama sekali",
+    "kind": "claim",
+    "confidence": "high"
+  }
+]

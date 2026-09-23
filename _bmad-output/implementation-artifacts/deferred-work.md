@@ -75,3 +75,9 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
   summary: BH-5-l Lookup — `lookupJoinCode` masih `teachingContexts take:1` tanpa orderBy: class multi-periode bisa menampilkan tahun ajaran/semester lama pada kartu konteks join (display saja; jalur klaim registerStudent sudah deterministik pasca-patch).
   evidence: Pre-existing sejak Story 3 (di luar diff Story 6 untuk fungsi ini); dampak kosmetik pada tampilan, tidak memengaruhi keputusan klaim; perbaikan mengikuti pola resolusi `find(ACTIVE) ?? [0]` yang sama.
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/7-student-progress-gelombong-2.md`
+  summary: Suite int real-DB (story 4-7) lolos diam-diam (test PASS tanpa eksekusi) saat DATABASE_URL tak terjangkau.
+  evidence: `if (!dbAvailable) return;` di setiap `it` + catch beforeAll yang hanya console.warn — konvensi lintas 4 suite; perlu keputusan test-infra lintas-suite (skipIf env gate / fail-loud).
+- source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/7-student-progress-gelombang-2.md`
+  summary: Layer UI portal siswa (nav 6 item, halaman nilai, widget beranda) tanpa cakupan test render.
+  evidence: Nol file `*.test.tsx` dan tanpa @testing-library/jsdom di devDependencies — repo belum punya infra test komponen; memperkenalkannya untuk satu item nav tidak proporsional untuk story ini.
