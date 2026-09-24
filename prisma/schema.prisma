@@ -50,6 +50,11 @@ enum AssignmentStatus {
   ARCHIVED
 }
 
+enum AssignmentSubmissionStatus {
+  SUBMITTED
+  REVIEWED
+}
+
 // -------------------------------------------------
 // ENUMS (STAGE 04)
 // -------------------------------------------------
@@ -297,14 +302,15 @@ model Student {
   accountRequestedAt DateTime? // Story 5 F2 — waktu pengajuan akun (sumber tunggal eskalasi)
   approvedBy         User?     @relation("StudentApprover", fields: [approvedById], references: [id])
 
-  classMemberships  ClassStudent[]
-  attendanceRecords AttendanceRecord[]
-  assessmentResults AssessmentResult[]
-  monitoringNotes   StudentMonitoringNote[]
-  parentRelations   ParentStudentRelation[]
-  parentInvitations ParentInvitation[]
-  quizAttempts      QuizAttempt[]
-  quizAccesses      QuizStudentAccess[]
+  classMemberships      ClassStudent[]
+  attendanceRecords     AttendanceRecord[]
+  assessmentResults     AssessmentResult[]
+  monitoringNotes       StudentMonitoringNote[]
+  parentRelations       ParentStudentRelation[]
+  parentInvitations     ParentInvitation[]
+  quizAttempts          QuizAttempt[]
+  quizAccesses          QuizStudentAccess[]
+  assignmentSubmissions AssignmentSubmission[]
 
   @@unique([schoolId, nis])
   @@index([fullName])
@@ -347,6 +353,7 @@ model TeacherProfile {
   createdParentInvitations      ParentInvitation[]        @relation("CreatedParentInvitations")
   grantedParentTeachingAccesses ParentTeachingAccess[]    @relation("GrantedParentTeachingAccesses")
   importSessions                ImportSession[]
+  assignmentSubmissions         AssignmentSubmission[]
 
   @@map("teacher_profile")
 }
@@ -522,10 +529,36 @@ model Assignment {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
+  submissions AssignmentSubmission[]
+
   @@index([teachingContextId])
   @@index([teachingSessionId])
   @@index([dueDate])
   @@map("assignment")
+}
+
+model AssignmentSubmission {
+  id                  String                     @id @default(cuid())
+  assignmentId        String
+  assignment          Assignment                 @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId           String
+  student             Student                    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  textContent         String?                    @db.Text
+  linkUrl             String?
+  status              AssignmentSubmissionStatus @default(SUBMITTED)
+  feedback            String?                    @db.Text
+  score               Int?
+  submittedAt         DateTime                   @default(now())
+  reviewedAt          DateTime?
+  reviewedByProfileId String?
+  reviewedByProfile   TeacherProfile?            @relation(fields: [reviewedByProfileId], references: [id], onDelete: SetNull)
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId, status])
+  @@index([studentId])
+  @@map("assignment_submission")
 }
 
 // -------------------------------------------------
@@ -689,6 +722,7 @@ model AiContentDraft {
   instruction       String?          @db.Text
   content           String           @db.Text
   status            AiDraftStatus    @default(ACTIVE)
+  publishedAt       DateTime? // Story 8 — publish materi untuk portal siswa (null = draf internal)
   modelUsed         String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt

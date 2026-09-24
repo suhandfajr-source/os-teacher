@@ -15,6 +15,8 @@ import {
   refineAiContentAction,
   saveAiDraftAction,
   archiveAiDraftAction,
+  publishAiDraftAction,
+  unpublishAiDraftAction,
   getAiDraftsAction,
   generateSlideIllustrationAction,
 } from "@/modules/ai/ai.actions";
@@ -51,6 +53,8 @@ import {
   LayoutTemplate,
   HelpCircle,
   GraduationCap,
+  Globe,
+  GlobeLock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createQuizAction } from "@/modules/quiz/quiz.actions";
@@ -84,6 +88,7 @@ interface AiDraftItem {
   instruction?: string | null;
   content: string;
   status: AiDraftStatus;
+  publishedAt?: Date | string | null;
   modelUsed?: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
@@ -513,6 +518,26 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
 
       refreshDrafts();
     });
+  };
+
+  const handleTogglePublish = async (draftId: string, publish: boolean) => {
+    const res = publish
+      ? await publishAiDraftAction(draftId)
+      : await unpublishAiDraftAction(draftId);
+    if (!res.success) {
+      toast.error(res.error || "Gagal mengubah status publish");
+      return;
+    }
+    toast.success(
+      publish ? "Materi dipublish — siswa kini bisa membacanya" : "Materi ditarik dari portal siswa"
+    );
+    setDraftsList((prev) =>
+      prev.map((d) =>
+        d.id === draftId
+          ? { ...d, publishedAt: publish ? new Date().toISOString() : null }
+          : d
+      )
+    );
   };
 
   const refreshDrafts = (statusToFetch: AiDraftStatus = savedTabStatus) => {
@@ -1730,6 +1755,15 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                             Aktif
                           </Badge>
                         )}
+                        {draft.publishedAt && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] flex items-center gap-1 bg-teal-50 text-teal-700 border-teal-200"
+                          >
+                            <Globe className="h-2.5 w-2.5" />
+                            Dipublikasikan
+                          </Badge>
+                        )}
                       </div>
                       <CardTitle className="text-base font-bold line-clamp-2 mt-1">
                         {draft.title}
@@ -1800,6 +1834,36 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                         </div>
 
                         <div className="flex items-center gap-1">
+                          {draft.contentType === "LEARNING_MATERIAL" && draft.status === "ACTIVE" && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleTogglePublish(draft.id, !draft.publishedAt)}
+                              className={`h-7 px-2 text-xs font-medium ${
+                                draft.publishedAt
+                                  ? "text-amber-600 hover:bg-amber-50"
+                                  : "text-teal-600 hover:bg-teal-50"
+                              }`}
+                              title={
+                                draft.publishedAt
+                                  ? "Tarik dari portal siswa"
+                                  : "Publish ke portal siswa"
+                              }
+                            >
+                              {draft.publishedAt ? (
+                                <>
+                                  <GlobeLock className="h-3.5 w-3.5 mr-1" />
+                                  Tarik
+                                </>
+                              ) : (
+                                <>
+                                  <Globe className="h-3.5 w-3.5 mr-1" />
+                                  Publish
+                                </>
+                              )}
+                            </Button>
+                          )}
                           {draft.status === "ACTIVE" && (
                             <Button
                               type="button"

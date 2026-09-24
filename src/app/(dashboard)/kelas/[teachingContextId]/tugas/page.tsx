@@ -11,6 +11,9 @@ export default async function TugasPage({ params }: { params: Promise<{ teaching
     orderBy: { createdAt: "desc" },
     include: {
       teachingSession: true,
+      _count: {
+        select: { submissions: { where: { status: "SUBMITTED" } } },
+      },
     }
   });
 
@@ -30,7 +33,10 @@ export default async function TugasPage({ params }: { params: Promise<{ teaching
 
       <TugasClient 
         teachingContextId={teachingContextId} 
-        initialAssignments={assignments} 
+        initialAssignments={assignments.map((a) => ({
+          ...a,
+          pendingSubmissions: a._count.submissions,
+        }))} 
         sessions={sessions}
       />
     </div>

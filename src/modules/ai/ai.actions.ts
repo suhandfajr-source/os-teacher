@@ -271,6 +271,71 @@ export async function archiveAiDraftAction(
 // 3. READ QUERIES (DRAFTS LIST & DETAIL & TEACHER CONTEXTS)
 // ============================================================================
 
+/**
+ * Story 8 — publish/unpublish materi untuk portal siswa.
+ * Publish = set publishedAt (idempoten); unpublish = set null.
+ * Hanya LEARNING_MATERIAL yang bisa dipublish (boundary spec Story 8).
+ */
+export async function publishAiDraftAction(
+  draftId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { draft } = await verifyAiDraftAccess(draftId);
+
+    if (draft.status === "ARCHIVED") {
+      return { success: false, error: "Draf terarsip tidak bisa dipublish." };
+    }
+
+    if (draft.contentType !== "LEARNING_MATERIAL") {
+      return { success: false, error: "Hanya materi ajar (LEARNING_MATERIAL) yang bisa dipublish ke portal siswa." };
+    }
+
+    if (!draft.teachingContextId) {
+      return { success: false, error: "Pilih rombel/mapel dulu — materi tanpa konteks mengajar tidak tampil di portal siswa." };
+    }
+
+    if (draft.publishedAt) {
+      return { success: true }; // idempoten
+    }
+
+    await prisma.aiContentDraft.update({
+      where: { id: draft.id },
+      data: { publishedAt: new Date() },
+    });
+
+    revalidatePath("/ai-studio");
+    revalidatePath("/siswa/portal/materi");
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal mempublish draf AI";
+    return { success: false, error: message };
+  }
+}
+
+export async function unpublishAiDraftAction(
+  draftId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { draft } = await verifyAiDraftAccess(draftId);
+
+    if (!draft.publishedAt) {
+      return { success: true }; // idempoten
+    }
+
+    await prisma.aiContentDraft.update({
+      where: { id: draft.id },
+      data: { publishedAt: null },
+    });
+
+    revalidatePath("/ai-studio");
+    revalidatePath("/siswa/portal/materi");
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Gagal membatalkan publish draf AI";
+    return { success: false, error: message };
+  }
+}
+
 export async function getAiDraftsAction(rawFilter?: AiDraftFilterInput) {
   const filter = aiDraftFilterSchema.parse(rawFilter || {});
   const { profile, activeSchoolId } = await verifyActiveSchoolMembership();

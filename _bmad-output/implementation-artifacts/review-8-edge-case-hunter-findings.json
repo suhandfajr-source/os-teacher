@@ -1,0 +1,9 @@
+[
+  {
+    "lens": "edge-case-hunter",
+    "location": "src/modules/assignments/assignment.actions.ts:66-79 (getSubmissionQueueAction)",
+    "trigger_condition": "Assignment dihapus antara pre-check halaman dan panggilan action — throw tak tertangani",
+    "guard_snippet": "bungkus panggilan di [assignmentId]/page.tsx dengan try/catch → notFound(); atau action return [] saat assignment hilang",
+    "potential_consequence": "Halaman antrean koreksi guru 500 (error boundary), bukan pesan"
+  }
+]

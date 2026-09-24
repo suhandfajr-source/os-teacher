@@ -12,8 +12,10 @@ import {
   ShieldCheck, 
   AlertCircle, 
   Monitor,
-  GraduationCap
+  GraduationCap,
+  Users
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChangePinModal } from "@/components/student/ChangePinModal";
 import { 
@@ -130,6 +132,29 @@ export default function StudentProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Mode Keluarga Card */}
+      <Link
+        href="/siswa/portal/keluarga"
+        className="block p-4 bg-gradient-to-br from-[#0F766E] to-[#115E59] rounded-3xl border border-teal-800/30 shadow-xs space-y-1.5 active:scale-[0.99] transition-transform"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-white/15 text-white flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="text-left">
+              <h4 className="text-xs font-bold text-white">Mode Keluarga</h4>
+              <p className="text-[10px] text-teal-100">
+                Pantauan nilai, presensi & tugas untuk orang tua
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold text-white bg-white/15 px-2 py-1 rounded-full">
+            Buka
+          </span>
+        </div>
+      </Link>
 
       {/* Security Actions Card */}
       <div className="p-4 bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-2.5">

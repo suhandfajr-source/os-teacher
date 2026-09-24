@@ -15,7 +15,8 @@ import {
   MapPin, 
   RefreshCw,
   TrendingUp,
-  Award
+  Award,
+  BookMarked
 } from "lucide-react";
 import { 
   getStudentDashboardDataAction, 
@@ -296,6 +297,36 @@ export default function StudentPortalHomePage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* 3.5 MATERI BELAJAR (Gelombang 3) */}
+      <div className="space-y-2.5 pt-1">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5">
+            <BookMarked className="w-4 h-4 text-[#0F766E]" />
+            <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+              Materi Belajar
+            </h2>
+          </div>
+          <Link
+            href="/siswa/portal/materi"
+            className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
+          >
+            Buka Materi <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+        <Link
+          href="/siswa/portal/materi"
+          className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs active:scale-[0.99] transition-transform"
+        >
+          <div className="min-w-0 space-y-0.5">
+            <h4 className="text-xs font-bold text-slate-900">Pustaka Materi Rombel</h4>
+            <p className="text-[10px] text-slate-500">
+              Ringkasan & bahan ajar yang dipublikasikan gurumu
+            </p>
+          </div>
+          <BookMarked className="w-5 h-5 text-teal-600 shrink-0" />
+        </Link>
       </div>
 
       {/* 4. WIDGET CAPAIAN BELAJAR (Gelombang 2) */}

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import Link from "next/link";
+import { ClipboardCheck } from "lucide-react";
 
 type AssignmentData = {
   id: string;
@@ -18,6 +20,7 @@ type AssignmentData = {
   status: string;
   dueDate?: Date | null;
   createdAt: Date | string;
+  pendingSubmissions?: number;
 };
 type SessionData = {
   id: string;
@@ -129,6 +132,18 @@ export default function TugasClient({ teachingContextId, initialAssignments, ses
                       Tenggat: {format(new Date(assignment.dueDate), "dd MMM yyyy", { locale: id })}
                     </p>
                   )}
+                  <Link
+                    href={`/kelas/${teachingContextId}/tugas/${assignment.id}`}
+                    className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-teal-700 hover:text-teal-800 hover:underline"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    Antrean koreksi
+                    {(assignment.pendingSubmissions ?? 0) > 0 && (
+                      <span className="ml-0.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200">
+                        {assignment.pendingSubmissions}
+                      </span>
+                    )}
+                  </Link>
                 </div>
               </div>
             ))
