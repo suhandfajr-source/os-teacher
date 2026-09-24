@@ -38,8 +38,6 @@ vi.mock("@/lib/auth", async (importOriginal) => {
 });
 
 import { requireSuperAdmin } from "@/lib/superadmin";
-import { verifyParentStudentRelation } from "@/lib/authorization";
-import { getParentAuthorizedContexts } from "@/modules/parent/parent.service";
 
 let mockedSession: { user: { id: string } } | null = null;
 
@@ -49,7 +47,6 @@ describe("Story 5 — fail-closed sesi existing & guard superadmin ber-audit", (
   let schoolId: string;
   let studentId: string;
   let studentToken: string;
-  let parentUserId: string;
   let teacherNonAdminId: string;
 
   beforeAll(async () => {
@@ -82,17 +79,9 @@ describe("Story 5 — fail-closed sesi existing & guard superadmin ber-audit", (
         pinUpdatedAt: student.pinUpdatedAt!.toISOString(),
       });
 
-      parentUserId = `s5g-pr-${ts}`;
       teacherNonAdminId = `s5g-ta-${ts}`;
       await prisma.user.create({
-        data: { id: parentUserId, email: `${parentUserId}@test.com`, name: "Ortu Guard", emailVerified: true, createdAt: new Date(), updatedAt: new Date(), platformRole: "USER", role: "USER" },
-      });
-      await prisma.user.create({
         data: { id: teacherNonAdminId, email: `${teacherNonAdminId}@test.com`, name: "Guru Guard", emailVerified: true, createdAt: new Date(), updatedAt: new Date(), platformRole: "MODERATOR", role: "MODERATOR" },
-      });
-      const parentProfile = await prisma.parentProfile.create({ data: { userId: parentUserId } });
-      await prisma.parentStudentRelation.create({
-        data: { parentProfileId: parentProfile.id, studentId },
       });
 
       dbAvailable = true;
@@ -104,10 +93,8 @@ describe("Story 5 — fail-closed sesi existing & guard superadmin ber-audit", (
   afterAll(async () => {
     if (!dbAvailable) return;
     try {
-      await prisma.parentStudentRelation.deleteMany({ where: { student: { schoolId } } });
-      await prisma.parentProfile.deleteMany({ where: { userId: parentUserId } });
       await prisma.auditLog.deleteMany({ where: { actorId: { in: [teacherNonAdminId] } } });
-      await prisma.user.deleteMany({ where: { id: { in: [parentUserId, teacherNonAdminId] } } });
+      await prisma.user.deleteMany({ where: { id: { in: [teacherNonAdminId] } } });
       await prisma.student.delete({ where: { id: studentId } });
       await prisma.school.delete({ where: { id: schoolId } });
     } catch {
@@ -145,59 +132,6 @@ describe("Story 5 — fail-closed sesi existing & guard superadmin ber-audit", (
     const res = await verifyStudentSession();
     expect(res).toBeNull();
     await prisma.student.update({ where: { id: studentId }, data: { accountStatus: "ACTIVE" } });
-  });
-
-  it("F7: layanan baca parent fail-closed saat sekolah nonaktif", async () => {
-    mockedSession = { user: { id: parentUserId } };
-
-    const before = await verifyParentStudentRelation(studentId);
-    expect(before.relation.student.id).toBe(studentId);
-
-    await prisma.school.update({ where: { id: schoolId }, data: { deactivatedAt: new Date() } });
-    await expect(verifyParentStudentRelation(studentId)).rejects.toThrow();
-    await prisma.school.update({ where: { id: schoolId }, data: { deactivatedAt: null } });
-  });
-
-  it("VG-1/F7: getParentAuthorizedContexts fail-closed saat sekolah nonaktif", async () => {
-    mockedSession = { user: { id: parentUserId } };
-
-    // Setup: guru + subject + teachingContext + parentTeachingAccess ACTIVE
-    const teacherUser = await prisma.user.create({
-      data: { id: `s5g-tc-${ts}`, email: `s5g-tc-${ts}@test.com`, name: "Guru Konteks", emailVerified: true, createdAt: new Date(), updatedAt: new Date(), platformRole: "USER", role: "USER" },
-    });
-    const teacherProfile = await prisma.teacherProfile.create({ data: { userId: teacherUser.id, activeSchoolId: schoolId, onboardingCompleted: true } });
-    const subject = await prisma.subject.create({ data: { schoolId, name: "Guard Mapel", normalizedName: `guard mapel ${ts}` } });
-    const period = await prisma.academicPeriod.create({ data: { schoolId, year: "2026/2027", semester: "Guard", status: "ACTIVE" } });
-    const klass = await prisma.class.create({ data: { schoolId, name: `Guard-${ts}` } });
-    const tc = await prisma.teachingContext.create({
-      data: { teacherProfileId: teacherProfile.id, schoolId, academicPeriodId: period.id, classId: klass.id, subjectId: subject.id },
-    });
-    const parentProfile = await prisma.parentProfile.findFirstOrThrow({ where: { userId: parentUserId } });
-    const relation = await prisma.parentStudentRelation.findFirstOrThrow({ where: { parentProfileId: parentProfile.id, studentId } });
-    await prisma.parentTeachingAccess.create({
-      data: { parentStudentRelationId: relation.id, teachingContextId: tc.id, grantedByTeacherProfileId: teacherProfile.id, status: "ACTIVE" },
-    });
-
-    // Sekolah aktif → konteks terlihat
-    const before = await getParentAuthorizedContexts(parentProfile.id);
-    expect(before.length).toBe(1);
-
-    // Nonaktif → kosong (fail-closed); reaktivasi → kembali
-    await prisma.school.update({ where: { id: schoolId }, data: { deactivatedAt: new Date() } });
-    const during = await getParentAuthorizedContexts(parentProfile.id);
-    expect(during.length).toBe(0);
-    await prisma.school.update({ where: { id: schoolId }, data: { deactivatedAt: null } });
-    const after = await getParentAuthorizedContexts(parentProfile.id);
-    expect(after.length).toBe(1);
-
-    // Cleanup entitas setup
-    await prisma.parentTeachingAccess.deleteMany({ where: { parentStudentRelationId: relation.id } });
-    await prisma.teachingContext.delete({ where: { id: tc.id } });
-    await prisma.class.delete({ where: { id: klass.id } });
-    await prisma.academicPeriod.delete({ where: { id: period.id } });
-    await prisma.subject.delete({ where: { id: subject.id } });
-    await prisma.teacherProfile.delete({ where: { id: teacherProfile.id } }).catch(() => {});
-    await prisma.user.delete({ where: { id: teacherUser.id } }).catch(() => {});
   });
 
   it("OQ-7/F10/G-9: guard deny-by-default (MODERATOR tertolak), tanpa sesi ditolak, denial ter-audit ber-dedup 60 detik", async () => {

@@ -2,7 +2,6 @@ import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { redirect } from "next/navigation";
 import { KlassaLogo, ModularCockpitArtwork } from "@/components/brand";
 import Link from "next/link";
-import { Users } from "lucide-react";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   let authContext = null;
@@ -45,13 +44,6 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         {/* Bottom Micro Switcher & Copyright with Safe Elevation */}
         <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
           <span>&copy; {new Date().getFullYear()} KLASSA &bull; Naik Kelas Bersama</span>
-          <Link
-            href="/parent/login"
-            className="text-[#0F766E] font-bold hover:underline flex items-center gap-1 transition-colors"
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Portal Orang Tua &rarr;</span>
-          </Link>
         </div>
 
       </div>

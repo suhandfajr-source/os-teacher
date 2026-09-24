@@ -1,6 +1,7 @@
 import React from "react";
 import { verifyStudentSession } from "@/modules/student-auth/student-session";
 import { getStudentProgressDataAction } from "@/modules/student-portal/student-progress.actions";
+import { getStudentFamilyDetailAction } from "@/modules/student-portal/student-family.actions";
 import { prisma } from "@/lib/auth";
 import { isSubmissionLate } from "@/modules/assignments/submission.service";
 import Link from "next/link";
@@ -26,6 +27,10 @@ export default async function KeluargaPage() {
   }
 
   const { hasActivePeriod, student, subjects, attendance } = progress.data;
+
+  // Pengayaan sunset /parent/*: rincian penilaian + aktivitas belajar per mapel
+  const family = await getStudentFamilyDetailAction();
+  const familySubjects = family.success ? (family.subjects ?? []) : [];
 
   // Status tugas & submission untuk ringkasan keluarga (read-only)
   const memberships = await prisma.student.findUnique({
@@ -163,6 +168,93 @@ export default async function KeluargaPage() {
             )}
           </section>
 
+          {/* Rincian penilaian per mapel (migrasi fitur portal ortu) */}
+          <section className="space-y-2">
+            <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <BookOpenCheck className="w-3.5 h-3.5 text-[#0F766E]" /> Rincian Penilaian
+            </h2>
+            {familySubjects.every((s) => s.assessments.length === 0) ? (
+              <p className="text-[11px] text-slate-400 px-1">Belum ada penilaian yang diselesaikan guru.</p>
+            ) : (
+              familySubjects
+                .filter((s) => s.assessments.length > 0)
+                .map((s) => (
+                  <div key={s.teachingContextId} className="p-3 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+                    <p className="text-[11px] font-bold text-slate-900">{s.subjectName}</p>
+                    {s.assessments.map((a) => {
+                      const tuntas =
+                        a.finalScore != null &&
+                        a.minimumPassingScore != null &&
+                        a.finalScore >= a.minimumPassingScore;
+                      return (
+                        <div key={a.id} className="flex items-center justify-between gap-2 border-b border-slate-50 pb-1 last:border-0 last:pb-0">
+                          <div className="min-w-0">
+                            <p className="text-[11px] text-slate-700 truncate">{a.title}</p>
+                            <p className="text-[9px] text-slate-400">
+                              {new Date(a.date).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                              {a.minimumPassingScore != null && ` • KKM ${a.minimumPassingScore}`}
+                            </p>
+                          </div>
+                          {a.finalScore != null ? (
+                            <span
+                              className={`text-[11px] font-black shrink-0 ${
+                                a.minimumPassingScore != null && !tuntas
+                                  ? "text-rose-600"
+                                  : "text-emerald-700"
+                              }`}
+                            >
+                              {a.finalScore}
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-slate-400 shrink-0">Menunggu nilai</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
+            )}
+          </section>
+
+          {/* Aktivitas belajar per sesi (migrasi fitur portal ortu) */}
+          <section className="space-y-2">
+            <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <TimerReset className="w-3.5 h-3.5 text-[#0F766E]" /> Aktivitas Belajar
+            </h2>
+            {familySubjects.every((s) => s.activities.length === 0) ? (
+              <p className="text-[11px] text-slate-400 px-1">Belum ada catatan aktivitas belajar.</p>
+            ) : (
+              familySubjects
+                .filter((s) => s.activities.length > 0)
+                .map((s) => (
+                  <div key={s.teachingContextId} className="p-3 bg-white rounded-2xl border border-slate-200/80 space-y-1.5">
+                    <p className="text-[11px] font-bold text-slate-900">{s.subjectName}</p>
+                    {s.activities.map((act) => (
+                      <div key={act.id} className="flex items-center justify-between gap-2 border-b border-slate-50 pb-1 last:border-0 last:pb-0">
+                        <div className="min-w-0">
+                          <p className="text-[11px] text-slate-700 truncate">
+                            {act.actualTopic ?? "Topik tidak tercatat"}
+                          </p>
+                          <p className="text-[9px] text-slate-400">
+                            {new Date(act.date).toLocaleDateString("id-ID", {
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </p>
+                        </div>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded shrink-0">
+                          {attShort(act.attendanceStatus)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))
+            )}
+          </section>
+
           {/* Status tugas & pengumpulan */}
           <section className="space-y-2">
             <h2 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -238,4 +330,22 @@ function BackLink() {
 // ponytail: label singkat S — angka besar tak muat di grid mobile; upgrade ke kartu bulanan bila keluhan.
 function sakitShort(n: number): string {
   return String(n);
+}
+
+// Label presensi singkat untuk aktivitas belajar — selaras legenda presensi di atas.
+function attShort(status: string): string {
+  switch (status) {
+    case "PRESENT":
+      return "H";
+    case "LATE":
+      return "L";
+    case "SICK":
+      return "S";
+    case "PERMISSION":
+      return "I";
+    case "ABSENT":
+      return "A";
+    default:
+      return status;
+  }
 }

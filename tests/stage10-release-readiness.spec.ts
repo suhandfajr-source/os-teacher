@@ -289,10 +289,6 @@ test.describe('Stage 10: Release Readiness, Navigation, Golden Journeys & Qualit
     await page.goto('/login');
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
-
-    await page.goto('/parent/login');
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test('13. NavigationProgressBar User-Visible Lifecycle & Repeated Navigation Guard', async ({ page }) => {

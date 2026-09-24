@@ -18,7 +18,6 @@ import {
 } from "../student-session";
 import { registerStudent, loginStudent } from "../student-auth.actions";
 import { createClassAction } from "../../classes/classes.actions";
-import { getParentAuthorizedContexts } from "../../parent/parent.service";
 
 vi.mock("@/lib/authorization", () => ({
   verifyActiveSchoolMembership: vi.fn(),
@@ -914,12 +913,15 @@ describe("Story 6 Rollover TA — Real Database Integration (CAP-8)", { timeout:
       },
     });
 
-    // Periode lama sudah INACTIVE (hasil saklar) — bacaan parent tetap berfungsi
-    const contexts = await getParentAuthorizedContexts(parentProfile.id);
-    const historical = contexts.find((c) => c.teachingContextId === oldContext.id);
+    // Periode lama sudah INACTIVE (hasil saklar) — akses historis parent tetap utuh
+    // (sunset /parent/*: tabel dipertahankan, kontrak rollover tak menghapus akses)
+    const accessRows = await prisma.parentTeachingAccess.findMany({
+      where: { parentStudentRelationId: relation.id },
+      include: { teachingContext: { select: { academicPeriodId: true } } },
+    });
+    const historical = accessRows.find((a) => a.teachingContext.academicPeriodId === oldPeriodId);
     expect(historical).toBeDefined();
-    expect(historical?.academicYear).toBe("2025/2026");
-    expect(historical?.studentId).toBe(budiId);
+    expect(historical?.status).toBe("ACTIVE");
 
     // Cleanup parent entities (Restrict pada student)
     await prisma.parentTeachingAccess.deleteMany({ where: { parentStudentRelationId: relation.id } });

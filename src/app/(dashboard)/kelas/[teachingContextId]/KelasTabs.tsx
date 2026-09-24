@@ -12,7 +12,6 @@ import {
   CheckSquare,
   FileSpreadsheet,
   Settings2,
-  UserCheck,
   GraduationCap,
   UploadCloud,
   LayoutDashboard
@@ -78,12 +77,10 @@ export default function KelasTabs({ teachingContextId }: { teachingContextId: st
       defaultHref: `${baseUrl}/monitoring`,
       matches: [
         `${baseUrl}/monitoring`,
-        `${baseUrl}/orang-tua`,
         `${baseUrl}#roster`
       ],
       subPills: [
         { name: "Monitoring Siswa", href: `${baseUrl}/monitoring`, icon: Users },
-        { name: "Akses Orang Tua", href: `${baseUrl}/orang-tua`, icon: UserCheck },
         { name: "Daftar Siswa (Roster)", href: `${baseUrl}#roster`, icon: GraduationCap },
       ]
     },
