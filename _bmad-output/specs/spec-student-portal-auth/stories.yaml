@@ -137,6 +137,12 @@
     reuse layanan baca parent, tanpa jalur tulis apa pun dari portal siswa.
 - id: "9"
   title: AI Tutor & Gamifikasi (Gelombang 4)
+  status: skipped
+  skip_note: >-
+    2026-09-24: Ditunda — checklist spec menulis "jika Tahap 9 dieksekusi"
+    (opsional by design). CAP-11 belum terwujud; infra Gemini sudah ada
+    sehingga bisa dieksekusi kapan pun. Go/no-go AI tutor + gamifikasi
+    menunggu data pemakaian nyata portal.
   description: >-
     Mewujudkan CAP-11: AI tutor tanya-jawab terkurasi materi publish + TP guru
     dengan rate-limit dan audit log; gamifikasi mikro opsional. Detail di
