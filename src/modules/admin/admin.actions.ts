@@ -1288,3 +1288,220 @@ export async function deleteClassAdminAction(classId: string) {
   }
 }
 
+/**
+ * Detailing Data Sekolah untuk Superadmin
+ */
+export async function getSchoolDetailAdminAction(schoolId: string) {
+  await requireSuperAdmin();
+
+  try {
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      include: {
+        academicPeriods: {
+          orderBy: [{ year: "desc" }, { semester: "desc" }],
+        },
+        classes: {
+          include: {
+            _count: { select: { classStudents: true, teachingContexts: true } },
+          },
+          orderBy: { name: "asc" },
+        },
+        memberships: {
+          include: {
+            teacherProfile: {
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, banned: true, platformRole: true },
+                },
+                teachingContexts: {
+                  where: { class: { schoolId } },
+                  include: { subject: true, class: true },
+                },
+              },
+            },
+          },
+        },
+        students: {
+          take: 50,
+          orderBy: { fullName: "asc" },
+          include: {
+            classMemberships: {
+              include: { class: true },
+            },
+          },
+        },
+        _count: {
+          select: { students: true, classes: true, memberships: true, aiContentDrafts: true },
+        },
+      },
+    });
+
+    if (!school) return { success: false, message: "Sekolah tidak ditemukan." };
+    return { success: true, data: school };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Detailing Data Guru untuk Superadmin
+ */
+export async function getTeacherDetailAdminAction(userId: string) {
+  await requireSuperAdmin();
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        platformRole: true,
+        banned: true,
+        createdAt: true,
+        teacherProfile: {
+          include: {
+            memberships: {
+              include: {
+                school: { select: { id: true, name: true, npsn: true, deactivatedAt: true } },
+              },
+            },
+            teachingContexts: {
+              include: {
+                subject: true,
+                class: {
+                  include: {
+                    school: { select: { id: true, name: true } },
+                    _count: { select: { classStudents: true } },
+                  },
+                },
+                academicPeriod: true,
+                _count: { select: { teachingSessions: true, assessments: true } },
+              },
+            },
+            aiContentDrafts: {
+              take: 10,
+              orderBy: { createdAt: "desc" },
+              select: { id: true, title: true, topic: true, contentType: true, modelUsed: true, createdAt: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) return { success: false, message: "Pengguna / guru tidak ditemukan." };
+    return { success: true, data: user };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Detailing Data Siswa untuk Superadmin
+ */
+export async function getStudentDetailAdminAction(studentId: string) {
+  await requireSuperAdmin();
+
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        school: { select: { id: true, name: true, npsn: true } },
+        classMemberships: {
+          include: {
+            class: true,
+            academicPeriod: true,
+          },
+        },
+        attendanceRecords: {
+          take: 20,
+          orderBy: { createdAt: "desc" },
+          include: {
+            teachingSession: {
+              include: {
+                teachingContext: {
+                  include: { subject: true },
+                },
+              },
+            },
+          },
+        },
+        assessmentResults: {
+          take: 20,
+          orderBy: { createdAt: "desc" },
+          include: {
+            assessment: {
+              include: {
+                teachingContext: {
+                  include: { subject: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!student) return { success: false, message: "Data siswa tidak ditemukan." };
+    return { success: true, data: student };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Detailing Data Kelas untuk Superadmin
+ */
+export async function getClassDetailAdminAction(classId: string) {
+  await requireSuperAdmin();
+
+  try {
+    const cls = await prisma.class.findUnique({
+      where: { id: classId },
+      include: {
+        school: { select: { id: true, name: true, npsn: true } },
+        classStudents: {
+          include: {
+            student: {
+              select: { id: true, fullName: true, nis: true, accountStatus: true, accessPinHash: true },
+            },
+          },
+          orderBy: { student: { fullName: "asc" } },
+        },
+        teachingContexts: {
+          include: {
+            subject: true,
+            academicPeriod: true,
+            teacherProfile: {
+              include: {
+                user: { select: { name: true, email: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!cls) return { success: false, message: "Kelas tidak ditemukan." };
+    return { success: true, data: cls };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Ambil Statistik AI & Token untuk Superadmin
+ */
+export async function getAiUsageStatsAdminAction(schoolIdFilter?: string) {
+  await requireSuperAdmin();
+  try {
+    const { getAiUsageStatsAdmin } = await import("./admin-stats.service");
+    const stats = await getAiUsageStatsAdmin(schoolIdFilter === "ALL" ? undefined : schoolIdFilter);
+    return { success: true, data: stats };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+

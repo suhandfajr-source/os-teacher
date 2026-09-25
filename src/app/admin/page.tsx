@@ -1,4 +1,4 @@
-import { getSuperadminOverviewStats } from "@/modules/admin/admin-stats.service";
+import { getSuperadminOverviewStats, getAiUsageStatsAdmin } from "@/modules/admin/admin-stats.service";
 import { prisma } from "@/lib/auth";
 import { AdminConsoleClient } from "./AdminConsoleClient";
 
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const [
     stats,
+    aiStats,
     schoolsList,
     schoolsData,
     teachersData,
@@ -18,6 +19,7 @@ export default async function AdminPage() {
     classesData,
   ] = await Promise.all([
     getSuperadminOverviewStats(),
+    getAiUsageStatsAdmin(),
     prisma.school.findMany({
       select: { id: true, name: true, npsn: true, deactivatedAt: true },
       orderBy: { name: "asc" },
@@ -128,6 +130,7 @@ export default async function AdminPage() {
   return (
     <AdminConsoleClient
       stats={stats}
+      initialAiStats={aiStats}
       allSchools={schoolsList}
       initialSchools={schoolsData as any}
       initialTeachers={teachersData as any}

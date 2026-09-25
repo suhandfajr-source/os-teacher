@@ -230,3 +230,199 @@ export async function getSuperadminOverviewStats(schoolIdFilter?: string): Promi
     recentAuditLogs,
   };
 }
+
+export interface AiUsageCategoryItem {
+  category: string;
+  label: string;
+  count: number;
+  tokens: number;
+  percentage: number;
+}
+
+export interface AiUsageTeacherItem {
+  teacherProfileId: string;
+  name: string;
+  email: string;
+  schoolName: string;
+  draftCount: number;
+  totalTokens: number;
+}
+
+export interface AiUsageRecentItem {
+  id: string;
+  title: string;
+  topic: string;
+  contentType: string;
+  modelUsed: string;
+  estimatedTokens: number;
+  createdAt: Date;
+  teacherName: string;
+  schoolName: string;
+}
+
+export interface AiUsageStats {
+  summary: {
+    totalDrafts: number;
+    totalPromptChars: number;
+    totalOutputChars: number;
+    totalEstimatedTokens: number;
+    estimatedCostUsd: number;
+    estimatedCostIdr: number;
+    activeAiTeachers: number;
+  };
+  byCategory: AiUsageCategoryItem[];
+  byModel: Array<{ model: string; count: number; tokens: number }>;
+  topTeachers: AiUsageTeacherItem[];
+  recentDrafts: AiUsageRecentItem[];
+}
+
+export async function getAiUsageStatsAdmin(schoolIdFilter?: string): Promise<AiUsageStats> {
+  const where = schoolIdFilter ? { schoolId: schoolIdFilter } : {};
+
+  const drafts = await prisma.aiContentDraft.findMany({
+    where,
+    select: {
+      id: true,
+      title: true,
+      topic: true,
+      instruction: true,
+      content: true,
+      contentType: true,
+      modelUsed: true,
+      createdAt: true,
+      teacherProfile: {
+        select: {
+          id: true,
+          user: { select: { name: true, email: true } },
+        },
+      },
+      school: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
+
+  let totalPromptChars = 0;
+  let totalOutputChars = 0;
+  let totalEstimatedTokens = 0;
+  let totalCostUsd = 0;
+
+  const categoryMap = new Map<string, { count: number; tokens: number }>();
+  const modelMap = new Map<string, { count: number; tokens: number }>();
+  const teacherMap = new Map<
+    string,
+    { name: string; email: string; schoolName: string; count: number; tokens: number }
+  >();
+
+  const categoryLabels: Record<string, string> = {
+    LESSON_PLAN: "Modul Ajar & RPP",
+    LEARNING_MATERIAL: "Bahan Bacaan & Materi",
+    TASK_INSTRUCTION: "Instruksi Tugas Siswa",
+    RUBRIC: "Rubrik & Kriteria Penilaian",
+  };
+
+  const processedRecentDrafts: AiUsageRecentItem[] = [];
+
+  for (const d of drafts) {
+    const promptChars = (d.title?.length || 0) + (d.topic?.length || 0) + (d.instruction?.length || 0);
+    const outputChars = d.content?.length || 0;
+    const promptTokens = Math.max(10, Math.ceil(promptChars / 3.8));
+    const outputTokens = Math.max(20, Math.ceil(outputChars / 3.8));
+    const itemTokens = promptTokens + outputTokens;
+
+    totalPromptChars += promptChars;
+    totalOutputChars += outputChars;
+    totalEstimatedTokens += itemTokens;
+
+    // Gemini 1.5 Flash rate: $0.075 / 1M prompt, $0.300 / 1M output
+    const cost = (promptTokens / 1_000_000) * 0.075 + (outputTokens / 1_000_000) * 0.3;
+    totalCostUsd += cost;
+
+    // Category aggregation
+    const cat = d.contentType;
+    const existingCat = categoryMap.get(cat) || { count: 0, tokens: 0 };
+    existingCat.count += 1;
+    existingCat.tokens += itemTokens;
+    categoryMap.set(cat, existingCat);
+
+    // Model aggregation
+    const model = d.modelUsed || "gemini-1.5-flash";
+    const existingModel = modelMap.get(model) || { count: 0, tokens: 0 };
+    existingModel.count += 1;
+    existingModel.tokens += itemTokens;
+    modelMap.set(model, existingModel);
+
+    // Teacher aggregation
+    const tId = d.teacherProfile?.id || "unknown";
+    const tName = d.teacherProfile?.user?.name || "Guru";
+    const tEmail = d.teacherProfile?.user?.email || "—";
+    const sName = d.school?.name || "Sekolah";
+
+    const existingTeacher = teacherMap.get(tId) || {
+      name: tName,
+      email: tEmail,
+      schoolName: sName,
+      count: 0,
+      tokens: 0,
+    };
+    existingTeacher.count += 1;
+    existingTeacher.tokens += itemTokens;
+    teacherMap.set(tId, existingTeacher);
+
+    if (processedRecentDrafts.length < 15) {
+      processedRecentDrafts.push({
+        id: d.id,
+        title: d.title,
+        topic: d.topic,
+        contentType: d.contentType,
+        modelUsed: model,
+        estimatedTokens: itemTokens,
+        createdAt: d.createdAt,
+        teacherName: tName,
+        schoolName: sName,
+      });
+    }
+  }
+
+  const byCategory: AiUsageCategoryItem[] = Array.from(categoryMap.entries()).map(([cat, data]) => ({
+    category: cat,
+    label: categoryLabels[cat] || cat,
+    count: data.count,
+    tokens: data.tokens,
+    percentage: drafts.length > 0 ? Math.round((data.count / drafts.length) * 100) : 0,
+  }));
+
+  const byModel = Array.from(modelMap.entries()).map(([model, data]) => ({
+    model,
+    count: data.count,
+    tokens: data.tokens,
+  }));
+
+  const topTeachers: AiUsageTeacherItem[] = Array.from(teacherMap.entries())
+    .map(([teacherProfileId, data]) => ({
+      teacherProfileId,
+      name: data.name,
+      email: data.email,
+      schoolName: data.schoolName,
+      draftCount: data.count,
+      totalTokens: data.tokens,
+    }))
+    .sort((a, b) => b.totalTokens - a.totalTokens)
+    .slice(0, 5);
+
+  return {
+    summary: {
+      totalDrafts: drafts.length,
+      totalPromptChars,
+      totalOutputChars,
+      totalEstimatedTokens,
+      estimatedCostUsd: Number(totalCostUsd.toFixed(4)),
+      estimatedCostIdr: Math.round(totalCostUsd * 16000),
+      activeAiTeachers: teacherMap.size,
+    },
+    byCategory,
+    byModel,
+    topTeachers,
+    recentDrafts: processedRecentDrafts,
+  };
+}
