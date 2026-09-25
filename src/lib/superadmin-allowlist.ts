@@ -48,3 +48,11 @@ export function parseSuperadminEmails(env: string | undefined): ParsedAllowlist 
     }
     return { emails, invalid };
 }
+
+/** Single-Admin Lane I3 — apakah email ini terreserved untuk akun platform
+ * (ada di allowlist)? Dipakai hook user.create.before Better Auth agar pintu
+ * publik (server action register & API signup) menolaknya — anti-squatting. */
+export function isReservedSuperadminEmail(email: string | undefined, env: string | undefined): boolean {
+    if (!email) return false;
+    return parseSuperadminEmails(env).emails.includes(email.trim().toLowerCase());
+}

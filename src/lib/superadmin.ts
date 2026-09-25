@@ -104,3 +104,15 @@ export async function requireSuperAdmin(): Promise<{ userId: string }> {
   await auditAccessDeniedOnce(userId);
   throw new SuperAdminRequiredError();
 }
+
+/** Single-Admin Lane I4 — apakah pemohon request ini superadmin?
+ * Dipakai layout jalur guru ((dashboard)/(onboarding)) untuk melempar admin
+ * ke /admin alih-alih menyodorkan wizard onboarding guru. */
+export async function isCurrentPlatformAdmin(): Promise<boolean> {
+  try {
+    await requireSuperAdmin();
+    return true;
+  } catch {
+    return false;
+  }
+}

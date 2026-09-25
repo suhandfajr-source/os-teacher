@@ -112,6 +112,21 @@ export const auth = betterAuth({
     // Story 5 (OQ-6 + G-5): fail-closed sekolah nonaktif pada pembuatan sesi BARU
     // guru DAN parent. Sesi existing ditangani revoke saat deaktivasi (B5).
     databaseHooks: {
+        user: {
+            create: {
+                // Single-Admin Lane I3 — email allowlist RESERVED: pendaftaran
+                // publik (halaman register maupun API Better Auth langsung)
+                // menolaknya. Pesan generik (anti-enumerasi). Seeder memakai
+                // prisma langsung sehingga hook ini tidak menyentuh jalurnya.
+                async before(user): Promise<boolean> {
+                    const { isReservedSuperadminEmail } = await import("./superadmin-allowlist");
+                    if (isReservedSuperadminEmail(user?.email, process.env.SUPERADMIN_EMAILS)) {
+                        throw new Error("Email ini tidak tersedia untuk pendaftaran.");
+                    }
+                    return true;
+                },
+            },
+        },
         session: {
             create: {
                 async before(session): Promise<boolean> {

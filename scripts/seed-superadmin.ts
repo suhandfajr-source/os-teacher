@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "better-auth/crypto";
 import { parseArgs } from "node:util";
 import { parseSuperadminEmails } from "../src/lib/superadmin-allowlist";
 import {
@@ -17,27 +18,49 @@ import {
  * `src/lib/superadmin-seeder.ts`.
  *
  * Run: npm run seed:superadmin [-- --dry-run] [-- --allow-unverified]
+ *      [-- --adopt] [-- --create-name "Nama Lengkap"]
  * LOCAL DB ONLY — production schema moves via `prisma migrate deploy` (Never list).
  * Requires Node >= 20.12 (--env-file-if-exists).
+ * Single-Admin Lane: create-when-missing butuh SUPERADMIN_INITIAL_PASSWORD (env;
+ * hanya dipakai saat email allowlist belum punya row User).
  */
 
 /** Hard-exit fallback must exceed the core's TRANSACTION_TIMEOUT_MS (15s) so a
  * legitimately slow apply (e.g. cold-start DB) is never killed mid-flight. */
 const HARD_EXIT_FALLBACK_MS = 30_000;
 
+/** I1 create-when-missing — bangun peta bootstrap; undefined bila env password
+ * bootstrap tidak diset (seeder akan abort dgn pesan bila ada email unknown). */
+async function buildBootstrap(
+    emails: string[],
+    name: string,
+    initialPassword: string | undefined
+): Promise<Record<string, { name: string; passwordHash: string }> | undefined> {
+    if (!initialPassword) return undefined;
+    const passwordHash = await hashPassword(initialPassword);
+    return Object.fromEntries(emails.map((email) => [email, { name, passwordHash }]));
+}
+
 async function main(): Promise<number> {
-    let flags: { "dry-run": boolean; "allow-unverified": boolean };
+    let flags: { "dry-run": boolean; "allow-unverified": boolean; adopt: boolean; "create-name": string };
     try {
         const { values } = parseArgs({
             options: {
                 "dry-run": { type: "boolean", default: false },
                 "allow-unverified": { type: "boolean", default: false },
+                adopt: { type: "boolean", default: false },
+                "create-name": { type: "string", default: "Super Admin" },
             },
         });
-        flags = { "dry-run": values["dry-run"] === true, "allow-unverified": values["allow-unverified"] === true };
+        flags = {
+            "dry-run": values["dry-run"] === true,
+            "allow-unverified": values["allow-unverified"] === true,
+            adopt: values.adopt === true,
+            "create-name": String(values["create-name"] ?? "Super Admin"),
+        };
     } catch (error) {
         console.error("Argumen CLI tidak dikenal:", error instanceof Error ? error.message : error);
-        console.error("Gunakan: npm run seed:superadmin [-- --dry-run] [-- --allow-unverified]");
+        console.error("Gunakan: npm run seed:superadmin [-- --dry-run] [-- --allow-unverified] [-- --adopt] [-- --create-name Nama]");
         return 1;
     }
 
@@ -76,6 +99,10 @@ async function main(): Promise<number> {
             target,
             dryRun: flags["dry-run"],
             allowUnverified: flags["allow-unverified"],
+            adopt: flags.adopt,
+            // I1 create-when-missing: hash sekali di sini — plaintext password
+            // tidak pernah meninggalkan proses CLI ini.
+            bootstrap: await buildBootstrap(allowlist.emails, flags["create-name"], process.env.SUPERADMIN_INITIAL_PASSWORD),
         });
         console.log(formatSeederReport(report));
         if (flags["allow-unverified"]) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSuperadminEmails } from "../superadmin-allowlist";
+import { parseSuperadminEmails, isReservedSuperadminEmail } from "../superadmin-allowlist";
 import { redactMetadata, REDACTED } from "../audit-metadata";
 
 describe("parseSuperadminEmails", () => {
@@ -148,5 +148,18 @@ describe("redactMetadata (BH6)", () => {
         const input = { password: "hunter2", inner: { token: "t" } };
         redactMetadata(input);
         expect(input).toEqual({ password: "hunter2", inner: { token: "t" } });
+    });
+});
+
+describe("isReservedSuperadminEmail (Single-Admin Lane I3)", () => {
+    it("true hanya untuk email yang persis ada di allowlist (case-insensitive)", () => {
+        const env = "owner@klassa.test,backup@klassa.test";
+        expect(isReservedSuperadminEmail("owner@klassa.test", env)).toBe(true);
+        expect(isReservedSuperadminEmail("  OWNER@KLASSA.TEST  ", env)).toBe(true);
+        expect(isReservedSuperadminEmail("owner@klassa.test ", env)).toBe(true);
+        expect(isReservedSuperadminEmail("x@klassa.test", env)).toBe(false);
+        expect(isReservedSuperadminEmail(undefined, env)).toBe(false);
+        expect(isReservedSuperadminEmail("owner@klassa.test", undefined)).toBe(false);
+        expect(isReservedSuperadminEmail("owner@klassa.test", "")).toBe(false);
     });
 });

@@ -166,6 +166,9 @@ model User {
   createdAt     DateTime
   updatedAt     DateTime
   platformRole  String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
+  // Single-Admin Lane — asal-usul akun: PUBLIC_REGISTER (pintu publik, tak pernah bisa jadi superadmin)
+  // | PLATFORM_SEED (lahir dari seeder). Default backfill user lama = PUBLIC_REGISTER.
+  registrationOrigin String @default("PUBLIC_REGISTER")
   // DEV STAGE 11 Story 5 — kolom plugin admin Better Auth (kanal otorisasi plugin; platformRole tetap kanonik untuk requireSuperAdmin)
   role          String    @default("USER") // kanal plugin Better Auth: "admin" lowercase | "USER"
   banned        Boolean   @default(false)

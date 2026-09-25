@@ -1,4 +1,5 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
+import { generateRandomString } from "better-auth/crypto";
 import { redactMetadata } from "./audit-metadata";
 import type { ParsedAllowlist } from "./superadmin-allowlist";
 
@@ -21,7 +22,16 @@ import type { ParsedAllowlist } from "./superadmin-allowlist";
  */
 
 const AUDIT_ACTION_PROMOTE = "SUPERADMIN_PROMOTE";
+const AUDIT_ACTION_ADOPT = "SUPERADMIN_ADOPT_ORIGIN";
 const TRANSACTION_TIMEOUT_MS = 15_000;
+
+/** Profil bootstrap untuk create-when-missing (Single-Admin Lane I1):
+ * seeder menciptakan akun superadmin — tidak pernah via /register. */
+export interface BootstrapProfile {
+    name: string;
+    /** Hash scrypt Better Auth (hashPassword) — plaintext tak pernah lewat sini. */
+    passwordHash: string;
+}
 
 export class SeedAbortError extends Error {
     constructor(
@@ -48,9 +58,13 @@ export interface SeedPlanEntry {
     emailVerified?: boolean;
     currentPlatformRole?: string;
     hasTeacherProfile?: boolean;
+    /** Single-Admin Lane — null di DB lama dibaca "PUBLIC_REGISTER". */
+    registrationOrigin?: string | null;
     createdAt?: Date;
     /** found && currentPlatformRole !== "ADMIN" — would be promoted on apply. */
     willPromote: boolean;
+    /** !found && bootstrap tersedia — akun akan DIBUAT oleh seeder (I1). */
+    willCreate: boolean;
 }
 
 export interface DriftEntry {
@@ -77,10 +91,16 @@ export interface SeederReport {
     unverified: SeedPlanEntry[];
     /** Plan entries with no matching User row. */
     unknown: SeedPlanEntry[];
+    /** Plan entries yang lahir dari pintu publik — TIDAK bisa dipromosikan (I2). */
+    ineligible: SeedPlanEntry[];
     /** Emails matching >1 case-variant User row — identity ambiguity (RT1). */
     ambiguous: AmbiguousEntry[];
     promoted: number;
     auditEntries: number;
+    /** Akun baru diciptakan seeder (create-when-missing, I1). */
+    created: number;
+    /** Akun yang di-adopsi origin-nya ke PLATFORM_SEED (--adopt). */
+    adopted: number;
 }
 
 interface UserRow {
@@ -89,6 +109,7 @@ interface UserRow {
     email: string;
     emailVerified: boolean;
     platformRole: string;
+    registrationOrigin: string | null;
     createdAt: Date;
 }
 
@@ -110,6 +131,7 @@ async function findCandidatesInsensitive(tx: Tx, email: string): Promise<UserRow
             email: true,
             emailVerified: true,
             platformRole: true,
+            registrationOrigin: true,
             createdAt: true,
         },
     });
@@ -121,10 +143,17 @@ export async function runSuperadminSeed(options: {
     target: { host: string; database: string };
     dryRun?: boolean;
     allowUnverified?: boolean;
+    /** --adopt: pindahkan origin allowlist PUBLIC_REGISTER (tanpa TeacherProfile)
+     * ke PLATFORM_SEED — migrasi sekali jalan akun bootstrap pra-Lane. */
+    adopt?: boolean;
+    /** Profil bootstrap per email ternormalisasi (create-when-missing, I1). */
+    bootstrap?: Record<string, BootstrapProfile>;
 }): Promise<SeederReport> {
     const { prisma, allowlist, target } = options;
     const dryRun = options.dryRun ?? false;
     const allowUnverified = options.allowUnverified ?? false;
+    const adopt = options.adopt ?? false;
+    const bootstrap = options.bootstrap ?? {};
 
     if (allowlist.invalid.length > 0) {
         throw new SeedConfigError(
@@ -151,7 +180,7 @@ export async function runSuperadminSeed(options: {
                         email,
                         candidates: candidates.map((c) => ({ userId: c.id, email: c.email, name: c.name })),
                     });
-                    plan.push({ email, found: false, willPromote: false });
+                    plan.push({ email, found: false, willPromote: false, willCreate: false });
                     continue;
                 }
                 const user = candidates[0] ?? null;
@@ -166,8 +195,10 @@ export async function runSuperadminSeed(options: {
                     emailVerified: user?.emailVerified,
                     currentPlatformRole: user?.platformRole,
                     hasTeacherProfile: teacherProfile !== null,
+                    registrationOrigin: user?.registrationOrigin,
                     createdAt: user?.createdAt,
                     willPromote: user !== null && user.platformRole !== "ADMIN",
+                    willCreate: user === null && Boolean(bootstrap[email]),
                 });
             }
 
@@ -186,8 +217,11 @@ export async function runSuperadminSeed(options: {
                     createdAt: u.createdAt,
                 }));
 
-            const unknown = plan.filter((p) => !p.found);
+            const unknown = plan.filter((p) => !p.found && !p.willCreate);
             const unverified = plan.filter((p) => p.found && p.emailVerified === false);
+            // Single-Admin Lane I2 — akun pintu publik tak bisa dipromosikan
+            // (kecuali di-adopt eksplisit via --adopt).
+            const ineligible = adopt ? [] : plan.filter((p) => p.found && (p.registrationOrigin ?? "PUBLIC_REGISTER") !== "PLATFORM_SEED");
 
             const baseReport: SeederReport = {
                 target,
@@ -197,9 +231,12 @@ export async function runSuperadminSeed(options: {
                 drift,
                 unverified,
                 unknown,
+                ineligible,
                 ambiguous,
                 promoted: 0,
                 auditEntries: 0,
+                created: 0,
+                adopted: 0,
             };
 
             // --- Gates (before ANY write; zero rows change on abort).
@@ -213,7 +250,21 @@ export async function runSuperadminSeed(options: {
             }
             if (unknown.length > 0) {
                 throw new SeedAbortError(
-                    `Email tidak dikenal (tanpa row User): ${unknown.map((u) => u.email).join(", ")} — all-or-nothing, nol row diubah.`,
+                    `Email tidak dikenal (tanpa row User): ${unknown.map((u) => u.email).join(", ")} — sediakan bootstrap (SUPERADMIN_INITIAL_PASSWORD + --create-name) agar seeder menciptakan akunnya (I1), atau daftarkan via jalur internal. All-or-nothing, nol row diubah.`,
+                    baseReport
+                );
+            }
+            if (ineligible.length > 0) {
+                throw new SeedAbortError(
+                    `Akun lahir dari pintu publik (PUBLIC_REGISTER) — TIDAK bisa dipromosikan (Single-Admin Lane I2): ${ineligible.map((u) => u.email).join(", ")} — gunakan --adopt hanya untuk akun bootstrap yang belum ber-TeacherProfile.`,
+                    baseReport
+                );
+            }
+            // I2 (keras) — guru tak pernah naik, apa pun origin/flag-nya.
+            const teacherLane = plan.filter((p) => p.found && p.hasTeacherProfile);
+            if (teacherLane.length > 0) {
+                throw new SeedAbortError(
+                    `Akun ber-TeacherProfile (jalur guru) dilarang jadi superadmin (I2): ${teacherLane.map((u) => u.email).join(", ")} — nol row diubah.`,
                     baseReport
                 );
             }
@@ -235,8 +286,74 @@ export async function runSuperadminSeed(options: {
             // ditolak plugin. Update `role` idempoten untuk SEMUA allowlisted ADMIN.
             let promoted = 0;
             let auditEntries = 0;
+            let created = 0;
+            let adopted = 0;
             for (const entry of plan) {
+                // I1 — create-when-missing: akun lahir dari seeder, bukan register.
+                if (entry.willCreate && bootstrap[entry.email]) {
+                    const bp = bootstrap[entry.email];
+                    const newUserId = generateRandomString(32);
+                    const now = new Date();
+                    await tx.user.create({
+                        data: {
+                            id: newUserId,
+                            name: bp.name,
+                            email: entry.email,
+                            emailVerified: true,
+                            platformRole: "ADMIN",
+                            role: "admin",
+                            registrationOrigin: "PLATFORM_SEED",
+                            createdAt: now,
+                            updatedAt: now,
+                        },
+                    });
+                    // Account kredensial Better Auth (providerId "credential") — tanpa ini sign-in email tak bisa verifikasi password.
+                    await tx.account.create({
+                        data: {
+                            id: generateRandomString(32),
+                            accountId: entry.email,
+                            providerId: "credential",
+                            userId: newUserId,
+                            password: bp.passwordHash,
+                            createdAt: now,
+                            updatedAt: now,
+                        },
+                    });
+                    created += 1;
+                    await tx.auditLog.create({
+                        data: {
+                            actorType: "SYSTEM",
+                            action: AUDIT_ACTION_PROMOTE,
+                            targetType: "USER",
+                            targetId: newUserId,
+                            metadata: redactMetadata({
+                                email: entry.email,
+                                source: "SEEDER_CREATE",
+                            }) as Prisma.InputJsonValue,
+                        },
+                    });
+                    auditEntries += 1;
+                    continue;
+                }
                 if (entry.userId === undefined) continue;
+                // --adopt: pindahkan origin akun publik bersih ke PLATFORM_SEED (sekali jalan, ter-audit).
+                if (adopt && (entry.registrationOrigin ?? "PUBLIC_REGISTER") !== "PLATFORM_SEED") {
+                    await tx.user.update({
+                        where: { id: entry.userId },
+                        data: { registrationOrigin: "PLATFORM_SEED" },
+                    });
+                    adopted += 1;
+                    await tx.auditLog.create({
+                        data: {
+                            actorType: "SYSTEM",
+                            action: AUDIT_ACTION_ADOPT,
+                            targetType: "USER",
+                            targetId: entry.userId,
+                            metadata: redactMetadata({ email: entry.email, from: "PUBLIC_REGISTER" }) as Prisma.InputJsonValue,
+                        },
+                    });
+                    auditEntries += 1;
+                }
                 const wasAlreadyAdmin = !entry.willPromote;
                 await tx.user.update({
                     where: { id: entry.userId },
@@ -260,7 +377,7 @@ export async function runSuperadminSeed(options: {
                 auditEntries += 1;
             }
 
-            return { ...baseReport, promoted, auditEntries };
+            return { ...baseReport, promoted, auditEntries, created, adopted };
         },
         { timeout: TRANSACTION_TIMEOUT_MS }
     );
@@ -275,8 +392,9 @@ export function formatSeederReport(report: SeederReport): string {
     lines.push("Rencana (allowlist):");
     for (const p of report.plan) {
         const flags = [
-            p.found ? `role=${p.currentPlatformRole}` : "TIDAK DITEMUKAN",
+            p.found ? `role=${p.currentPlatformRole}` : (p.willCreate ? "AKAN-DIBUAT-SEEDER" : "TIDAK DITEMUKAN"),
             p.found ? `verified=${p.emailVerified}` : null,
+            p.found ? `origin=${p.registrationOrigin ?? "PUBLIC_REGISTER"}` : null,
             p.found && p.hasTeacherProfile ? "TeacherProfile=ada" : null,
             p.willPromote ? "AKAN-DIPROMOSI" : "sudah-ADMIN",
         ].filter(Boolean);
@@ -296,6 +414,13 @@ export function formatSeederReport(report: SeederReport): string {
             lines.push(`  ! ${d.email} (${d.name}, ${d.userId}, sejak ${d.createdAt.toISOString()})`);
         }
     }
+    if (report.ineligible.length > 0) {
+        lines.push("");
+        lines.push("AKAN-DITOLAK — akun pintu publik (I2), gunakan --adopt bila akun bootstrap bersih:");
+        for (const p of report.ineligible) {
+            lines.push(`  ! ${p.email} (origin=${p.registrationOrigin ?? "PUBLIC_REGISTER"})`);
+        }
+    }
     if (report.unverified.length > 0) {
         lines.push("");
         lines.push(
@@ -305,7 +430,7 @@ export function formatSeederReport(report: SeederReport): string {
         );
     }
     lines.push("");
-    lines.push(`Hasil: promoted=${report.promoted}, auditEntries=${report.auditEntries}`);
+    lines.push(`Hasil: promoted=${report.promoted}, created=${report.created}, adopted=${report.adopted}, auditEntries=${report.auditEntries}`);
     return lines.join("\n");
 }
 

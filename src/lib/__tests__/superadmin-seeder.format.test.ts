@@ -37,9 +37,12 @@ describe("formatSeederReport", () => {
         drift: [],
         unverified: [],
         unknown: [],
+        ineligible: [],
         ambiguous: [],
         promoted: 0,
         auditEntries: 0,
+        created: 0,
+        adopted: 0,
     };
 
     it("always leads with the DB target identity (blast-radius)", () => {
@@ -64,8 +67,9 @@ describe("formatSeederReport", () => {
                     currentPlatformRole: "USER",
                     hasTeacherProfile: true,
                     willPromote: true,
+                    willCreate: false,
                 },
-                { email: "x@y.z", found: false, willPromote: false },
+                { email: "x@y.z", found: false, willPromote: false, willCreate: false },
             ],
         });
         expect(out).toContain("a@b.c (Guru A)");

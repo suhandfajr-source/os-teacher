@@ -3,8 +3,14 @@ import { Topbar } from "@/components/layout/Topbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { redirect } from "next/navigation";
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
+import { isCurrentPlatformAdmin } from "@/lib/superadmin";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // Single-Admin Lane I4 — superadmin tidak pernah masuk jalur guru.
+  if (await isCurrentPlatformAdmin()) {
+    redirect("/admin");
+  }
+
   let authContext = null;
   try {
     authContext = await getRscAuthContext();

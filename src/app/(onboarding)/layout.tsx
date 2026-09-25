@@ -1,7 +1,13 @@
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
+import { isCurrentPlatformAdmin } from "@/lib/superadmin";
 import { redirect } from "next/navigation";
 
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
+  // Single-Admin Lane I4 — superadmin tidak pernah disodori wizard guru.
+  if (await isCurrentPlatformAdmin()) {
+    redirect("/admin");
+  }
+
   let authContext = null;
 
   try {

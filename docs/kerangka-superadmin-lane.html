@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kerangka: Jalur Terpisah Superadmin — KLASSA</title>
+<style>
+  :root {
+    --teal: #0F766E; --teal-dark: #115E59; --teal-50: #f0fdfa;
+    --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
+    --slate-200: #e2e8f0; --slate-50: #f8fafc;
+    --amber: #d97706; --amber-50: #fffbeb; --rose: #e11d48; --emerald: #059669;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--slate-50); color: var(--slate-900); line-height: 1.65; padding-bottom: 4rem; }
+  .hero { background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%); color: #fff; padding: 2rem 1.25rem 1.6rem; }
+  .hero-inner { max-width: 780px; margin: 0 auto; }
+  .hero h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+  .hero p { font-size: .84rem; color: #ccfbf1; margin-top: .3rem; }
+  .draft { display: inline-block; background: #fbbf24; color: #7c2d12; font-size: .68rem; font-weight: 800; letter-spacing: .06em; padding: .2rem .6rem; border-radius: 99px; margin-bottom: .5rem; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 1.25rem; }
+  section.card { background: #fff; border: 1px solid var(--slate-200); border-radius: 1rem; margin-top: 1.1rem; padding: 1.15rem 1.3rem; }
+  section.card > h2 { font-size: 1rem; font-weight: 800; color: var(--teal-dark); border-bottom: 1px solid var(--slate-50); padding-bottom: .5rem; margin-bottom: .75rem; }
+  h3 { font-size: .85rem; font-weight: 800; margin: .9rem 0 .35rem; color: var(--slate-700); }
+  p, li { font-size: .88rem; color: var(--slate-700); }
+  ul, ol { padding-left: 1.3rem; margin: .3rem 0 .6rem; }
+  li { margin: .22rem 0; }
+  strong { color: var(--slate-900); }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .8em; background: var(--slate-50); border: 1px solid var(--slate-200); padding: .05rem .35rem; border-radius: .35rem; color: var(--teal-dark); }
+  pre { background: #0f172a; color: #e2e8f0; border-radius: .7rem; padding: .85rem 1rem; overflow-x: auto; margin: .5rem 0 .8rem; }
+  pre code { background: none; border: none; color: #a5f3fc; font-size: .78rem; line-height: 1.55; }
+  table { width: 100%; border-collapse: collapse; margin: .5rem 0 .8rem; font-size: .82rem; }
+  th { text-align: left; background: var(--teal-50); color: var(--teal-dark); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+  th, td { border: 1px solid var(--slate-200); padding: .45rem .6rem; vertical-align: top; }
+  td { color: var(--slate-700); }
+  .flow { background: var(--slate-50); border-left: 3px solid var(--teal); border-radius: 0 .6rem .6rem 0; padding: .6rem .9rem; margin: .45rem 0 .7rem; }
+  .flow .lbl { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--teal); display: block; margin-bottom: .15rem; }
+  .danger { color: var(--rose); font-weight: 700; }
+  .tag { font-size: .62rem; font-weight: 800; padding: .12rem .5rem; border-radius: 99px; white-space: nowrap; }
+  .tag-c { background: #ffe4e6; color: var(--rose); } .tag-i { background: #dcfce7; color: var(--emerald); }
+  label.confirm { display: flex; align-items: flex-start; gap: .6rem; padding: .5rem .65rem; border-radius: .6rem; cursor: pointer; font-size: .88rem; }
+  label.confirm:hover { background: var(--slate-50); }
+  label.confirm input { margin-top: .3rem; accent-color: var(--teal); width: 1rem; height: 1rem; flex-shrink: 0; }
+  label.confirm.checked .txt { text-decoration: line-through; color: var(--slate-500); }
+  .note { font-size: .76rem; color: var(--slate-500); margin-top: .4rem; }
+  footer { text-align: center; font-size: .72rem; color: var(--slate-500); margin-top: 2rem; }
+  @media print { body { background: #fff; } section.card { break-inside: avoid; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <span class="draft">DRAFT — menunggu persetujuan</span>
+    <h1>🔐 Kerangka: Jalur Terpisah Superadmin (Single-Admin Lane)</h1>
+    <p>Menutup 4 celah: guru tak bisa jadi superadmin, superadmin tak lahir dari register, email reserved, lane terpisah penuh. · 2026-09-24</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="card">
+    <h2>1. Alur Sekarang (dan kenapa harus ganti)</h2>
+    <div class="flow"><span class="lbl">Register guru</span>
+      <code>/register</code> (publik) → sign-up Better Auth → <code>User</code> biasa (role <code>user</code>) → login → <code>/dashboard</code> → wizard onboarding → <code>TeacherProfile</code> + Sekolah + Kelas → persetujuan superadmin.
+    </div>
+    <div class="flow"><span class="lbl">Superadmin</span>
+      <code>.env: SUPERADMIN_EMAILS</code> → <span class="danger">daftar dulu via pintu publik yang SAMA dengan guru</span> → set emailVerified manual → <code>npm run seed:superadmin</code> → promote <code>platformRole ADMIN</code>.
+    </div>
+    <table>
+      <tr><th>#</th><th>Celah</th><th>Dampak</th></tr>
+      <tr><td>C1</td><td>Seeder tidak peduli akun itu guru — akun <strong>ber-TeacherProfile bisa dipromosikan</strong></td><td>Guru bisa jadi superadmin <span class="tag tag-c">dilarang</span></td></tr>
+      <tr><td>C2</td><td>Akun superadmin <strong>lahir dari pintu publik</strong> (<code>/register</code>)</td><td>Tidak ada pemisahan identitas sejak lahir</td></tr>
+      <tr><td>C3</td><td>Email allowlist <strong>tidak di-reserve</strong> di <code>/register</code></td><td>Bisa disquat orang lain</td></tr>
+      <tr><td>C4</td><td>Superadmin <strong>bisa ikut onboarding guru</strong> (hibrida)</td><td>Batas lane kabur</td></tr>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>2. Invariant Baru</h2>
+    <ul>
+      <li><strong>I1 — Lahir dari seeder saja.</strong> Superadmin hanya diciptakan lewat <code>SUPERADMIN_EMAILS</code> + seeder. Tidak pernah dari <code>/register</code>.</li>
+      <li><strong>I2 — Guru tidak pernah naik.</strong> Akun <code>PUBLIC_REGISTER</code> <strong>tidak bisa dipromosikan</strong> — seeder abort, nol baris berubah (termasuk akun guru maupun akun publik tanpa profil).</li>
+      <li><strong>I3 — Email reserved.</strong> Email di <code>SUPERADMIN_EMAILS</code> ditolak di <code>/register</code> &amp; API signup (pesan jelas, tidak membocorkan daftar).</li>
+      <li><strong>I4 — Lane terpisah penuh.</strong> Superadmin: login → <code>/admin</code>, tidak bisa masuk jalur guru. Guru: tidak bisa <code>/admin</code> (sudah ada, dipertahankan).</li>
+      <li><strong>I5 — Satu superadmin: kamu.</strong> Allowlist = tepat 1 email (<code>suhandfajr5@gmail.com</code>). Kode mendukung multi untuk DR, tidak dipakai.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>3. Desain Teknis</h2>
+
+    <h3>3.1 Skema (migrasi kecil)</h3>
+    <pre><code>model User {
+  registrationOrigin RegistrationOrigin?  // PUBLIC_REGISTER | PLATFORM_SEED
+}
+enum RegistrationOrigin { PUBLIC_REGISTER PLATFORM_SEED }</code></pre>
+    <p>User lama (semua) → <code>PUBLIC_REGISTER</code> via migrasi. Seeder menulis <code>PLATFORM_SEED</code> untuk akun yang ia ciptakan/adopsi.</p>
+
+    <h3>3.2 Seeder (<code>superadmin-seeder.ts</code> + CLI)</h3>
+    <ol>
+      <li><strong>Create-when-missing</strong>: email allowlist tak ditemukan → <strong>seeder membuat akunnya</strong> — password dari <code>SUPERADMIN_INITIAL_PASSWORD</code> atau prompt interaktif (tidak pernah di-log), hash via helper Better Auth; <code>emailVerified: true</code>, <code>PLATFORM_SEED</code>, promote — <strong>satu transaksi + audit</strong>.</li>
+      <li><strong>Promote-existing hanya untuk <code>PLATFORM_SEED</code></strong>: akun <code>PUBLIC_REGISTER</code> → <code>SeedAbortError</code> (nol row). Menutup C1+C2.</li>
+      <li>Drift report ADMIN-di-luar-allowlist tetap (BH7, tidak auto-demosi).</li>
+    </ol>
+
+    <h3>3.3 Register / API signup</h3>
+    <p>Validasi di server action register <strong>dan</strong> hook <code>user.create.before</code> Better Auth: email ∈ allowlist → tolak. Menutup C3.</p>
+
+    <h3>3.4 Routing &amp; guard pasca-login</h3>
+    <ul>
+      <li>Redirect pasca-login: <code>platformRole = ADMIN</code> → <code>/admin</code>.</li>
+      <li>Guard jalur guru (onboarding, <code>/kelas/**</code>): tolak <code>ADMIN</code> → lempar <code>/admin</code>. Menutup C4.</li>
+      <li><code>/admin</code> tetap <code>requireSuperAdmin</code> (tanpa perubahan).</li>
+    </ul>
+
+    <h3>3.5 Migrasi akunmu (sekali jalan)</h3>
+    <p>Akun <code>suhandfajr5@gmail.com</code> hari ini = <code>PUBLIC_REGISTER</code>. Solusi: flag seeder <strong><code>--adopt</code></strong> — set <code>origin = PLATFORM_SEED</code> hanya bila akun <strong>belum punya TeacherProfile</strong> → transaksi + audit. Setelah adopsi, I2 mengunci permanen.</p>
+  </section>
+
+  <section class="card">
+    <h2>4. Test Matrix (int)</h2>
+    <table>
+      <tr><th>Skenario</th><th>Ekspektasi</th></tr>
+      <tr><td>Register dengan email allowlist</td><td>Ditolak (action + hook)</td></tr>
+      <tr><td>Seeder create-when-missing</td><td>Akun jadi, <code>sign-in</code> sukses dengan password bootstrap</td></tr>
+      <tr><td>Seeder + akun <code>PUBLIC_REGISTER</code></td><td>Abort, nol row, lapor</td></tr>
+      <tr><td>Seeder + akun ber-TeacherProfile</td><td>Abort, nol row</td></tr>
+      <tr><td><code>--adopt</code> akun bersih</td><td>origin berubah, ter-audit</td></tr>
+      <tr><td><code>--adopt</code> akun guru</td><td>Abort</td></tr>
+      <tr><td>Login ADMIN → redirect</td><td><code>/admin</code></td></tr>
+      <tr><td>ADMIN buka onboarding</td><td>Ditolak → <code>/admin</code></td></tr>
+      <tr><td>Guru buka <code>/admin</code></td><td>Ditolak (regresi story 5 hijau)</td></tr>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>5. Out of Scope</h2>
+    <p>Multi-superadmin · undang admin · UI kelola allowlist · 2FA.</p>
+  </section>
+
+  <section class="card">
+    <h2>6. Urutan Implementasi</h2>
+    <ol>
+      <li>Migrasi skema <code>registrationOrigin</code> (default user lama → <code>PUBLIC_REGISTER</code>)</li>
+      <li>Seeder <code>--adopt</code> → jalankan untuk akunmu</li>
+      <li>Seeder create-when-missing + gate origin (I1+I2)</li>
+      <li>Tolak email reserved di register/signup (I3)</li>
+      <li>Redirect &amp; guard lane (I4)</li>
+      <li>Tests + update <code>docs/CHECKLIST-FITUR.md</code> (bagian Superadmin)</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>✅ Konfirmasi Sebelum Eksekusi</h2>
+    <label class="confirm" id="cf1"><input type="checkbox" onchange="tog('cf1',this)"><span class="txt">Setuju password superadmin = yang sekarang (tidak diubah)?</span></label>
+    <label class="confirm" id="cf2"><input type="checkbox" onchange="tog('cf2',this)"><span class="txt"><code>--adopt</code> untuk akun <code>suhandfajr5@gmail.com</code> (belum ber-TeacherProfile, aman)?</span></label>
+    <label class="confirm" id="cf3"><input type="checkbox" onchange="tog('cf3',this)"><span class="txt">Urutan 1–6 di atas?</span></label>
+    <p class="note">Centangan tersimpan di browser (localStorage). Sumber: docs/KERANGKA-superadmin-lane.md</p>
+  </section>
+
+  <footer>KLASSA • Kerangka Single-Admin Lane — buka via docs/kerangka-superadmin-lane.html</footer>
+</div>
+
+<script>
+const KEY = "klassa-kerangka-sa-v1";
+let st = JSON.parse(localStorage.getItem(KEY) || "{}");
+function tog(id, el) {
+  st[id] = el.checked; localStorage.setItem(KEY, JSON.stringify(st));
+  el.closest("label").classList.toggle("checked", el.checked);
+}
+["cf1","cf2","cf3"].forEach(id => {
+  const el = document.querySelector("#" + id + " input");
+  if (st[id]) { el.checked = true; document.getElementById(id).classList.add("checked"); }
+});
+</script>
+</body>
+</html>

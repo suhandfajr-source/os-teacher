@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/auth";
-import { runSuperadminSeed, SeedConfigError } from "../superadmin-seeder";
+import { runSuperadminSeed, SeedConfigError, SeedAbortError } from "../superadmin-seeder";
 import { parseSuperadminEmails } from "../superadmin-allowlist";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 
 /**
  * Integration tests against the real DATABASE_URL (Story 1c, BH12).
@@ -24,7 +25,7 @@ interface TestUser {
     name: string;
 }
 
-async function createTestUser(prefix: string, extra?: { platformRole?: string; emailVerified?: boolean; emailOverride?: string }): Promise<TestUser> {
+async function createTestUser(prefix: string, extra?: { platformRole?: string; emailVerified?: boolean; emailOverride?: string; registrationOrigin?: string }): Promise<TestUser> {
     seq += 1;
     const email = extra?.emailOverride ?? `${prefix}-${Date.now()}-${seq}@test.local`;
     const user = await prisma.user.create({
@@ -34,6 +35,9 @@ async function createTestUser(prefix: string, extra?: { platformRole?: string; e
             email,
             emailVerified: extra?.emailVerified ?? false,
             platformRole: extra?.platformRole ?? "USER",
+            // Single-Admin Lane: default fixture = akun lahir-seeder; tes gate
+            // I2 eksplisit membuat PUBLIC_REGISTER.
+            registrationOrigin: extra?.registrationOrigin ?? "PLATFORM_SEED",
             createdAt: new Date(),
             updatedAt: new Date(),
         },
@@ -272,8 +276,17 @@ describe("Story 1c — superadmin seeder core (real DB)", () => {
         await prisma.teacherProfile.create({ data: { userId: user.id } });
         try {
             const parsed = parseSuperadminEmails(user.email);
-            const report = await runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, dryRun: true, allowUnverified: true });
-            expect(report.plan[0].hasTeacherProfile).toBe(true);
+            // Single-Admin Lane I2: jalur guru kini abort — sinyal akun tetap
+            // terbit di laporan abort (dry-run, nol row berubah).
+            let caught: unknown;
+            try {
+                await runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, dryRun: true, allowUnverified: true });
+            } catch (e) {
+                caught = e;
+            }
+            expect(caught).toBeInstanceOf(SeedAbortError);
+            expect((caught as Error).message).toMatch(/TeacherProfile/);
+            expect((caught as SeedAbortError).report.plan[0].hasTeacherProfile).toBe(true);
         } finally {
             await prisma.teacherProfile.deleteMany({ where: { userId: user.id } });
         }
@@ -331,5 +344,71 @@ describe("Story 1c — seeder core guards (no DB needed)", () => {
         await expect(
             runSuperadminSeed({ prisma: {} as never, allowlist: parsed, target: TARGET })
         ).rejects.toBeInstanceOf(SeedConfigError);
+    });
+});
+
+describe("Single-Admin Lane — I1/I2 (registrationOrigin)", () => {
+    it("I2: akun PUBLIC_REGISTER di allowlist → abort sebelum tulis, nol row berubah", async () => {
+        if (!dbAvailable) { expect(true).toBe(true); return; }
+        const user = await createTestUser("lane-pub", { emailVerified: true, registrationOrigin: "PUBLIC_REGISTER" });
+        const parsed = parseSuperadminEmails(user.email);
+        await expect(
+            runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, allowUnverified: true })
+        ).rejects.toThrow(/PUBLIC_REGISTER/);
+        expect((await prisma.user.findUnique({ where: { id: user.id } }))?.platformRole).toBe("USER");
+        expect(await auditCountFor(user.id)).toBe(0);
+    });
+
+    it("I2 keras: akun ber-TeacherProfile ditolak bahkan dengan --adopt", async () => {
+        if (!dbAvailable) { expect(true).toBe(true); return; }
+        const user = await createTestUser("lane-guru", { emailVerified: true, registrationOrigin: "PLATFORM_SEED" });
+        await prisma.teacherProfile.create({ data: { userId: user.id, onboardingCompleted: false } });
+        const parsed = parseSuperadminEmails(user.email);
+        await expect(
+            runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, allowUnverified: true, adopt: true })
+        ).rejects.toThrow(/TeacherProfile/);
+        expect((await prisma.user.findUnique({ where: { id: user.id } }))?.platformRole).toBe("USER");
+    });
+
+    it("--adopt: akun publik bersih → origin pindah ke PLATFORM_SEED + audit; idempoten", async () => {
+        if (!dbAvailable) { expect(true).toBe(true); return; }
+        const user = await createTestUser("lane-adopt", { emailVerified: true, registrationOrigin: "PUBLIC_REGISTER" });
+        const parsed = parseSuperadminEmails(user.email);
+        const r1 = await runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, allowUnverified: true, adopt: true });
+        expect(r1.adopted).toBe(1);
+        expect(r1.promoted).toBe(1);
+        const db1 = await prisma.user.findUnique({ where: { id: user.id }, select: { registrationOrigin: true, platformRole: true } });
+        expect(db1).toMatchObject({ registrationOrigin: "PLATFORM_SEED", platformRole: "ADMIN" });
+        expect(await auditCountFor(user.id, "SUPERADMIN_ADOPT_ORIGIN")).toBe(1);
+        const r2 = await runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, allowUnverified: true, adopt: true });
+        expect(r2.adopted).toBe(0);
+        expect(r2.promoted).toBe(0);
+    });
+
+    it("I1 create-when-missing: seeder menciptakan akun + account credential (login-ready)", async () => {
+        if (!dbAvailable) { expect(true).toBe(true); return; }
+        const email = `lane-create-${Date.now()}-${++seq}@test.local`;
+        const passwordHash = await hashPassword("BootstrapPass123!");
+        const parsed = parseSuperadminEmails(email);
+        const report = await runSuperadminSeed({
+            prisma, allowlist: parsed, target: TARGET, allowUnverified: true,
+            bootstrap: { [email]: { name: "Lane Seed", passwordHash } },
+        });
+        expect(report.created).toBe(1);
+        const user = await prisma.user.findUnique({ where: { email }, select: { id: true, platformRole: true, role: true, registrationOrigin: true, emailVerified: true } });
+        expect(user).toMatchObject({ platformRole: "ADMIN", role: "admin", registrationOrigin: "PLATFORM_SEED", emailVerified: true });
+        const account = await prisma.account.findFirst({ where: { userId: user!.id, providerId: "credential" } });
+        expect(account?.password).toBeTruthy();
+        expect(await verifyPassword({ password: "BootstrapPass123!", hash: account!.password! })).toBe(true);
+        expect(await verifyPassword({ password: "WrongPass456!", hash: account!.password! })).toBe(false);
+        createdUserIds.push(user!.id);
+    });
+
+    it("I1 tanpa bootstrap: unknown email tetap abort (bukan create diam-diam)", async () => {
+        if (!dbAvailable) { expect(true).toBe(true); return; }
+        const parsed = parseSuperadminEmails(`nobody-lane-${Date.now()}@test.local`);
+        await expect(
+            runSuperadminSeed({ prisma, allowlist: parsed, target: TARGET, allowUnverified: true })
+        ).rejects.toBeInstanceOf(SeedAbortError);
     });
 });
