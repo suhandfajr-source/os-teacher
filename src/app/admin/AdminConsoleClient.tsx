@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
   Building2,
@@ -15,6 +15,7 @@ import {
   Ban,
   CheckCircle2,
   XCircle,
+  X,
   Trash2,
   ArrowRightLeft,
   Edit3,
@@ -134,6 +135,31 @@ interface AdminConsoleClientProps {
   initialClasses: ClassItem[];
 }
 
+function sortItemsByRelevance<T>(items: T[], query: string, extractKey: (item: T) => string): T[] {
+  if (!query.trim()) return items;
+  const q = query.trim().toLowerCase();
+  return [...items].sort((a, b) => {
+    const keyA = extractKey(a).toLowerCase();
+    const keyB = extractKey(b).toLowerCase();
+    const exactA = keyA === q;
+    const exactB = keyB === q;
+    if (exactA && !exactB) return -1;
+    if (!exactA && exactB) return 1;
+    const startsA = keyA.startsWith(q);
+    const startsB = keyB.startsWith(q);
+    if (startsA && !startsB) return -1;
+    if (!startsA && startsB) return 1;
+    const idxA = keyA.indexOf(q);
+    const idxB = keyB.indexOf(q);
+    if (idxA !== -1 && idxB !== -1 && idxA !== idxB) {
+      return idxA - idxB;
+    }
+    if (idxA !== -1 && idxB === -1) return -1;
+    if (idxA === -1 && idxB !== -1) return 1;
+    return keyA.localeCompare(keyB);
+  });
+}
+
 export function AdminConsoleClient({
   stats,
   allSchools,
@@ -178,12 +204,29 @@ export function AdminConsoleClient({
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [modalInput, setModalInput] = useState<{ [key: string]: string }>({});
 
+  // Relevance Sorting Helper
+  const sortedSchools = useMemo(() => {
+    return sortItemsByRelevance(schools, schoolSearch, (s) => `${s.name} ${s.npsn || ""} ${s.city || ""}`);
+  }, [schools, schoolSearch]);
+
+  const sortedTeachers = useMemo(() => {
+    return sortItemsByRelevance(teachers, teacherSearch, (t) => `${t.name} ${t.email}`);
+  }, [teachers, teacherSearch]);
+
+  const sortedStudents = useMemo(() => {
+    return sortItemsByRelevance(students, studentSearch, (s) => `${s.fullName} ${s.nis || ""} ${s.id}`);
+  }, [students, studentSearch]);
+
+  const sortedClasses = useMemo(() => {
+    return sortItemsByRelevance(classes, classSearch, (c) => `${c.name} ${c.gradeLevel || ""} ${c.school.name}`);
+  }, [classes, classSearch]);
+
   // Trigger Refetches
-  const reloadSchools = () => {
+  const reloadSchools = (customQuery?: string, customStatus?: "ALL" | "ACTIVE" | "INACTIVE") => {
     startTransition(async () => {
       const res = await listSchoolsAdminAction({
-        query: schoolSearch,
-        statusFilter: schoolStatusFilter,
+        query: customQuery !== undefined ? customQuery : schoolSearch,
+        statusFilter: customStatus !== undefined ? customStatus : schoolStatusFilter,
         page: 1,
         pageSize: 50,
       });
@@ -191,12 +234,12 @@ export function AdminConsoleClient({
     });
   };
 
-  const reloadTeachers = () => {
+  const reloadTeachers = (customQuery?: string, customStatus?: "ALL" | "ACTIVE" | "BANNED", customSchoolId?: string) => {
     startTransition(async () => {
       const res = await listTeachersAdminAction({
-        query: teacherSearch,
-        schoolId: selectedSchoolFilter,
-        statusFilter: teacherStatusFilter,
+        query: customQuery !== undefined ? customQuery : teacherSearch,
+        schoolId: customSchoolId !== undefined ? customSchoolId : selectedSchoolFilter,
+        statusFilter: customStatus !== undefined ? customStatus : teacherStatusFilter,
         page: 1,
         pageSize: 50,
       });
@@ -204,12 +247,12 @@ export function AdminConsoleClient({
     });
   };
 
-  const reloadStudents = () => {
+  const reloadStudents = (customQuery?: string, customStatus?: "ALL" | "ACTIVE" | "PENDING" | "REJECTED", customSchoolId?: string) => {
     startTransition(async () => {
       const res = await listStudentsAdminAction({
-        query: studentSearch,
-        schoolId: selectedSchoolFilter,
-        accountStatus: studentStatusFilter,
+        query: customQuery !== undefined ? customQuery : studentSearch,
+        schoolId: customSchoolId !== undefined ? customSchoolId : selectedSchoolFilter,
+        accountStatus: customStatus !== undefined ? customStatus : studentStatusFilter,
         page: 1,
         pageSize: 50,
       });
@@ -217,18 +260,56 @@ export function AdminConsoleClient({
     });
   };
 
-  const reloadClasses = () => {
+  const reloadClasses = (customQuery?: string, customGrade?: string, customSchoolId?: string) => {
     startTransition(async () => {
       const res = await listClassesAdminAction({
-        query: classSearch,
-        schoolId: selectedSchoolFilter,
-        gradeLevel: classGradeFilter,
+        query: customQuery !== undefined ? customQuery : classSearch,
+        schoolId: customSchoolId !== undefined ? customSchoolId : selectedSchoolFilter,
+        gradeLevel: customGrade !== undefined ? customGrade : classGradeFilter,
         page: 1,
         pageSize: 50,
       });
       if (res.success) setClasses(res.data as ClassItem[]);
     });
   };
+
+  // Debounced live search effects (250ms)
+  const isMountedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+    const timer = setTimeout(() => {
+      reloadSchools();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [schoolSearch, schoolStatusFilter]);
+
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+    const timer = setTimeout(() => {
+      reloadTeachers();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [teacherSearch, teacherStatusFilter, selectedSchoolFilter]);
+
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+    const timer = setTimeout(() => {
+      reloadStudents();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [studentSearch, studentStatusFilter, selectedSchoolFilter]);
+
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      return;
+    }
+    const timer = setTimeout(() => {
+      reloadClasses();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [classSearch, classGradeFilter, selectedSchoolFilter]);
 
   // Nav items definition
   const navTabs = [
@@ -568,7 +649,7 @@ export function AdminConsoleClient({
                   size="sm"
                   variant="outline"
                   className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs gap-1.5"
-                  onClick={reloadSchools}
+                  onClick={() => reloadSchools()}
                   disabled={isPending}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
@@ -585,24 +666,29 @@ export function AdminConsoleClient({
                   placeholder="Cari sekolah (nama / NPSN / kota)..."
                   value={schoolSearch}
                   onChange={(e) => setSchoolSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && reloadSchools()}
-                  className="pl-9 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
+                  className="pl-9 pr-8 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
                 />
+                {schoolSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setSchoolSearch("")}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <select
                 value={schoolStatusFilter}
-                onChange={(e) => {
-                  setSchoolStatusFilter(e.target.value as any);
-                  setTimeout(reloadSchools, 50);
-                }}
+                onChange={(e) => setSchoolStatusFilter(e.target.value as any)}
                 className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-3 py-2 outline-none"
               >
                 <option value="ALL">Semua Status</option>
                 <option value="ACTIVE">Hanya Aktif</option>
                 <option value="INACTIVE">Hanya Nonaktif</option>
               </select>
-              <Button size="sm" onClick={reloadSchools} disabled={isPending} className="bg-teal-600 hover:bg-teal-500 text-white text-xs">
-                Cari
+              <Button size="sm" onClick={() => reloadSchools()} disabled={isPending} className="bg-teal-600 hover:bg-teal-500 text-white text-xs">
+                {isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Cari"}
               </Button>
             </div>
           </CardHeader>
@@ -620,17 +706,17 @@ export function AdminConsoleClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {schools.length === 0 ? (
+                  {sortedSchools.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-500 text-xs">
                         Tidak ada sekolah yang sesuai kriteria pencarian.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    schools.map((s) => {
+                    sortedSchools.map((s) => {
                       const isDeactivated = !!s.deactivatedAt;
                       return (
-                        <TableRow key={s.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-850/50">
+                        <TableRow key={s.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors">
                           <TableCell>
                             <div className="font-medium text-slate-900 dark:text-slate-100 text-sm">{s.name}</div>
                             <div className="text-[11px] text-slate-500 dark:text-slate-400">ID: {s.id}</div>
@@ -774,7 +860,7 @@ export function AdminConsoleClient({
                 size="sm"
                 variant="outline"
                 className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs gap-1.5"
-                onClick={reloadTeachers}
+                onClick={() => reloadTeachers()}
                 disabled={isPending}
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
@@ -790,24 +876,29 @@ export function AdminConsoleClient({
                   placeholder="Cari guru (nama / email)..."
                   value={teacherSearch}
                   onChange={(e) => setTeacherSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && reloadTeachers()}
-                  className="pl-9 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
+                  className="pl-9 pr-8 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
                 />
+                {teacherSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setTeacherSearch("")}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <select
                 value={teacherStatusFilter}
-                onChange={(e) => {
-                  setTeacherStatusFilter(e.target.value as any);
-                  setTimeout(reloadTeachers, 50);
-                }}
+                onChange={(e) => setTeacherStatusFilter(e.target.value as any)}
                 className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-3 py-2 outline-none"
               >
                 <option value="ALL">Semua Status</option>
                 <option value="ACTIVE">Hanya Aktif</option>
                 <option value="BANNED">Hanya Banned</option>
               </select>
-              <Button size="sm" onClick={reloadTeachers} disabled={isPending} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs">
-                Cari
+              <Button size="sm" onClick={() => reloadTeachers()} disabled={isPending} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs">
+                {isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Cari"}
               </Button>
             </div>
           </CardHeader>
@@ -825,19 +916,19 @@ export function AdminConsoleClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teachers.length === 0 ? (
+                  {sortedTeachers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-500 text-xs">
                         Tidak ada data guru yang ditemukan.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    teachers.map((t) => {
+                    sortedTeachers.map((t) => {
                       const isSuperadmin = t.platformRole === "ADMIN";
                       const memberships = t.teacherProfile?.memberships || [];
 
                       return (
-                        <TableRow key={t.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-850/50">
+                        <TableRow key={t.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors">
                           <TableCell>
                             <div className="font-medium text-slate-900 dark:text-slate-100 text-sm">{t.name}</div>
                             <div className="text-xs text-slate-500 dark:text-slate-400">{t.email}</div>
@@ -994,7 +1085,7 @@ export function AdminConsoleClient({
                 size="sm"
                 variant="outline"
                 className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs gap-1.5"
-                onClick={reloadStudents}
+                onClick={() => reloadStudents()}
                 disabled={isPending}
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
@@ -1010,16 +1101,21 @@ export function AdminConsoleClient({
                   placeholder="Cari siswa (nama / NIS / ID)..."
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && reloadStudents()}
-                  className="pl-9 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
+                  className="pl-9 pr-8 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
                 />
+                {studentSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setStudentSearch("")}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <select
                 value={studentStatusFilter}
-                onChange={(e) => {
-                  setStudentStatusFilter(e.target.value as any);
-                  setTimeout(reloadStudents, 50);
-                }}
+                onChange={(e) => setStudentStatusFilter(e.target.value as any)}
                 className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-3 py-2 outline-none"
               >
                 <option value="ALL">Semua Status Akun</option>
@@ -1027,8 +1123,8 @@ export function AdminConsoleClient({
                 <option value="PENDING">PENDING (Menunggu)</option>
                 <option value="REJECTED">REJECTED (Ditolak)</option>
               </select>
-              <Button size="sm" onClick={reloadStudents} disabled={isPending} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs">
-                Cari
+              <Button size="sm" onClick={() => reloadStudents()} disabled={isPending} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs">
+                {isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Cari"}
               </Button>
             </div>
           </CardHeader>
@@ -1046,19 +1142,19 @@ export function AdminConsoleClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students.length === 0 ? (
+                  {sortedStudents.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-500 text-xs">
                         Tidak ada data siswa yang sesuai pencarian.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    students.map((s) => {
+                    sortedStudents.map((s) => {
                       const enrollment = s.classMemberships[0];
                       const className = enrollment ? enrollment.class.name : "Belum di-assign";
 
                       return (
-                        <TableRow key={s.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-850/50">
+                        <TableRow key={s.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors">
                           <TableCell>
                             <div className="font-medium text-slate-900 dark:text-slate-100 text-sm">{s.fullName}</div>
                             <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
@@ -1235,7 +1331,7 @@ export function AdminConsoleClient({
                   size="sm"
                   variant="outline"
                   className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs gap-1.5"
-                  onClick={reloadClasses}
+                  onClick={() => reloadClasses()}
                   disabled={isPending}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isPending ? "animate-spin" : ""}`} />
@@ -1252,16 +1348,21 @@ export function AdminConsoleClient({
                   placeholder="Cari kelas (nama rombel / tingkat)..."
                   value={classSearch}
                   onChange={(e) => setClassSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && reloadClasses()}
-                  className="pl-9 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
+                  className="pl-9 pr-8 bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-200"
                 />
+                {classSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setClassSearch("")}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <select
                 value={classGradeFilter}
-                onChange={(e) => {
-                  setClassGradeFilter(e.target.value);
-                  setTimeout(reloadClasses, 50);
-                }}
+                onChange={(e) => setClassGradeFilter(e.target.value)}
                 className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-3 py-2 outline-none"
               >
                 <option value="ALL">Semua Jenjang Tingkat</option>
@@ -1272,8 +1373,8 @@ export function AdminConsoleClient({
                 <option value="11">Tingkat 11 (XI)</option>
                 <option value="12">Tingkat 12 (XII)</option>
               </select>
-              <Button size="sm" onClick={reloadClasses} disabled={isPending} className="bg-amber-600 hover:bg-amber-500 text-white text-xs">
-                Cari
+              <Button size="sm" onClick={() => reloadClasses()} disabled={isPending} className="bg-amber-600 hover:bg-amber-500 text-white text-xs">
+                {isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Cari"}
               </Button>
             </div>
           </CardHeader>
@@ -1291,15 +1392,15 @@ export function AdminConsoleClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {classes.length === 0 ? (
+                  {sortedClasses.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-slate-500 text-xs">
                         Tidak ada rombel yang ditemukan.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    classes.map((c) => (
-                      <TableRow key={c.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-850/50">
+                    sortedClasses.map((c) => (
+                      <TableRow key={c.id} className="border-slate-200 dark:border-slate-800/80 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors">
                         <TableCell>
                           <div className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{c.name}</div>
                           <div className="text-[11px] text-slate-400">ID: {c.id}</div>
