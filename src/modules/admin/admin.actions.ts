@@ -613,3 +613,678 @@ export async function lookupSchoolsForAdminAction(query: string) {
 
   return { success: true, schools };
 }
+
+/**
+ * Mengambil daftar sekolah dengan filter & pagination untuk Superadmin
+ */
+export async function listSchoolsAdminAction(params: {
+  query?: string;
+  statusFilter?: "ALL" | "ACTIVE" | "INACTIVE";
+  page?: number;
+  pageSize?: number;
+}) {
+  await requireSuperAdmin();
+  const page = Math.max(1, params.page || 1);
+  const pageSize = Math.min(100, Math.max(5, params.pageSize || 20));
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.SchoolWhereInput = {};
+  if (params.query?.trim()) {
+    const q = params.query.trim();
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { npsn: q },
+      { city: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  if (params.statusFilter === "ACTIVE") {
+    where.deactivatedAt = null;
+  } else if (params.statusFilter === "INACTIVE") {
+    where.deactivatedAt = { not: null };
+  }
+
+  const [total, schools] = await Promise.all([
+    prisma.school.count({ where }),
+    prisma.school.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        npsn: true,
+        city: true,
+        province: true,
+        deactivatedAt: true,
+        createdAt: true,
+        _count: {
+          select: {
+            students: true,
+            memberships: { where: { status: "ACTIVE" } },
+            classes: true,
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+      skip,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    success: true,
+    data: schools,
+    pagination: {
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  };
+}
+
+/**
+ * Mengambil daftar guru / staf pengajar dengan filter untuk Superadmin
+ */
+export async function listTeachersAdminAction(params: {
+  query?: string;
+  schoolId?: string;
+  statusFilter?: "ALL" | "ACTIVE" | "BANNED";
+  page?: number;
+  pageSize?: number;
+}) {
+  await requireSuperAdmin();
+  const page = Math.max(1, params.page || 1);
+  const pageSize = Math.min(100, Math.max(5, params.pageSize || 20));
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.UserWhereInput = {};
+
+  if (params.query?.trim()) {
+    const q = params.query.trim();
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { email: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  if (params.schoolId && params.schoolId !== "ALL") {
+    where.teacherProfile = {
+      memberships: {
+        some: { schoolId: params.schoolId },
+      },
+    };
+  }
+
+  if (params.statusFilter === "ACTIVE") {
+    where.banned = false;
+  } else if (params.statusFilter === "BANNED") {
+    where.banned = true;
+  }
+
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        platformRole: true,
+        role: true,
+        banned: true,
+        banReason: true,
+        createdAt: true,
+        teacherProfile: {
+          select: {
+            id: true,
+            preferredName: true,
+            activeSchoolId: true,
+            memberships: {
+              select: {
+                id: true,
+                status: true,
+                workspaceRole: true,
+                school: {
+                  select: { id: true, name: true, npsn: true, deactivatedAt: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    success: true,
+    data: users,
+    pagination: {
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  };
+}
+
+/**
+ * Mengambil daftar siswa dengan filter lengkap untuk Superadmin
+ */
+export async function listStudentsAdminAction(params: {
+  query?: string;
+  schoolId?: string;
+  classId?: string;
+  accountStatus?: "ALL" | "ACTIVE" | "PENDING" | "REJECTED";
+  page?: number;
+  pageSize?: number;
+}) {
+  await requireSuperAdmin();
+  const page = Math.max(1, params.page || 1);
+  const pageSize = Math.min(100, Math.max(5, params.pageSize || 20));
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.StudentWhereInput = {};
+
+  if (params.query?.trim()) {
+    const q = params.query.trim();
+    where.OR = [
+      { fullName: { contains: q, mode: "insensitive" } },
+      { nis: { contains: q, mode: "insensitive" } },
+      { id: q },
+    ];
+  }
+
+  if (params.schoolId && params.schoolId !== "ALL") {
+    where.schoolId = params.schoolId;
+  }
+
+  if (params.classId && params.classId !== "ALL") {
+    where.classMemberships = {
+      some: { classId: params.classId },
+    };
+  }
+
+  if (params.accountStatus && params.accountStatus !== "ALL") {
+    where.accountStatus = params.accountStatus;
+  }
+
+  const [total, students] = await Promise.all([
+    prisma.student.count({ where }),
+    prisma.student.findMany({
+      where,
+      select: {
+        id: true,
+        fullName: true,
+        nis: true,
+        accountStatus: true,
+        status: true,
+        failedAttempts: true,
+        lockedUntil: true,
+        lastLoginAt: true,
+        createdAt: true,
+        school: {
+          select: { id: true, name: true },
+        },
+        classMemberships: {
+          select: {
+            id: true,
+            class: {
+              select: { id: true, name: true, gradeLevel: true },
+            },
+            academicPeriod: {
+              select: { id: true, year: true, semester: true, status: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      skip,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    success: true,
+    data: students,
+    pagination: {
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  };
+}
+
+/**
+ * Mengambil daftar kelas / rombel untuk Superadmin
+ */
+export async function listClassesAdminAction(params: {
+  query?: string;
+  schoolId?: string;
+  gradeLevel?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  await requireSuperAdmin();
+  const page = Math.max(1, params.page || 1);
+  const pageSize = Math.min(100, Math.max(5, params.pageSize || 20));
+  const skip = (page - 1) * pageSize;
+
+  const where: Prisma.ClassWhereInput = {};
+
+  if (params.query?.trim()) {
+    const q = params.query.trim();
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { gradeLevel: { contains: q, mode: "insensitive" } },
+    ];
+  }
+
+  if (params.schoolId && params.schoolId !== "ALL") {
+    where.schoolId = params.schoolId;
+  }
+
+  if (params.gradeLevel && params.gradeLevel !== "ALL") {
+    where.gradeLevel = params.gradeLevel;
+  }
+
+  const [total, classes] = await Promise.all([
+    prisma.class.count({ where }),
+    prisma.class.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        gradeLevel: true,
+        status: true,
+        joinCode: true,
+        joinCodeLocked: true,
+        school: {
+          select: { id: true, name: true },
+        },
+        _count: {
+          select: {
+            classStudents: true,
+            teachingContexts: true,
+          },
+        },
+      },
+      orderBy: [{ name: "asc" }],
+      skip,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    success: true,
+    data: classes,
+    pagination: {
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    },
+  };
+}
+
+/**
+ * Hapus / Arsip Sekolah secara aman
+ */
+export async function deleteOrArchiveSchoolAction(schoolId: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      include: {
+        _count: {
+          select: { students: true, teachingContexts: true },
+        },
+      },
+    });
+
+    if (!school) {
+      return { success: false, message: "Sekolah tidak ditemukan." };
+    }
+
+    // Jika memiliki data kegiatan/siswa, nonaktifkan permanen
+    if (school._count.students > 0 || school._count.teachingContexts > 0) {
+      await prisma.school.update({
+        where: { id: schoolId },
+        data: { deactivatedAt: new Date(), npsn: null },
+      });
+      await writeAudit(prisma, {
+        actorType: "SUPERADMIN",
+        actorId: userId,
+        action: "SCHOOL_ARCHIVED_SAFE",
+        targetType: "SCHOOL",
+        targetId: schoolId,
+        metadata: { name: school.name, reason: "Has related data, deactivated instead of hard delete" },
+      });
+      return { success: true, message: `Sekolah "${school.name}" dinonaktifkan & diarsipkan dengan aman.` };
+    }
+
+    // Jika sekolah kosong, boleh dihapus
+    await prisma.school.delete({ where: { id: schoolId } });
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "SCHOOL_DELETED",
+      targetType: "SCHOOL",
+      targetId: schoolId,
+      metadata: { name: school.name },
+    });
+
+    return { success: true, message: `Sekolah "${school.name}" berhasil dihapus.` };
+  } catch (err: unknown) {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Lepas asosiasi guru dari sekolah
+ */
+export async function disassociateTeacherMembershipAction(membershipId: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const mem = await prisma.teacherSchoolMembership.findUnique({
+      where: { id: membershipId },
+      include: {
+        teacherProfile: { include: { user: true } },
+        school: true,
+      },
+    });
+
+    if (!mem) return { success: false, message: "Keanggotaan guru tidak ditemukan." };
+
+    await prisma.teacherSchoolMembership.delete({ where: { id: membershipId } });
+
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "TEACHER_MEMBERSHIP_REMOVED",
+      targetType: "TEACHER_MEMBERSHIP",
+      targetId: membershipId,
+      metadata: {
+        teacherUserId: mem.teacherProfile.userId,
+        teacherEmail: mem.teacherProfile.user.email,
+        schoolName: mem.school.name,
+      },
+    });
+
+    return { success: true, message: `Guru berhasil dilepas dari keanggotaan ${mem.school.name}.` };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Hapus Akun Guru (dengan guard superadmin & audit)
+ */
+export async function deleteTeacherAccountAction(userIdToDelete: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userIdToDelete },
+      select: { id: true, email: true, platformRole: true },
+    });
+
+    if (!targetUser) return { success: false, message: "User tidak ditemukan." };
+    if (targetUser.platformRole === "ADMIN") {
+      return { success: false, message: "Tidak dapat menghapus akun SUPERADMIN." };
+    }
+
+    // Revoke sesi terlebih dahulu
+    await prisma.session.deleteMany({ where: { userId: userIdToDelete } });
+    await prisma.user.delete({ where: { id: userIdToDelete } });
+
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "TEACHER_ACCOUNT_DELETED",
+      targetType: "USER",
+      targetId: userIdToDelete,
+      metadata: { email: targetUser.email },
+    });
+
+    return { success: true, message: `Akun guru (${targetUser.email}) berhasil dihapus.` };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Pindahkan siswa ke kelas / rombel lain
+ */
+export async function transferStudentClassAction(studentId: string, targetClassId: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const [student, targetClass] = await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+        include: { classMemberships: true },
+      }),
+      prisma.class.findUnique({
+        where: { id: targetClassId },
+        include: {
+          school: {
+            include: {
+              academicPeriods: { where: { status: "ACTIVE" }, take: 1 },
+            },
+          },
+        },
+      }),
+    ]);
+
+    if (!student || !targetClass) {
+      return { success: false, message: "Data siswa atau kelas target tidak valid." };
+    }
+
+    const activePeriod = targetClass.school.academicPeriods[0];
+    if (!activePeriod) {
+      return { success: false, message: "Sekolah kelas tujuan belum memiliki periode akademik aktif." };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Update schoolId siswa jika pindah sekolah
+      if (student.schoolId !== targetClass.schoolId) {
+        await tx.student.update({
+          where: { id: studentId },
+          data: { schoolId: targetClass.schoolId },
+        });
+      }
+
+      // Hapus enrollment lama di periode yang sama
+      await tx.classStudent.deleteMany({
+        where: { studentId, academicPeriodId: activePeriod.id },
+      });
+
+      // Buat enrollment baru
+      await tx.classStudent.create({
+        data: {
+          studentId,
+          classId: targetClassId,
+          academicPeriodId: activePeriod.id,
+        },
+      });
+
+      await writeAudit(tx, {
+        actorType: "SUPERADMIN",
+        actorId: userId,
+        action: "STUDENT_CLASS_TRANSFERRED_ADMIN",
+        targetType: "STUDENT",
+        targetId: studentId,
+        metadata: {
+          targetClassId,
+          targetClassName: targetClass.name,
+          schoolId: targetClass.schoolId,
+        },
+      });
+    });
+
+    return { success: true, message: `Siswa berhasil dipindahkan ke kelas ${targetClass.name}.` };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Hapus data siswa oleh superadmin
+ */
+export async function deleteStudentAdminAction(studentId: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { id: true, fullName: true, nis: true, schoolId: true },
+    });
+
+    if (!student) return { success: false, message: "Siswa tidak ditemukan." };
+
+    await prisma.student.delete({ where: { id: studentId } });
+
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "STUDENT_DELETED_ADMIN",
+      targetType: "STUDENT",
+      targetId: studentId,
+      metadata: { fullName: student.fullName, nis: student.nis, schoolId: student.schoolId },
+    });
+
+    return { success: true, message: `Siswa "${student.fullName}" berhasil dihapus.` };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Tambah Kelas baru oleh Superadmin
+ */
+export async function createClassAdminAction(params: {
+  schoolId: string;
+  name: string;
+  gradeLevel?: string;
+}) {
+  const { userId } = await requireSuperAdmin();
+
+  const cleanName = params.name?.trim();
+  if (!cleanName) return { success: false, message: "Nama kelas wajib diisi." };
+
+  try {
+    const normalizedName = cleanName.toLowerCase().replace(/\s+/g, "");
+    const created = await prisma.class.create({
+      data: {
+        schoolId: params.schoolId,
+        name: cleanName,
+        normalizedName,
+        gradeLevel: params.gradeLevel?.trim() || null,
+      },
+    });
+
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "CLASS_CREATED_ADMIN",
+      targetType: "CLASS",
+      targetId: created.id,
+      metadata: { name: cleanName, schoolId: params.schoolId },
+    });
+
+    return { success: true, message: `Kelas "${cleanName}" berhasil dibuat.` };
+  } catch (err: unknown) {
+    if (typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002") {
+      return { success: false, message: "Kelas dengan nama ini sudah ada di sekolah tersebut." };
+    }
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Update data Kelas oleh Superadmin
+ */
+export async function updateClassAdminAction(params: {
+  classId: string;
+  name: string;
+  gradeLevel?: string;
+}) {
+  const { userId } = await requireSuperAdmin();
+
+  const cleanName = params.name?.trim();
+  if (!cleanName) return { success: false, message: "Nama kelas wajib diisi." };
+
+  try {
+    const normalizedName = cleanName.toLowerCase().replace(/\s+/g, "");
+    await prisma.class.update({
+      where: { id: params.classId },
+      data: {
+        name: cleanName,
+        normalizedName,
+        gradeLevel: params.gradeLevel?.trim() || null,
+      },
+    });
+
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "CLASS_UPDATED_ADMIN",
+      targetType: "CLASS",
+      targetId: params.classId,
+      metadata: { name: cleanName },
+    });
+
+    return { success: true, message: `Kelas berhasil diperbarui.` };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Hapus Kelas oleh Superadmin
+ */
+export async function deleteClassAdminAction(classId: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const cls = await prisma.class.findUnique({
+      where: { id: classId },
+      include: {
+        _count: {
+          select: { classStudents: true, teachingContexts: true },
+        },
+      },
+    });
+
+    if (!cls) return { success: false, message: "Kelas tidak ditemukan." };
+
+    if (cls._count.classStudents > 0 || cls._count.teachingContexts > 0) {
+      return {
+        success: false,
+        message: `Kelas "${cls.name}" tidak dapat dihapus karena masih memiliki ${cls._count.classStudents} siswa atau aktivitas belajar.`,
+      };
+    }
+
+    await prisma.class.delete({ where: { id: classId } });
+
+    await writeAudit(prisma, {
+      actorType: "SUPERADMIN",
+      actorId: userId,
+      action: "CLASS_DELETED_ADMIN",
+      targetType: "CLASS",
+      targetId: classId,
+      metadata: { name: cls.name },
+    });
+
+    return { success: true, message: `Kelas "${cls.name}" berhasil dihapus.` };
+  } catch {
+    return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { NavigationProgressBar } from "@/components/layout/NavigationProgressBar";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "KLASSA — Naik Kelas Bersama",
@@ -16,13 +17,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className="h-full antialiased font-sans">
-      <body className="flex h-full bg-background overflow-hidden font-sans">
-        <Suspense fallback={null}>
-          <NavigationProgressBar />
-        </Suspense>
-        {children}
-        <Toaster position="top-right" />
+    <html lang="id" className="h-full antialiased font-sans" suppressHydrationWarning>
+      <body className="flex flex-col h-full w-full bg-background text-foreground font-sans">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <Suspense fallback={null}>
+            <NavigationProgressBar />
+          </Suspense>
+          {children}
+          <Toaster position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Panduan Hemat Token untuk Vibecoder</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #1e293b;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .cover { text-align: left; padding: 8mm 0 4mm 0; border-bottom: 4px solid #4f46e5; margin-bottom: 8mm; }
+  .cover h1 { font-size: 22pt; margin: 0 0 4px 0; color: #111827; }
+  .cover .sub { font-size: 11pt; color: #64748b; }
+  .cover .meta { margin-top: 6px; font-size: 9pt; color: #94a3b8; }
+  h2 {
+    font-size: 14pt; color: #4f46e5; margin: 7mm 0 2mm 0;
+    padding-bottom: 2px; border-bottom: 2px solid #e0e7ff;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11pt; color: #0f172a; margin: 4mm 0 1mm 0; page-break-after: avoid; }
+  p { margin: 1.5mm 0; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 3mm 0; font-size: 9.5pt; page-break-inside: avoid; }
+  th { background: #4f46e5; color: #fff; text-align: left; padding: 5px 8px; }
+  td { border: 1px solid #e2e8f0; padding: 5px 8px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .box {
+    background: #f5f6ff; border-left: 4px solid #4f46e5;
+    padding: 3mm 4mm; margin: 2.5mm 0; border-radius: 0 6px 6px 0;
+    page-break-inside: avoid;
+  }
+  .box.green { background: #f0fdf4; border-left-color: #16a34a; }
+  .box.red { background: #fef2f2; border-left-color: #dc2626; }
+  .box.amber { background: #fffbeb; border-left-color: #d97706; }
+  .box .title { font-weight: 700; margin-bottom: 1mm; }
+  code, .mono {
+    font-family: "Cascadia Code", Consolas, monospace;
+    background: #eef2ff; padding: 1px 5px; border-radius: 4px; font-size: 9pt;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0; padding: 3.5mm 4mm;
+    border-radius: 8px; font-size: 9pt; line-height: 1.5;
+    white-space: pre-wrap; page-break-inside: avoid; margin: 2mm 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  ul, ol { margin: 1.5mm 0 2.5mm 0; padding-left: 6mm; }
+  li { margin-bottom: 1mm; }
+  .grid2 { display: flex; gap: 4mm; }
+  .grid2 > div { flex: 1; }
+  .badge {
+    display: inline-block; background: #e0e7ff; color: #3730a3;
+    border-radius: 99px; padding: 1px 10px; font-size: 8.5pt; font-weight: 600;
+    margin-right: 4px;
+  }
+  .small { font-size: 8.5pt; color: #64748b; }
+  .check li { list-style: none; padding-left: 0; }
+  .check li::before { content: "☐ "; font-weight: 700; color: #4f46e5; }
+  .pagebreak { page-break-before: always; }
+  .footer-note { margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e2e8f0; font-size: 8.5pt; color: #94a3b8; }
+  .do-dont { display: flex; gap: 4mm; margin: 2mm 0; }
+  .do-dont > div { flex: 1; border-radius: 8px; padding: 3mm; page-break-inside: avoid; }
+  .do { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .dont { background: #fef2f2; border: 1px solid #fecaca; }
+  .do .h { color: #15803d; font-weight: 700; margin-bottom: 1mm; }
+  .dont .h { color: #b91c1c; font-weight: 700; margin-bottom: 1mm; }
+  .do ul, .dont ul { margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>💡 Panduan Hemat Token untuk Vibecoder</h1>
+  <div class="sub">Panduan praktis membangun aplikasi dengan AI Agent — murah, cepat, dan backend tetap aman</div>
+  <div class="meta">Konteks: Project Ai Teacher Assistant (Klassa) · Berdasarkan data konsumsi aktual story 3–5 · Sep 2026</div>
+</div>
+
+<h2>0 · Pahami Dulu: Dari Mana Token Terbuang?</h2>
+
+<p>Setiap giliran (turn) percakapan dengan AI agent, <b>seluruh riwayat konteks dikirim ulang</b> ke model. Makin panjang sesi, makin besar konteks yang dikirim ulang. Ada 3 jenis token dengan harga berbeda:</p>
+
+<table>
+  <tr><th style="width:22%">Jenis</th><th>Artinya</th><th style="width:22%">Harga relatif</th></tr>
+  <tr><td><b>Input fresh</b></td><td>Token baru yang belum pernah diproses</td><td>Mahal (acuan 10x)</td></tr>
+  <tr><td><b>Cache read</b></td><td>Bagian konteks yang sama dengan turn sebelumnya, diambil dari cache server</td><td>Murah (~1x)</td></tr>
+  <tr><td><b>Output</b></td><td>Token yang model generate (jawaban, kode, tool call)</td><td>Paling mahal per token</td></tr>
+</table>
+
+<div class="box green">
+  <div class="title">✅ Fakta menenangkan</div>
+  Cache read yang besar itu <b>tanda bagus</b>, bukan pemborosan. Data aktual project: satu sesi build menyerap 78 juta cache read tapi biayanya cuma ~$2,6. Kalau token itu ditagih sebagai input biasa, biayanya bisa 10x lipat.
+</div>
+
+<div class="box red">
+  <div class="title">❌ Musuh sebenarnya: cache miss & sesi panjang</div>
+  (1) <b>Cache miss</b> — konteks berubah di tengah sesi (edit file besar, campur topik), seluruh konteks dihitung ulang sebagai input mahal. (2) <b>Sesi panjang</b> — makin lama sesi, makin banyak konteks terbawa di setiap turn. Dua hal ini yang dikendalikan panduan ini.
+</div>
+
+<div class="box amber">
+  <div class="title">📌 Data pembanding dari project ini</div>
+  Sesi yang diawali perintah <i>"analisa mendalam dan menyeluruh"</i> konsisten menyerap <b>20–70 juta token</b> cache read. Sesi yang diawali path file spesifik (review lens) cuma <b>40–170 ribu</b>. Perbedaan prompt saja: seratus kali lipat.
+</div>
+
+<h2 class="pagebreak">1 · Aturan Emas: 1 Story = 1 Sesi</h2>
+
+<p>Sesi monster (78 juta token) terjadi karena satu sesi mengerjakan banyak hal: cek progress → hardening → build → fix. Setiap giliran, semua konteks itu terbawa.</p>
+
+<div class="do-dont">
+  <div class="do">
+    <div class="h">✅ LAKUKAN</div>
+    <ul>
+      <li>1 story = 1 sesi build. Selesai → commit → tutup sesi.</li>
+      <li>"Cek progress", "jalankan server", "review git" → sesi terpisah yang pendek.</li>
+      <li>Mulai sesi build langsung dengan path story file.</li>
+    </ul>
+  </div>
+  <div class="dont">
+    <div class="h">❌ HINDARI</div>
+    <ul>
+      <li>Mixing topik dalam satu sesi ("sekalian cek deploy ya Bro").</li>
+      <li>Sesi melewati batas 1 hari / 1 story.</li>
+      <li>Mengobrol santai di sesi build yang sudah panjang — tiap pesan menambah konteks permanen.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>2 · Prompt yang Menghemat 100x</h2>
+
+<h3>Polanya: SPESIFIK PATH + SCOPE EKSPLISIT</h3>
+
+<div class="do-dont">
+  <div class="do">
+    <div class="h">✅ HEMAT (~50 ribu token)</div>
+    <pre style="margin:0">Baca _bmad-output/specs/spec-student-portal-auth/
+stories/5-panel-persetujuan.md, lalu implementasikan
+bagian batch approve saja.
+File yang boleh disentuh: src/modules/approvals/**
+Test: vitest run src/modules/approvals</pre>
+  </div>
+  <div class="dont">
+    <div class="h">❌ MAHAL (5–70 juta token)</div>
+    <pre style="margin:0">"Tolong analisa project ini secara menyeluruh
+dan mendalam, semua file, lalu tolong
+perbaiki juga yang kurang"</pre>
+  </div>
+</div>
+
+<h3>Template prompt build siap pakai</h3>
+
+<pre>Kerjakan story N: [path file story]
+Baca HANYA: story file itu + file yang direferensikannya.
+Scope: [2-3 kalimat].
+Out of scope: [daftar eksplisit yang JANGAN disentuh].
+Test: vitest run [modul] + tsc. Full suite JANGAN dulu.
+Selesai: ringkas perubahan per file (maks 15 baris)
++ daftar asumsi keamanan yang diambil.</pre>
+
+<div class="box">
+  <div class="title">💡 Kalimat ajaib untuk backend</div>
+  Tambahkan selalu di akhir prompt build backend:<br>
+  <i>"Setelah selesai, tulis daftar asumsi keamanan yang kamu buat + titik yang menurutmu paling berisiko."</i>
+  <br>Harganya ~500 token output, tapi memancing agent mengoreksi dirinya sendiri sebelum review.
+</div>
+
+<h2 class="pagebreak">3 · Test Terarah, Bukan Full Suite Tiap Iterasi</h2>
+
+<table>
+  <tr><th>Momen</th><th>Perintah</th><th>Kenapa</th></tr>
+  <tr><td>Saat iterasi/edit kecil</td><td><code>vitest run src/modules/[modul]</code></td><td>Log pendek, cepat, konteks tak bengkak</td></tr>
+  <tr><td>Akhir tahap/story</td><td>Full suite + <code>tsc --noEmit</code></td><td>Sekali saja, sebagai gerbang DoD</td></tr>
+  <tr><td>E2E Playwright</td><td>Hanya untuk journey DoD</td><td>Paling mahal — jangan tiap edit kecil</td></tr>
+</table>
+
+<p class="small">Log test yang panjang masuk ke konteks dan terbawa sisa sesi. Output test ratusan baris x 20 iterasi = jutaan token sia-sia.</p>
+
+<h2>4 · Skalakan Review Lens Sesuai Risiko</h2>
+
+<p>Pola 3 review lens (blind hunter / edge-case hunter / verification-gap) bagus — tapi jangan seragam untuk semua story:</p>
+
+<table>
+  <tr><th>Jenis perubahan</th><th>Contoh story</th><th>Review</th></tr>
+  <tr><td>Auth, sesi, rate-limit, migrasi DB, akses antar-role</td><td>Story 3, 5, 6</td><td><b>3 lens penuh + walkthrough</b></td></tr>
+  <tr><td>Agregasi/query baca</td><td>Story 7</td><td>2 lens: edge-case + verification-gap</td></tr>
+  <tr><td>UI portal read-only, tampilan</td><td>Bagian UI story 4, 7, 8</td><td>1 lens: blind hunter (atau cukup verifikasi visual)</td></tr>
+</table>
+
+<div class="box green">
+  <div class="title">✅ Hasil</div>
+  Hemat 40–60% biaya review tanpa mengorbankan keamanan — story yang kritis tetap dapat perlindungan penuh.
+</div>
+
+<h2>5 · Ambil Keputusan SEBELUM Build</h2>
+
+<ul>
+  <li>Keputusan saat blueprint/elicitation = <b>murah</b> (diskusi, minim tool call).</li>
+  <li>Keputusan di tengah build = <b>mahal</b>: agent sudah baca 10 file, asumsi salah → baca ulang → edit ulang → test ulang.</li>
+  <li>Contoh nyata: <b>Open Question ① Story 7</b> (skor flat vs GradePolicy/KKTP). Putuskan sekarang, tulis di story file — kalau tidak, tambahan ~0,5–1 juta token + risiko rework.</li>
+</ul>
+
+<h2>6 · Keamanan Backend: Kunci dengan Invariants, Bukan Prompt Panjang</h2>
+
+<p>Jangan minta "pastikan aman ya" (tidak terukur). Yang terbukti bekerja di project ini — daftar invarian pendek di <code>invoke_dev_with</code>:</p>
+
+<pre>· limiter wajib persisten di DB (bukan in-memory)
+· studentId derive dari verifyStudentSession(),
+  parameter identitas dari klien diabaikan
+· pesan error generik + dummy-verify agar timing seragam
+· PIN_PEPPER fail-fast di production</pre>
+
+<p class="small">Invarian pendek & mengikat &gt; prompt keamanan 3 paragraf. Lebih efektif, dan gratis.</p>
+
+<h2>7 · Model Tiering</h2>
+
+<table>
+  <tr><th>Tugas</th><th>Model</th></tr>
+  <tr><td>Scaffold UI, dokumen, ringkasan, review awal</td><td>Model cepat/murah (flash)</td></tr>
+  <tr><td>Desain migrasi DB, core auth/session, review akhir story kritis</td><td>Model kuat — naikkan hanya di sini</td></tr>
+</table>
+
+<h2 class="pagebreak">8 · Khusus Vibecoder: Aman Tanpa Paham Kode</h2>
+
+<p>Vibecoder tidak perlu paham kode untuk aman. Yang perlu dipahami: <b>proses dan bukti</b>. Kode itu urusan agent; tugasmu menjaga kontrak dan verifikasi hasil.</p>
+
+<h3>8.1 Ganti "baca kode" dengan "tuntut bukti"</h3>
+<p>Ketika agent bilang "selesai", jawabanmu cuma satu: <b>"Buktikan."</b> Minta dia menjalankan aplikasi dan mendemokan alurnya (browser automation bisa klik-klik dan screenshot untukmu). Kamu menilai <b>perilaku</b>, bukan kode.</p>
+
+<h3>8.2 Lembar uji 5 menit (jalankan sendiri tiap akhir story)</h3>
+<div class="box">
+<ul class="check">
+  <li>Login guru bisa</li>
+  <li>Login siswa NIS + PIN bisa</li>
+  <li>PIN salah 5x → terkunci</li>
+  <li>Buat quiz → siswa kerjakan → nilai muncul di dashboard guru</li>
+  <li>Siswa A tidak bisa lihat data Siswa B</li>
+  <li>Ganti PIN → login pakai PIN baru berhasil</li>
+</ul>
+</div>
+<p class="small">5 menit klik menggantikan 90% kebutuhan memahami kode. Kalau ada yang gagal di checklist, baru agent yang bedah teknisnya.</p>
+
+<h3>8.3 Git adalah jaring pengamanmu</h3>
+<div class="do-dont">
+  <div class="do">
+    <div class="h">✅ Cukup 2 kebiasaan</div>
+    <ul>
+      <li><b>Commit sebelum mulai story</b> → titik aman; build berantakan = rollback 1 perintah, nol kerugian.</li>
+      <li><b>1 story = 1 commit</b> → kalau rusak, tahu persis penyebabnya.</li>
+    </ul>
+  </div>
+  <div class="dont">
+    <div class="h">❌ Akibat kalai diabaikan</div>
+    <ul>
+      <li>Tanpa titik aman, satu build buruk bisa menular ke area yang tadinya baik.</li>
+      <li>Commit campur aduk = tidak bisa rollback selektif.</li>
+    </ul>
+  </div>
+</div>
+
+<h3>8.4 Kekuatan vibecoder ada di SPEC, bukan kode</h3>
+<ul>
+  <li>Tulis perilaku di story file dengan bahasa manusia yang presisi — contoh bagus: <i>"siswa tanpa NIS tidak punya jalur klaim"</i>.</li>
+  <li>Istilah tidak paham? Tanya: <i>"jelaskan pakai bahasa sederhana + analogi"</i> — ~500 token, mental model menempel lama.</li>
+  <li>Kode boleh tidak dipahami, <b>syaratnya perilaku terverifikasi (8.1 + 8.2)</b>.</li>
+</ul>
+
+<h3>8.5 Jangan hemat di titik butamu</h3>
+<table>
+  <tr><th>Area</th><th>Bisa verifikasi sendiri?</th><th>Strategi</th></tr>
+  <tr><td>UI portal, tampilan</td><td>✅ Klik-klik</td><td>Hemat review, verifikasi visual</td></tr>
+  <tr><td>Alur bisnis (quiz, nilai, persetujuan)</td><td>✅ Checklist 5 menit</td><td>Review sedang</td></tr>
+  <tr><td>Auth, sesi, PIN, migrasi DB</td><td>❌ Buta total</td><td><b>Jangan hemat — 3 lens + walkthrough wajib</b></td></tr>
+</table>
+
+<h3>8.6 Prompt penutup sesi build (wajib)</h3>
+<pre>Sekarang jalankan walkthrough: jelaskan apa yang berubah
+pakai bahasa manusia (bukan istilah teknis), apa yang harus
+saya coba sendiri untuk memastikan ini jalan, dan apa yang
+paling berisiko rusak.</pre>
+<p class="small">Di BMAD sudah ada skill-nya: <code>bmad-walkthrough</code>.</p>
+
+<h2 class="pagebreak">9 · Estimasi Token Story 6–8 (Mengikuti Pola Existing)</h2>
+
+<table>
+  <tr><th>Story</th><th>Beban</th><th>Input fresh</th><th>Cache read</th><th>Output + reasoning</th></tr>
+  <tr><td><b>6</b> — Pengerasan, Rollover TA & Dokumentasi</td><td>Ringan</td><td>~1,5–2,5 jt</td><td>~10–20 jt</td><td>~100–150 rb</td></tr>
+  <tr><td><b>7</b> — Student Progress (Gelombang 2)</td><td>Sedang</td><td>~3–5 jt</td><td>~30–60 jt</td><td>~150–250 rb</td></tr>
+  <tr><td><b>8</b> — Submission, Materi & Mode Keluarga (G3)</td><td>Paling berat</td><td>~4–7 jt</td><td>~40–80 jt</td><td>~200–350 rb</td></tr>
+  <tr><td><b>TOTAL</b></td><td>—</td><td><b>~8,5–14,5 jt</b></td><td>~85–165 jt</td><td><b>~0,45–0,75 jt</b></td></tr>
+</table>
+
+<div class="box amber">
+  <div class="title">⚠️ Catatan</div>
+  (1) Biaya aktual ~$3–7/story dengan model flash + cache hit tinggi. (2) Faktor pembengkak terbesar: elicitation multi-ronde dan sesi build yang membaca spec besar tiap turn. (3) Open Question ① Story 7 belum diputuskan = tambah 0,5–1 juta token. (4) Dengan penerapan panduan ini, target hemat 30–50% dari angka di atas.
+</div>
+
+<h2>10 · Ringkasan Satu Halaman</h2>
+
+<table>
+  <tr><th style="width:30%">Prinsip</th><th>Aksi konkret</th></tr>
+  <tr><td>1 story = 1 sesi</td><td>Selesai story → commit → tutup sesi. Hal sampingan = sesi terpisah.</td></tr>
+  <tr><td>Prompt spesifik path</td><td>Selalu sebut file + scope + out-of-scope. Hindari "analisa menyeluruh".</td></tr>
+  <tr><td>Keputusan pra-build</td><td>Selesaikan open question saat elicitation, tulis di story file.</td></tr>
+  <tr><td>Test terarah</td><td>vitest per modul saat iterasi; full suite + tsc hanya di akhir tahap.</td></tr>
+  <tr><td>Review sesuai risiko</td><td>3 lens untuk auth/DB; 2 lens untuk query; 1 lens/visual untuk UI.</td></tr>
+  <tr><td>Invariants, bukan prompt panjang</td><td>Daftar aturan keamanan pendek di invoke_dev_with.</td></tr>
+  <tr><td>Bukti &gt; kode</td><td>"Selesai" = harus didemokan jalan. Checklist 5 menit tiap akhir story.</td></tr>
+  <tr><td>Git disiplin</td><td>Commit sebelum story, 1 story = 1 commit.</td></tr>
+  <tr><td>Tutup dengan walkthrough</td><td>Penjelasan bahasa manusia + yang harus dicoba + risiko terbesar.</td></tr>
+</table>
+
+<div class="box green">
+  <div class="title">🎯 Inti semuanya</div>
+  Biaya terbesar bukan output, tapi <b>konteks yang terbawa</b>. Sesi pendek + scope eksplisit = hemat 50%+ tanpa mengorbankan apa pun. Vibecoder yang aman bukan yang paham kode, tapi yang (1) menuntut bukti perilaku nyata, (2) disiplin commit, (3) tahu di mana dia buta dan membayar review persis di titik itu.
+</div>
+
+<div class="footer-note">
+  Disusun berdasarkan analisis log sesi aktual project Ai Teacher Assistant (story 1–5, Sep 2026) · Total sampel: ~40 sesi, 85+ juta token cache read · Alat: pi coding agent + BMAD workflow
+</div>
+
+</body>
+</html>

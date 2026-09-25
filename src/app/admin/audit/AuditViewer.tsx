@@ -49,16 +49,16 @@ export function AuditViewer({ items, total, page, pageSize, actions, filters }: 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">AuditLog — {total} entri</h1>
+    <div className="space-y-4 w-full">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">AuditLog — {total} entri</h1>
 
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-sm">Filter</CardTitle>
+      <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm text-slate-900 dark:text-white">Filter Log Audit</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <select
-            className="h-9 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm"
+            className="h-9 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 text-sm outline-none"
             value={action}
             onChange={(e) => navigate(1, { action: e.target.value })}
           >
@@ -73,13 +73,13 @@ export function AuditViewer({ items, total, page, pageSize, actions, filters }: 
             placeholder="Actor ID..."
             value={actorId}
             onChange={(e) => setActorId(e.target.value)}
-            className="bg-slate-800 border-slate-700 w-64"
+            className="bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 w-64"
           />
           <Input
             placeholder="Target type (STUDENT/SCHOOL/USER...)"
             value={targetType}
             onChange={(e) => setTargetType(e.target.value)}
-            className="bg-slate-800 border-slate-700 w-72"
+            className="bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 w-72"
           />
           <Button size="sm" variant="secondary" onClick={() => navigate(1)}>
             Terapkan
@@ -103,23 +103,23 @@ export function AuditViewer({ items, total, page, pageSize, actions, filters }: 
         {items.map((i) => (
           <div
             key={i.id}
-            className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 flex flex-wrap items-center gap-2 text-xs"
+            className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 px-3 py-2 flex flex-wrap items-center gap-2 text-xs shadow-2xs"
           >
-            <Badge variant="outline" className="border-slate-700 text-slate-300">
+            <Badge variant="outline" className="border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300">
               {i.actorType}
             </Badge>
-            <span className="font-mono font-semibold text-emerald-400">{i.action}</span>
-            <span className="text-slate-400">
+            <span className="font-mono font-semibold text-teal-600 dark:text-emerald-400">{i.action}</span>
+            <span className="text-slate-600 dark:text-slate-400">
               {i.targetType}
               {i.targetId ? `/${i.targetId}` : ""}
             </span>
             {i.metadata != null && Object.keys(i.metadata as object).length > 0 && (
-              <span className="text-slate-300 font-mono truncate max-w-[28rem]" title={JSON.stringify(i.metadata)}>
+              <span className="text-slate-600 dark:text-slate-300 font-mono truncate max-w-[28rem]" title={JSON.stringify(i.metadata)}>
                 {JSON.stringify(i.metadata)}
               </span>
             )}
-            {i.ip && <span className="text-slate-500">[{i.ip}]</span>}
-            <span className="text-slate-500 ml-auto">{new Date(i.createdAt).toLocaleString("id-ID")}</span>
+            {i.ip && <span className="text-slate-400 dark:text-slate-500">[{i.ip}]</span>}
+            <span className="text-slate-400 dark:text-slate-500 ml-auto">{new Date(i.createdAt).toLocaleString("id-ID")}</span>
           </div>
         ))}
         {items.length === 0 && (
@@ -127,11 +127,11 @@ export function AuditViewer({ items, total, page, pageSize, actions, filters }: 
         )}
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pt-2">
         <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => navigate(page - 1)}>
           ← Sebelumnya
         </Button>
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           Halaman {page} / {totalPages}
         </span>
         <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => navigate(page + 1)}>

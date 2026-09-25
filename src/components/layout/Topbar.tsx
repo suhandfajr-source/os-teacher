@@ -21,6 +21,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { KlassaLogo } from "@/components/brand";
 import { NotificationBell } from "./NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const mainNavItems = [
   { href: "/", label: "Beranda", icon: Home, exact: true },
@@ -84,6 +85,7 @@ export function Topbar() {
             <span>AI Studio</span>
           </Link>
           <NotificationBell />
+          <ThemeToggle />
           <Link
             href="/pengaturan/setup"
             aria-label="Pengaturan Akun dan Sekolah"
