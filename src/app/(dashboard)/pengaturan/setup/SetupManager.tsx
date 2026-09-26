@@ -15,11 +15,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { createClassAction } from "@/modules/classes/classes.actions";
-import { revokeTeacherMembership } from "@/modules/schools/schools.actions";
+import { requestRevokeTeacherMembership, cancelRevokeTeacherMembershipRequest } from "@/modules/schools/schools.actions";
 import { switchActiveSchool } from "@/modules/teachers/teachers.actions";
 import { toast } from "sonner";
-import { Plus, GraduationCap, Users, School as SchoolIcon, ShieldAlert, ArrowLeftRight } from "lucide-react";
+import { Plus, GraduationCap, Users, School as SchoolIcon, ShieldAlert, ArrowLeftRight, Clock, AlertTriangle } from "lucide-react";
 import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
+import { Textarea } from "@/components/ui/textarea";
 import type {
   TeacherProfile,
   AcademicPeriod,
@@ -44,6 +45,14 @@ export type SchoolTeacherItem = {
       image: string | null;
     };
   };
+  pendingRevocationRequest?: {
+    id: string;
+    reason: string;
+    requesterName: string | null;
+    requesterEmail: string;
+    requesterProfileId: string;
+    createdAt: Date | string;
+  } | null;
 };
 
 type ProfileWithContext = TeacherProfile & {
@@ -70,6 +79,7 @@ export default function SetupManager({
   const [activeTab, setActiveTab] = useState("context");
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [targetToRevoke, setTargetToRevoke] = useState<SchoolTeacherItem | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
   const [isPending, startTransition] = useTransition();
 
   // Form State Kelas
@@ -116,14 +126,35 @@ export default function SetupManager({
 
   const handleConfirmRevoke = () => {
     if (!targetToRevoke) return;
+    if (revokeReason.trim().length < 5) {
+      toast.error("Alasan permohonan pencabutan akses minimal 5 karakter.");
+      return;
+    }
+
     startTransition(async () => {
       try {
-        await revokeTeacherMembership(targetToRevoke.id);
-        toast.success(`Akses guru "${targetToRevoke.teacherProfile.user.name}" berhasil dicabut.`);
+        const res = await requestRevokeTeacherMembership({
+          teacherSchoolMembershipId: targetToRevoke.id,
+          reason: revokeReason.trim(),
+        });
+        toast.success(res.message);
         setTargetToRevoke(null);
+        setRevokeReason("");
         router.refresh();
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Gagal mencabut akses guru");
+        toast.error(err instanceof Error ? err.message : "Gagal mengajukan pencabutan akses guru");
+      }
+    });
+  };
+
+  const handleCancelRevokeRequest = (requestId: string) => {
+    startTransition(async () => {
+      try {
+        const res = await cancelRevokeTeacherMembershipRequest(requestId);
+        toast.success(res.message);
+        router.refresh();
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Gagal membatalkan pengajuan");
       }
     });
   };
@@ -345,33 +376,64 @@ export default function SetupManager({
                         </Badge>
 
                         {/* Status Badge */}
-                        <Badge
-                          variant="outline"
-                          className={
-                            t.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 text-xs"
-                              : "bg-rose-50 text-rose-700 border-rose-300 text-xs"
-                          }
-                        >
-                          {t.status === "ACTIVE" ? "Aktif" : "Dinonaktifkan"}
-                        </Badge>
-
-                        {/* Tombol Aksi Revoke */}
-                        {!isSelf && !isRevoked && (
-                          <Button
-                            size="sm"
+                        {t.pendingRevocationRequest ? (
+                          <Badge
                             variant="outline"
-                            disabled={isPending || isForbiddenToRevoke}
-                            onClick={() => setTargetToRevoke(t)}
-                            className="text-xs text-rose-700 border-rose-200 hover:bg-rose-50 hover:text-rose-800"
-                            title={
-                              isForbiddenToRevoke
-                                ? "Anggota (Member) tidak dapat mencabut akses Pengelola (Owner)"
-                                : "Cabut akses guru ini dari sekolah"
+                            className="bg-amber-500/10 text-amber-700 border-amber-300 text-xs flex items-center gap-1"
+                            title={`Alasan: ${t.pendingRevocationRequest.reason} (Diajukan oleh ${t.pendingRevocationRequest.requesterName})`}
+                          >
+                            <Clock className="h-3 w-3 animate-pulse" />
+                            Diajukan ke Superadmin
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className={
+                              t.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300 text-xs"
+                                : "bg-rose-50 text-rose-700 border-rose-300 text-xs"
                             }
                           >
-                            Cabut Akses
-                          </Button>
+                            {t.status === "ACTIVE" ? "Aktif" : "Dinonaktifkan"}
+                          </Badge>
+                        )}
+
+                        {/* Tombol Aksi */}
+                        {!isSelf && !isRevoked && (
+                          <>
+                            {t.pendingRevocationRequest ? (
+                              (isCallerOwner || t.pendingRevocationRequest.requesterProfileId === initialProfile.id) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={isPending}
+                                  onClick={() => handleCancelRevokeRequest(t.pendingRevocationRequest!.id)}
+                                  className="text-xs text-slate-500 hover:text-slate-700 underline h-7 px-2"
+                                  title="Batalkan permohonan pencabutan akses ini"
+                                >
+                                  Batalkan Pengajuan
+                                </Button>
+                              )
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isPending || isForbiddenToRevoke}
+                                onClick={() => {
+                                  setTargetToRevoke(t);
+                                  setRevokeReason("");
+                                }}
+                                className="text-xs text-rose-700 border-rose-200 hover:bg-rose-50 hover:text-rose-800"
+                                title={
+                                  isForbiddenToRevoke
+                                    ? "Anggota (Member) tidak dapat mengajukan pencabutan Pengelola (Owner)"
+                                    : "Ajukan permohonan pencabutan akses guru ini ke Superadmin"
+                                }
+                              >
+                                Ajukan Cabut Akses
+                              </Button>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -474,25 +536,51 @@ export default function SetupManager({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Konfirmasi Cabut Akses (Revoke) */}
+      {/* Dialog Konfirmasi Pengajuan Cabut Akses (Revoke Request) */}
       <Dialog open={!!targetToRevoke} onOpenChange={(open) => !open && setTargetToRevoke(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-rose-700">
               <ShieldAlert className="h-5 w-5" />
-              Cabut Akses Guru
+              Ajukan Pencabutan Akses Guru
             </DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin mencabut akses keanggotaan untuk guru ini dari {activeSchool.name}?
+              Permohonan ini akan dikirimkan ke <strong>Superadmin platform</strong> untuk diverifikasi dan disetujui.
             </DialogDescription>
           </DialogHeader>
 
           {targetToRevoke && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1 text-sm text-rose-950 my-2">
-              <div className="font-semibold">{targetToRevoke.teacherProfile.user.name}</div>
-              <div className="text-xs text-rose-700">{targetToRevoke.teacherProfile.user.email}</div>
-              <div className="text-xs text-rose-600 pt-1">
-                Guru ini tidak akan dapat mengakses data sekolah {activeSchool.name} lagi sampai ditambahkan kembali.
+            <div className="space-y-4 my-2">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-sm text-slate-900">
+                <div className="font-semibold">{targetToRevoke.teacherProfile.user.name}</div>
+                <div className="text-xs text-slate-500">{targetToRevoke.teacherProfile.user.email}</div>
+                <div className="text-xs text-slate-500 pt-1">
+                  Sekolah: <strong>{activeSchool.name}</strong> • Peran: <strong>{targetToRevoke.workspaceRole === "OWNER" ? "Pengelola" : "Anggota"}</strong>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="revoke-reason" className="text-xs font-semibold text-slate-800">
+                  Alasan Pencabutan Akses <span className="text-rose-500">*</span>
+                </Label>
+                <Textarea
+                  id="revoke-reason"
+                  placeholder="Contoh: Guru telah mutasi dinas / berhenti mengajar per semester ini."
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  className="text-xs min-h-[80px]"
+                  autoFocus
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Tuliskan alasan jelas agar Superadmin dapat memvalidasi pengajuan ini.
+                </p>
+              </div>
+
+              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                <span>
+                  Guru target tetap memiliki akses pembelajaran sampai permohonan ini disetujui oleh Superadmin.
+                </span>
               </div>
             </div>
           )}
@@ -508,9 +596,9 @@ export default function SetupManager({
             <Button
               variant="destructive"
               onClick={handleConfirmRevoke}
-              disabled={isPending}
+              disabled={isPending || revokeReason.trim().length < 5}
             >
-              {isPending ? "Mencabut..." : "Ya, Cabut Akses"}
+              {isPending ? "Mengirim..." : "Kirim Pengajuan"}
             </Button>
           </DialogFooter>
         </DialogContent>

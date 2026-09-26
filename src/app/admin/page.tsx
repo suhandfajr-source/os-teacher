@@ -17,6 +17,7 @@ export default async function AdminPage() {
     teachersData,
     studentsData,
     classesData,
+    revocationRequestsData,
   ] = await Promise.all([
     getSuperadminOverviewStats(),
     getAiUsageStatsAdmin(),
@@ -42,7 +43,7 @@ export default async function AdminPage() {
         },
       },
       orderBy: { name: "asc" },
-      take: 20,
+      take: 100,
     }),
     prisma.user.findMany({
       select: {
@@ -73,7 +74,7 @@ export default async function AdminPage() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: 100,
     }),
     prisma.student.findMany({
       select: {
@@ -102,7 +103,7 @@ export default async function AdminPage() {
         },
       },
       orderBy: [{ createdAt: "desc" }],
-      take: 20,
+      take: 100,
     }),
     prisma.class.findMany({
       select: {
@@ -123,9 +124,52 @@ export default async function AdminPage() {
         },
       },
       orderBy: [{ name: "asc" }],
-      take: 20,
+      take: 100,
+    }),
+    prisma.teacherRevocationRequest.findMany({
+      where: { status: "PENDING" },
+      include: {
+        school: { select: { id: true, name: true, city: true, npsn: true } },
+        teacherSchoolMembership: {
+          include: {
+            teacherProfile: {
+              include: { user: { select: { id: true, name: true, email: true } } },
+            },
+          },
+        },
+        requesterProfile: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+        reviewedBy: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: 50,
     }),
   ]);
+
+  const mappedRevocationRequests = revocationRequestsData.map((r) => ({
+    id: r.id,
+    status: r.status,
+    reason: r.reason,
+    rejectionReason: r.rejectionReason,
+    createdAt: r.createdAt,
+    reviewedAt: r.reviewedAt,
+    school: r.school,
+    targetTeacher: {
+      membershipId: r.teacherSchoolMembership.id,
+      teacherProfileId: r.teacherSchoolMembership.teacherProfileId,
+      name: r.teacherSchoolMembership.teacherProfile.user.name,
+      email: r.teacherSchoolMembership.teacherProfile.user.email,
+      workspaceRole: r.teacherSchoolMembership.workspaceRole,
+      membershipStatus: r.teacherSchoolMembership.status,
+    },
+    requester: {
+      teacherProfileId: r.requesterProfileId,
+      name: r.requesterProfile.user.name,
+      email: r.requesterProfile.user.email,
+    },
+    reviewedBy: r.reviewedBy ? { name: r.reviewedBy.name, email: r.reviewedBy.email } : null,
+  }));
 
   return (
     <AdminConsoleClient
@@ -136,6 +180,7 @@ export default async function AdminPage() {
       initialTeachers={teachersData as any}
       initialStudents={studentsData as any}
       initialClasses={classesData as any}
+      initialRevocationRequests={mappedRevocationRequests as any}
     />
   );
 }

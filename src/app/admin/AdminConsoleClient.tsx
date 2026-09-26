@@ -39,6 +39,9 @@ import {
   CheckCircle,
   Clock,
   Zap,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -79,8 +82,35 @@ import {
   getStudentDetailAdminAction,
   getClassDetailAdminAction,
   getAiUsageStatsAdminAction,
+  listTeacherRevocationRequestsAdminAction,
+  approveTeacherRevocationRequestAction,
+  rejectTeacherRevocationRequestAction,
 } from "@/modules/admin/admin.actions";
 import type { SuperadminOverviewStats, AiUsageStats } from "@/modules/admin/admin-stats.service";
+
+interface TeacherRevocationRequestItem {
+  id: string;
+  status: string;
+  reason: string;
+  rejectionReason?: string | null;
+  createdAt: string | Date;
+  reviewedAt?: string | Date | null;
+  school: { id: string; name: string; city: string | null; npsn: string | null };
+  targetTeacher: {
+    membershipId: string;
+    teacherProfileId: string;
+    name: string | null;
+    email: string;
+    workspaceRole: string;
+    membershipStatus: string;
+  };
+  requester: {
+    teacherProfileId: string;
+    name: string | null;
+    email: string;
+  };
+  reviewedBy?: { name: string | null; email: string } | null;
+}
 
 interface SchoolItem {
   id: string;
@@ -152,6 +182,7 @@ interface AdminConsoleClientProps {
   initialTeachers: TeacherItem[];
   initialStudents: StudentItem[];
   initialClasses: ClassItem[];
+  initialRevocationRequests?: TeacherRevocationRequestItem[];
 }
 
 function sortItemsByRelevance<T>(items: T[], query: string, extractKey: (item: T) => string): T[] {
@@ -187,6 +218,7 @@ export function AdminConsoleClient({
   initialTeachers,
   initialStudents,
   initialClasses,
+  initialRevocationRequests = [],
 }: AdminConsoleClientProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "ai-usage" | "schools" | "teachers" | "students" | "classes">("overview");
   const [selectedSchoolFilter, setSelectedSchoolFilter] = useState<string>("ALL");
@@ -202,19 +234,89 @@ export function AdminConsoleClient({
   const [teachers, setTeachers] = useState<TeacherItem[]>(initialTeachers);
   const [students, setStudents] = useState<StudentItem[]>(initialStudents);
   const [classes, setClasses] = useState<ClassItem[]>(initialClasses);
+  const [revocationRequests, setRevocationRequests] = useState<TeacherRevocationRequestItem[]>(initialRevocationRequests);
 
   // Search & Filter state
   const [schoolSearch, setSchoolSearch] = useState("");
   const [schoolStatusFilter, setSchoolStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [schoolSort, setSchoolSort] = useState<
+    | "name_asc"
+    | "name_desc"
+    | "npsn_asc"
+    | "npsn_desc"
+    | "students_desc"
+    | "students_asc"
+    | "teachers_desc"
+    | "teachers_asc"
+    | "classes_desc"
+    | "classes_asc"
+    | "status_asc"
+    | "status_desc"
+    | "created_desc"
+    | "created_asc"
+  >("name_asc");
 
   const [teacherSearch, setTeacherSearch] = useState("");
   const [teacherStatusFilter, setTeacherStatusFilter] = useState<"ALL" | "ACTIVE" | "BANNED">("ALL");
+  const [teacherSort, setTeacherSort] = useState<
+    | "created_desc"
+    | "created_asc"
+    | "name_asc"
+    | "name_desc"
+    | "email_asc"
+    | "email_desc"
+    | "role_asc"
+    | "role_desc"
+    | "school_asc"
+    | "school_desc"
+    | "status_active"
+    | "status_banned"
+  >("created_desc");
 
   const [studentSearch, setStudentSearch] = useState("");
   const [studentStatusFilter, setStudentStatusFilter] = useState<"ALL" | "ACTIVE" | "PENDING" | "REJECTED">("ALL");
+  const [studentSort, setStudentSort] = useState<
+    | "name_asc"
+    | "name_desc"
+    | "nis_asc"
+    | "nis_desc"
+    | "school_asc"
+    | "school_desc"
+    | "class_asc"
+    | "class_desc"
+    | "created_desc"
+    | "created_asc"
+    | "status_pending"
+    | "status_active"
+  >("name_asc");
 
   const [classSearch, setClassSearch] = useState("");
   const [classGradeFilter, setClassGradeFilter] = useState<string>("ALL");
+  const [classSort, setClassSort] = useState<
+    | "name_asc"
+    | "name_desc"
+    | "school_asc"
+    | "school_desc"
+    | "grade_asc"
+    | "grade_desc"
+    | "students_desc"
+    | "students_asc"
+    | "contexts_desc"
+    | "contexts_asc"
+    | "joinCode_asc"
+    | "joinCode_desc"
+  >("name_asc");
+
+  // Helper for Column Header Sort Indicator
+  const renderSortHeaderIcon = (ascKey: string, descKey: string, currentSort: string) => {
+    if (currentSort === ascKey) {
+      return <ChevronUp className="h-3.5 w-3.5 ml-1 text-teal-600 dark:text-teal-400 shrink-0 inline-block font-bold" />;
+    }
+    if (currentSort === descKey) {
+      return <ChevronDown className="h-3.5 w-3.5 ml-1 text-teal-600 dark:text-teal-400 shrink-0 inline-block font-bold" />;
+    }
+    return <ArrowUpDown className="h-3 w-3 ml-1 text-slate-400 dark:text-slate-500 opacity-40 group-hover:opacity-100 hover:text-slate-600 transition-opacity shrink-0 inline-block" />;
+  };
 
   // Dialog State (Action Modals)
   const [modalType, setModalType] = useState<
@@ -235,22 +337,199 @@ export function AdminConsoleClient({
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailDrawerTab, setDetailDrawerTab] = useState<string>("overview");
 
-  // Relevance Sorting Helper
+  // Filter & Sorting Helpers
   const sortedSchools = useMemo(() => {
-    return sortItemsByRelevance(schools, schoolSearch, (s) => `${s.name} ${s.npsn || ""} ${s.city || ""}`);
-  }, [schools, schoolSearch]);
+    let result = schools.filter((s) => {
+      if (!schoolSearch.trim()) return true;
+      const q = schoolSearch.trim().toLowerCase();
+      return (
+        s.name.toLowerCase().includes(q) ||
+        (s.npsn && s.npsn.toLowerCase().includes(q)) ||
+        (s.city && s.city.toLowerCase().includes(q)) ||
+        (s.province && s.province.toLowerCase().includes(q))
+      );
+    });
+
+    return [...result].sort((a, b) => {
+      switch (schoolSort) {
+        case "name_asc":
+          return a.name.localeCompare(b.name, "id");
+        case "name_desc":
+          return b.name.localeCompare(a.name, "id");
+        case "npsn_asc":
+          return (a.npsn || "").localeCompare(b.npsn || "", "id");
+        case "npsn_desc":
+          return (b.npsn || "").localeCompare(a.npsn || "", "id");
+        case "students_desc":
+          return (b._count?.students ?? 0) - (a._count?.students ?? 0);
+        case "students_asc":
+          return (a._count?.students ?? 0) - (b._count?.students ?? 0);
+        case "teachers_desc":
+          return (b._count?.memberships ?? 0) - (a._count?.memberships ?? 0);
+        case "teachers_asc":
+          return (a._count?.memberships ?? 0) - (b._count?.memberships ?? 0);
+        case "classes_desc":
+          return (b._count?.classes ?? 0) - (a._count?.classes ?? 0);
+        case "classes_asc":
+          return (a._count?.classes ?? 0) - (b._count?.classes ?? 0);
+        case "status_asc":
+          return (a.deactivatedAt ? 1 : 0) - (b.deactivatedAt ? 1 : 0);
+        case "status_desc":
+          return (b.deactivatedAt ? 1 : 0) - (a.deactivatedAt ? 1 : 0);
+        case "created_desc":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "created_asc":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [schools, schoolSearch, schoolSort]);
 
   const sortedTeachers = useMemo(() => {
-    return sortItemsByRelevance(teachers, teacherSearch, (t) => `${t.name} ${t.email}`);
-  }, [teachers, teacherSearch]);
+    let result = teachers.filter((t) => {
+      if (!teacherSearch.trim()) return true;
+      const q = teacherSearch.trim().toLowerCase();
+      const schoolNames = t.teacherProfile?.memberships?.map((m) => m.school.name.toLowerCase()).join(" ") || "";
+      return (
+        (t.name && t.name.toLowerCase().includes(q)) ||
+        (t.email && t.email.toLowerCase().includes(q)) ||
+        schoolNames.includes(q) ||
+        (t.teacherProfile?.preferredName && t.teacherProfile.preferredName.toLowerCase().includes(q))
+      );
+    });
+
+    return [...result].sort((a, b) => {
+      switch (teacherSort) {
+        case "created_desc":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "created_asc":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "name_asc":
+          return (a.name || "").localeCompare(b.name || "", "id");
+        case "name_desc":
+          return (b.name || "").localeCompare(a.name || "", "id");
+        case "email_asc":
+          return (a.email || "").localeCompare(b.email || "", "id");
+        case "email_desc":
+          return (b.email || "").localeCompare(a.email || "", "id");
+        case "role_asc":
+          return (a.platformRole || "").localeCompare(b.platformRole || "", "id");
+        case "role_desc":
+          return (b.platformRole || "").localeCompare(a.platformRole || "", "id");
+        case "school_asc": {
+          const sA = a.teacherProfile?.memberships?.[0]?.school?.name || "";
+          const sB = b.teacherProfile?.memberships?.[0]?.school?.name || "";
+          return sA.localeCompare(sB, "id");
+        }
+        case "school_desc": {
+          const sA = a.teacherProfile?.memberships?.[0]?.school?.name || "";
+          const sB = b.teacherProfile?.memberships?.[0]?.school?.name || "";
+          return sB.localeCompare(sA, "id");
+        }
+        case "status_active":
+          return (a.banned ? 1 : 0) - (b.banned ? 1 : 0);
+        case "status_banned":
+          return (b.banned ? 1 : 0) - (a.banned ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+  }, [teachers, teacherSearch, teacherSort]);
 
   const sortedStudents = useMemo(() => {
-    return sortItemsByRelevance(students, studentSearch, (s) => `${s.fullName} ${s.nis || ""} ${s.id}`);
-  }, [students, studentSearch]);
+    let result = students.filter((s) => {
+      if (!studentSearch.trim()) return true;
+      const q = studentSearch.trim().toLowerCase();
+      return (
+        s.fullName.toLowerCase().includes(q) ||
+        (s.nis && s.nis.toLowerCase().includes(q)) ||
+        (s.school?.name && s.school.name.toLowerCase().includes(q)) ||
+        (s.classMemberships?.[0]?.class?.name && s.classMemberships[0].class.name.toLowerCase().includes(q))
+      );
+    });
+
+    return [...result].sort((a, b) => {
+      switch (studentSort) {
+        case "name_asc":
+          return a.fullName.localeCompare(b.fullName, "id");
+        case "name_desc":
+          return b.fullName.localeCompare(a.fullName, "id");
+        case "nis_asc":
+          return (a.nis || "").localeCompare(b.nis || "", "id", { numeric: true });
+        case "nis_desc":
+          return (b.nis || "").localeCompare(a.nis || "", "id", { numeric: true });
+        case "school_asc":
+          return (a.school?.name || "").localeCompare(b.school?.name || "", "id");
+        case "school_desc":
+          return (b.school?.name || "").localeCompare(a.school?.name || "", "id");
+        case "class_asc": {
+          const cA = a.classMemberships?.[0]?.class?.name || "";
+          const cB = b.classMemberships?.[0]?.class?.name || "";
+          return cA.localeCompare(cB, "id", { numeric: true });
+        }
+        case "class_desc": {
+          const cA = a.classMemberships?.[0]?.class?.name || "";
+          const cB = b.classMemberships?.[0]?.class?.name || "";
+          return cB.localeCompare(cA, "id", { numeric: true });
+        }
+        case "created_desc":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "created_asc":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "status_pending":
+          return (b.accountStatus === "PENDING" ? 1 : 0) - (a.accountStatus === "PENDING" ? 1 : 0);
+        case "status_active":
+          return (a.accountStatus === "PENDING" ? 1 : 0) - (b.accountStatus === "PENDING" ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+  }, [students, studentSearch, studentSort]);
 
   const sortedClasses = useMemo(() => {
-    return sortItemsByRelevance(classes, classSearch, (c) => `${c.name} ${c.gradeLevel || ""} ${c.school.name}`);
-  }, [classes, classSearch]);
+    let result = classes.filter((c) => {
+      if (!classSearch.trim()) return true;
+      const q = classSearch.trim().toLowerCase();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        (c.gradeLevel && c.gradeLevel.toLowerCase().includes(q)) ||
+        (c.school?.name && c.school.name.toLowerCase().includes(q)) ||
+        (c.joinCode && c.joinCode.toLowerCase().includes(q))
+      );
+    });
+
+    return [...result].sort((a, b) => {
+      switch (classSort) {
+        case "name_asc":
+          return a.name.localeCompare(b.name, "id", { numeric: true });
+        case "name_desc":
+          return b.name.localeCompare(a.name, "id", { numeric: true });
+        case "school_asc":
+          return (a.school?.name || "").localeCompare(b.school?.name || "", "id");
+        case "school_desc":
+          return (b.school?.name || "").localeCompare(a.school?.name || "", "id");
+        case "grade_asc":
+          return (a.gradeLevel || "").localeCompare(b.gradeLevel || "", "id", { numeric: true });
+        case "grade_desc":
+          return (b.gradeLevel || "").localeCompare(a.gradeLevel || "", "id", { numeric: true });
+        case "students_desc":
+          return (b._count?.classStudents ?? 0) - (a._count?.classStudents ?? 0);
+        case "students_asc":
+          return (a._count?.classStudents ?? 0) - (b._count?.classStudents ?? 0);
+        case "contexts_desc":
+          return (b._count?.teachingContexts ?? 0) - (a._count?.teachingContexts ?? 0);
+        case "contexts_asc":
+          return (a._count?.teachingContexts ?? 0) - (b._count?.teachingContexts ?? 0);
+        case "joinCode_asc":
+          return (a.joinCode || "").localeCompare(b.joinCode || "", "id");
+        case "joinCode_desc":
+          return (b.joinCode || "").localeCompare(a.joinCode || "", "id");
+        default:
+          return 0;
+      }
+    });
+  }, [classes, classSearch, classSort]);
 
   // Trigger Refetches
   const reloadSchools = (customQuery?: string, customStatus?: "ALL" | "ACTIVE" | "INACTIVE") => {
@@ -313,6 +592,48 @@ export function AdminConsoleClient({
       }
       setIsAiLoading(false);
     });
+  };
+
+  const reloadRevocationRequests = (customSchoolId?: string) => {
+    startTransition(async () => {
+      const res = await listTeacherRevocationRequestsAdminAction({
+        statusFilter: "PENDING",
+        schoolId: customSchoolId !== undefined ? customSchoolId : selectedSchoolFilter,
+      });
+      if (res.success && res.data) {
+        setRevocationRequests(res.data as any);
+      }
+    });
+  };
+
+  const handleApproveRevocationRequest = (reqId: string, teacherName: string, schoolName: string) => {
+    if (confirm(`Setujui permohonan pencabutan akses untuk guru "${teacherName}" di sekolah "${schoolName}"? Keanggotaan guru akan dicabut.`)) {
+      startTransition(async () => {
+        const res = await approveTeacherRevocationRequestAction(reqId);
+        if (res.success) {
+          toast.success(res.message);
+          reloadRevocationRequests();
+          reloadTeachers();
+        } else {
+          toast.error(res.message || "Gagal menyetujui.");
+        }
+      });
+    }
+  };
+
+  const handleRejectRevocationRequest = (reqId: string, teacherName: string) => {
+    const reason = prompt(`Alasan penolakan permohonan pencabutan akses untuk "${teacherName}" (Opsional):`);
+    if (reason !== null) {
+      startTransition(async () => {
+        const res = await rejectTeacherRevocationRequestAction(reqId, reason);
+        if (res.success) {
+          toast.success(res.message);
+          reloadRevocationRequests();
+        } else {
+          toast.error(res.message || "Gagal menolak.");
+        }
+      });
+    }
   };
 
   // Open Detailing Drill-Down
@@ -1048,12 +1369,66 @@ export function AdminConsoleClient({
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-950/80">
                   <TableRow className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                    <TableHead className="text-slate-700 dark:text-slate-300">Nama Sekolah & Kota</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">NPSN</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300 text-center">Guru</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300 text-center">Siswa</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300 text-center">Kelas</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Status</TableHead>
+                    <TableHead
+                      onClick={() => setSchoolSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-teal-600 dark:hover:text-teal-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Sekolah"
+                    >
+                      <div className="flex items-center">
+                        Nama Sekolah & Kota
+                        {renderSortHeaderIcon("name_asc", "name_desc", schoolSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setSchoolSort((prev) => (prev === "npsn_asc" ? "npsn_desc" : "npsn_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-teal-600 dark:hover:text-teal-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan NPSN"
+                    >
+                      <div className="flex items-center">
+                        NPSN
+                        {renderSortHeaderIcon("npsn_asc", "npsn_desc", schoolSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setSchoolSort((prev) => (prev === "teachers_desc" ? "teachers_asc" : "teachers_desc"))}
+                      className="text-slate-700 dark:text-slate-300 text-center cursor-pointer select-none hover:text-teal-600 dark:hover:text-teal-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Jumlah Guru"
+                    >
+                      <div className="flex items-center justify-center">
+                        Guru
+                        {renderSortHeaderIcon("teachers_asc", "teachers_desc", schoolSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setSchoolSort((prev) => (prev === "students_desc" ? "students_asc" : "students_desc"))}
+                      className="text-slate-700 dark:text-slate-300 text-center cursor-pointer select-none hover:text-teal-600 dark:hover:text-teal-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Jumlah Siswa"
+                    >
+                      <div className="flex items-center justify-center">
+                        Siswa
+                        {renderSortHeaderIcon("students_asc", "students_desc", schoolSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setSchoolSort((prev) => (prev === "classes_desc" ? "classes_asc" : "classes_desc"))}
+                      className="text-slate-700 dark:text-slate-300 text-center cursor-pointer select-none hover:text-teal-600 dark:hover:text-teal-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Jumlah Rombel"
+                    >
+                      <div className="flex items-center justify-center">
+                        Kelas
+                        {renderSortHeaderIcon("classes_asc", "classes_desc", schoolSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setSchoolSort((prev) => (prev === "status_asc" ? "status_desc" : "status_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-teal-600 dark:hover:text-teal-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Status"
+                    >
+                      <div className="flex items-center">
+                        Status
+                        {renderSortHeaderIcon("status_asc", "status_desc", schoolSort)}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-slate-700 dark:text-slate-300 text-right">Aksi Kendali</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1199,8 +1574,130 @@ export function AdminConsoleClient({
       {/* TAB 4: GURU & STAF                                                       */}
       {/* ========================================================================= */}
       {activeTab === "teachers" && (
-        <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs">
-          <CardHeader className="pb-4">
+        <div className="space-y-6">
+          {/* Panel Permohonan Pencabutan Akses Guru (Maker-Checker Approval) */}
+          <Card className={`border-slate-200 dark:border-slate-800 shadow-xs ${
+            revocationRequests.length > 0
+              ? "bg-amber-50/40 dark:bg-amber-950/20 border-amber-300/60 dark:border-amber-700/50"
+              : "bg-white dark:bg-slate-900"
+          }`}>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-2 rounded-lg ${
+                    revocationRequests.length > 0
+                      ? "bg-amber-500 text-white shadow-xs"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                  }`}>
+                    <ShieldAlert className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      Persetujuan Pencabutan Akses Guru
+                      {revocationRequests.length > 0 ? (
+                        <Badge variant="secondary" className="bg-amber-500 text-white text-[11px] font-bold px-2">
+                          {revocationRequests.length} Menunggu Persetujuan
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-slate-400 text-[10px]">
+                          0 Permohonan
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Permohonan dari guru/pengelola sekolah untuk mencabut keanggotaan rekan guru dari sekolah.
+                    </CardDescription>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={() => reloadRevocationRequests()}
+                  className="h-8 text-xs shrink-0"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isPending ? "animate-spin" : ""}`} />
+                  Refresh Pengajuan
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-0">
+              {revocationRequests.length === 0 ? (
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl text-center text-xs text-slate-500 dark:text-slate-400">
+                  Tidak ada permohonan pencabutan akses guru yang sedang menunggu persetujuan.
+                </div>
+              ) : (
+                <div className="rounded-xl border border-amber-200 dark:border-amber-800/60 overflow-hidden bg-white dark:bg-slate-900">
+                  <Table>
+                    <TableHeader className="bg-amber-50/80 dark:bg-amber-950/60 text-xs">
+                      <TableRow className="border-b border-amber-200 dark:border-amber-800/60">
+                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Guru Target</TableHead>
+                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Sekolah</TableHead>
+                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Pemohon</TableHead>
+                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">Alasan Pencabutan</TableHead>
+                        <TableHead className="text-slate-700 dark:text-slate-300 font-semibold text-right">Keputusan Admin</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-amber-100 dark:divide-slate-800 text-xs">
+                      {revocationRequests.map((r) => (
+                        <TableRow key={r.id} className="hover:bg-amber-50/50 dark:hover:bg-amber-950/30">
+                          <TableCell className="font-semibold text-slate-900 dark:text-white">
+                            <div>{r.targetTeacher.name || "Guru"}</div>
+                            <div className="text-[11px] text-slate-400 font-normal">{r.targetTeacher.email}</div>
+                            <Badge variant="outline" className="text-[9px] mt-1">
+                              {r.targetTeacher.workspaceRole === "OWNER" ? "Pengelola (Owner)" : "Anggota (Member)"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">{r.school.name}</div>
+                            <div className="text-[11px] text-slate-400">{r.school.city || "—"}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-slate-800 dark:text-slate-200">{r.requester.name || "Guru"}</div>
+                            <div className="text-[11px] text-slate-400">{r.requester.email}</div>
+                          </TableCell>
+                          <TableCell className="max-w-[280px]">
+                            <div className="p-2 bg-slate-50 dark:bg-slate-950/80 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs italic">
+                              &ldquo;{r.reason}&rdquo;
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-1">
+                              Diajukan: {new Date(r.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                size="sm"
+                                disabled={isPending}
+                                onClick={() => handleApproveRevocationRequest(r.id, r.targetTeacher.name || "Guru", r.school.name)}
+                                className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                              >
+                                Setujui Pencabutan
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isPending}
+                                onClick={() => handleRejectRevocationRequest(r.id, r.targetTeacher.name || "Guru")}
+                                className="h-7 px-2.5 text-xs text-rose-600 border-rose-300 hover:bg-rose-50"
+                              >
+                                Tolak
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Daftar Guru & Akun Pengguna Utama */}
+          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs">
+            <CardHeader className="pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <CardTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -1261,10 +1758,46 @@ export function AdminConsoleClient({
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-950/80">
                   <TableRow className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                    <TableHead className="text-slate-700 dark:text-slate-300">Nama & Email</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Role</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Sekolah Terdaftar</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Status</TableHead>
+                    <TableHead
+                      onClick={() => setTeacherSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Guru"
+                    >
+                      <div className="flex items-center">
+                        Nama & Email
+                        {renderSortHeaderIcon("name_asc", "name_desc", teacherSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setTeacherSort((prev) => (prev === "role_asc" ? "role_desc" : "role_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Role"
+                    >
+                      <div className="flex items-center">
+                        Role
+                        {renderSortHeaderIcon("role_asc", "role_desc", teacherSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setTeacherSort((prev) => (prev === "school_asc" ? "school_desc" : "school_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Sekolah"
+                    >
+                      <div className="flex items-center">
+                        Sekolah Terdaftar
+                        {renderSortHeaderIcon("school_asc", "school_desc", teacherSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setTeacherSort((prev) => (prev === "status_active" ? "status_banned" : "status_active"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Status"
+                    >
+                      <div className="flex items-center">
+                        Status
+                        {renderSortHeaderIcon("status_active", "status_banned", teacherSort)}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-slate-700 dark:text-slate-300 text-right">Aksi Kendali</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1424,6 +1957,7 @@ export function AdminConsoleClient({
             </div>
           </CardContent>
         </Card>
+        </div>
       )}
 
       {/* ========================================================================= */}
@@ -1493,10 +2027,46 @@ export function AdminConsoleClient({
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-950/80">
                   <TableRow className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                    <TableHead className="text-slate-700 dark:text-slate-300">Nama Siswa & NIS</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Sekolah</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Kelas / Rombel</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Status Akun</TableHead>
+                    <TableHead
+                      onClick={() => setStudentSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Siswa"
+                    >
+                      <div className="flex items-center">
+                        Nama Siswa & NIS
+                        {renderSortHeaderIcon("name_asc", "name_desc", studentSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setStudentSort((prev) => (prev === "school_asc" ? "school_desc" : "school_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Sekolah"
+                    >
+                      <div className="flex items-center">
+                        Sekolah
+                        {renderSortHeaderIcon("school_asc", "school_desc", studentSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setStudentSort((prev) => (prev === "class_asc" ? "class_desc" : "class_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Kelas / Rombel"
+                    >
+                      <div className="flex items-center">
+                        Kelas / Rombel
+                        {renderSortHeaderIcon("class_asc", "class_desc", studentSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setStudentSort((prev) => (prev === "status_pending" ? "status_active" : "status_pending"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Status Akun"
+                    >
+                      <div className="flex items-center">
+                        Status Akun
+                        {renderSortHeaderIcon("status_active", "status_pending", studentSort)}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-slate-700 dark:text-slate-300 text-right">Aksi Kendali</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1681,7 +2251,7 @@ export function AdminConsoleClient({
               <div className="relative sm:col-span-8">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Cari nama kelas atau jenjang..."
+                  placeholder="Cari nama kelas, jenjang, kode, atau nama sekolah..."
                   value={classSearch}
                   onChange={(e) => setClassSearch(e.target.value)}
                   className="pl-9 h-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700"
@@ -1718,12 +2288,66 @@ export function AdminConsoleClient({
               <Table>
                 <TableHeader className="bg-slate-50 dark:bg-slate-950/80">
                   <TableRow className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold">
-                    <TableHead className="text-slate-700 dark:text-slate-300">Nama Kelas / Rombel</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Sekolah</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Tingkat</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300 text-center">Jumlah Siswa</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300 text-center">Konteks Ajar</TableHead>
-                    <TableHead className="text-slate-700 dark:text-slate-300">Kode Gabung</TableHead>
+                    <TableHead
+                      onClick={() => setClassSort((prev) => (prev === "name_asc" ? "name_desc" : "name_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-amber-600 dark:hover:text-amber-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Kelas"
+                    >
+                      <div className="flex items-center">
+                        Nama Kelas / Rombel
+                        {renderSortHeaderIcon("name_asc", "name_desc", classSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setClassSort((prev) => (prev === "school_asc" ? "school_desc" : "school_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-amber-600 dark:hover:text-amber-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Nama Sekolah"
+                    >
+                      <div className="flex items-center">
+                        Sekolah
+                        {renderSortHeaderIcon("school_asc", "school_desc", classSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setClassSort((prev) => (prev === "grade_asc" ? "grade_desc" : "grade_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-amber-600 dark:hover:text-amber-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Tingkat"
+                    >
+                      <div className="flex items-center">
+                        Tingkat
+                        {renderSortHeaderIcon("grade_asc", "grade_desc", classSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setClassSort((prev) => (prev === "students_desc" ? "students_asc" : "students_desc"))}
+                      className="text-slate-700 dark:text-slate-300 text-center cursor-pointer select-none hover:text-amber-600 dark:hover:text-amber-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Jumlah Siswa"
+                    >
+                      <div className="flex items-center justify-center">
+                        Jumlah Siswa
+                        {renderSortHeaderIcon("students_asc", "students_desc", classSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setClassSort((prev) => (prev === "contexts_desc" ? "contexts_asc" : "contexts_desc"))}
+                      className="text-slate-700 dark:text-slate-300 text-center cursor-pointer select-none hover:text-amber-600 dark:hover:text-amber-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Konteks / Mapel"
+                    >
+                      <div className="flex items-center justify-center">
+                        Konteks Ajar
+                        {renderSortHeaderIcon("contexts_asc", "contexts_desc", classSort)}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => setClassSort((prev) => (prev === "joinCode_asc" ? "joinCode_desc" : "joinCode_asc"))}
+                      className="text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:text-amber-600 dark:hover:text-amber-400 transition-colors group"
+                      title="Klik untuk mengurutkan berdasarkan Kode Gabung"
+                    >
+                      <div className="flex items-center">
+                        Kode Gabung
+                        {renderSortHeaderIcon("joinCode_asc", "joinCode_desc", classSort)}
+                      </div>
+                    </TableHead>
                     <TableHead className="text-slate-700 dark:text-slate-300 text-right">Aksi Kendali</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1914,7 +2538,7 @@ export function AdminConsoleClient({
                           <div>
                             <span className="text-slate-400 text-[11px]">Total Guru:</span>
                             <div className="font-semibold text-indigo-600 dark:text-indigo-400">
-                              {detailData._count?.teacherMemberships ?? 0} Guru
+                              {detailData._count?.memberships ?? 0} Guru
                             </div>
                           </div>
                         </div>
@@ -1930,7 +2554,7 @@ export function AdminConsoleClient({
                               : "text-slate-600 dark:text-slate-400"
                           }`}
                         >
-                          Daftar Guru ({detailData.teacherMemberships?.length ?? 0})
+                          Daftar Guru ({detailData.memberships?.length ?? 0})
                         </button>
                         <button
                           onClick={() => setDetailDrawerTab("classes")}
@@ -1961,10 +2585,10 @@ export function AdminConsoleClient({
                             Guru yang Mengajar di {detailData.name}:
                           </h4>
                           <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs">
-                            {(detailData.teacherMemberships || []).length === 0 ? (
+                            {(detailData.memberships || []).length === 0 ? (
                               <div className="p-4 text-center text-slate-400">Belum ada guru terhubung.</div>
                             ) : (
-                              detailData.teacherMemberships.map((m: any) => {
+                              detailData.memberships.map((m: any) => {
                                 const teacherUser = m.teacherProfile?.user;
                                 const contexts = m.teacherProfile?.teachingContexts || [];
                                 return (
@@ -2002,25 +2626,31 @@ export function AdminConsoleClient({
                           <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
                             Rombongan Belajar di {detailData.name}:
                           </h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {(detailData.classes || []).map((cls: any) => (
-                              <div
-                                key={cls.id}
-                                className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 space-y-2 text-xs"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-bold text-slate-900 dark:text-white text-sm">{cls.name}</span>
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {cls.gradeLevel ? `Kelas ${cls.gradeLevel}` : "Umum"}
-                                  </Badge>
+                          {(detailData.classes || []).length === 0 ? (
+                            <div className="p-4 text-center text-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl text-xs">
+                              Belum ada rombongan belajar di sekolah ini.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {detailData.classes.map((cls: any) => (
+                                <div
+                                  key={cls.id}
+                                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 space-y-2 text-xs"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-900 dark:text-white text-sm">{cls.name}</span>
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {cls.gradeLevel ? `Kelas ${cls.gradeLevel}` : "Umum"}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                    <span>👥 {cls._count?.classStudents ?? 0} Siswa</span>
+                                    <span>📚 {cls._count?.teachingContexts ?? 0} Mapel</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
-                                  <span>👥 {cls._count?.classStudents ?? 0} Siswa</span>
-                                  <span>📚 {cls._count?.teachingContexts ?? 0} Mapel</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -2030,21 +2660,27 @@ export function AdminConsoleClient({
                           <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300">
                             Daftar Siswa (Maks 50 Siswa Pertama):
                           </h4>
-                          <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs max-h-96 overflow-y-auto">
-                            {(detailData.students || []).map((st: any) => (
-                              <div key={st.id} className="p-2.5 bg-white dark:bg-slate-900/90 flex items-center justify-between">
-                                <div>
-                                  <div className="font-semibold text-slate-900 dark:text-white">{st.fullName}</div>
-                                  <div className="text-[11px] text-slate-400 font-mono">NIS: {st.nis || "-"}</div>
+                          {(detailData.students || []).length === 0 ? (
+                            <div className="p-4 text-center text-slate-400 border border-slate-200 dark:border-slate-800 rounded-xl text-xs">
+                              Belum ada siswa terdaftar di sekolah ini.
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs max-h-96 overflow-y-auto">
+                              {detailData.students.map((st: any) => (
+                                <div key={st.id} className="p-2.5 bg-white dark:bg-slate-900/90 flex items-center justify-between">
+                                  <div>
+                                    <div className="font-semibold text-slate-900 dark:text-white">{st.fullName}</div>
+                                    <div className="text-[11px] text-slate-400 font-mono">NIS: {st.nis || "-"}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {st.classMemberships?.[0]?.class?.name || "Tanpa Kelas"}
+                                    </Badge>
+                                  </div>
                                 </div>
-                                <div className="text-right">
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {st.classMemberships?.[0]?.class?.name || "Tanpa Kelas"}
-                                  </Badge>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

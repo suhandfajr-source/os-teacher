@@ -181,6 +181,7 @@ model User {
   parentProfile    ParentProfile?
   approvedStudents Student[]       @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
   notifications    Notification[]
+  revocationReviews TeacherRevocationRequest[] @relation("RevocationReviewer")
 
   @@unique([email])
   @@map("user")
@@ -259,6 +260,7 @@ model School {
   aiContentDrafts   AiContentDraft[]
   documentTemplates DocumentTemplate[]
   importSessions    ImportSession[]
+  revocationRequests TeacherRevocationRequest[]
 
   @@index([normalizedName])
   @@index([npsn])
@@ -276,9 +278,33 @@ model TeacherSchoolMembership {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
+  revocationRequests TeacherRevocationRequest[]
+
   @@unique([teacherProfileId, schoolId])
   @@index([status])
   @@map("teacher_school_membership")
+}
+
+model TeacherRevocationRequest {
+  id                        String                  @id @default(cuid())
+  teacherSchoolMembershipId String
+  teacherSchoolMembership   TeacherSchoolMembership @relation(fields: [teacherSchoolMembershipId], references: [id], onDelete: Cascade)
+  schoolId                  String
+  school                    School                  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  requesterProfileId        String
+  requesterProfile          TeacherProfile          @relation("RevocationRequester", fields: [requesterProfileId], references: [id], onDelete: Cascade)
+  reason                    String
+  status                    String                  @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  reviewedById              String?
+  reviewedBy                User?                   @relation("RevocationReviewer", fields: [reviewedById], references: [id])
+  reviewedAt                DateTime?
+  rejectionReason           String?
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+
+  @@index([schoolId, status])
+  @@index([teacherSchoolMembershipId])
+  @@map("teacher_revocation_request")
 }
 
 model Student {
@@ -357,6 +383,7 @@ model TeacherProfile {
   grantedParentTeachingAccesses ParentTeachingAccess[]    @relation("GrantedParentTeachingAccesses")
   importSessions                ImportSession[]
   assignmentSubmissions         AssignmentSubmission[]
+  revocationRequests            TeacherRevocationRequest[] @relation("RevocationRequester")
 
   @@map("teacher_profile")
 }

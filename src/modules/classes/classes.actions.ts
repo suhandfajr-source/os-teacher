@@ -325,3 +325,55 @@ export async function createClassAction(input: CreateClassActionInput) {
   });
 }
 
+export interface UpdateClassActionInput {
+  classId: string;
+  className: string;
+  gradeLevel?: string;
+}
+
+export async function updateClassAction(input: UpdateClassActionInput) {
+  const { activeSchoolId } = await verifyActiveSchoolMembership();
+
+  const className = input.className?.trim();
+  if (!className) {
+    throw new Error("Nama kelas wajib diisi.");
+  }
+
+  const existing = await prisma.class.findUnique({
+    where: { id: input.classId },
+  });
+
+  if (!existing || existing.schoolId !== activeSchoolId) {
+    throw new Error("Kelas tidak ditemukan pada sekolah aktif Anda.");
+  }
+
+  const normalizedClassName = className.toUpperCase().replace(/\s+/g, " ");
+
+  // Check if renaming conflicts with another class in the same school
+  const duplicate = await prisma.class.findFirst({
+    where: {
+      schoolId: activeSchoolId,
+      normalizedName: normalizedClassName,
+      id: { not: input.classId },
+    },
+  });
+
+  if (duplicate) {
+    throw new Error(`Kelas dengan nama "${className}" sudah terdaftar di sekolah ini.`);
+  }
+
+  const updatedClass = await prisma.class.update({
+    where: { id: input.classId },
+    data: {
+      name: className,
+      normalizedName: normalizedClassName,
+      gradeLevel: input.gradeLevel?.trim() || null,
+    },
+  });
+
+  return {
+    success: true,
+    class: updatedClass,
+    message: `Kelas "${className}" berhasil diperbarui.`,
+  };
+}

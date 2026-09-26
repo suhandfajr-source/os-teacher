@@ -58,6 +58,16 @@ export default async function SetupPage() {
           },
         },
       },
+      revocationRequests: {
+        where: { status: "PENDING" },
+        include: {
+          requesterProfile: {
+            include: { user: { select: { name: true, email: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
     orderBy: [{ workspaceRole: "asc" }, { createdAt: "asc" }],
   });

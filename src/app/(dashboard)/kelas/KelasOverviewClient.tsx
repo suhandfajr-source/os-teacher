@@ -15,7 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { createClassAction } from "@/modules/classes/classes.actions";
+import { createClassAction, updateClassAction } from "@/modules/classes/classes.actions";
 import { toast } from "sonner";
 import {
   Plus,
@@ -26,6 +26,7 @@ import {
   GraduationCap,
   Calendar,
   Clock,
+  Edit3,
 } from "lucide-react";
 import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
 
@@ -58,6 +59,12 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Edit State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editClassId, setEditClassId] = useState("");
+  const [editClassName, setEditClassName] = useState("");
+  const [editGradeLevel, setEditGradeLevel] = useState("");
 
   // Form State
   const [className, setClassName] = useState("");
@@ -95,6 +102,41 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
     }
     setCustomSubjectName("");
     setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (classId: string, currentName: string, currentGrade: string | null) => {
+    setEditClassId(classId);
+    setEditClassName(currentName);
+    setEditGradeLevel(currentGrade || "");
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editClassName.trim()) {
+      toast.error("Nama kelas wajib diisi");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await updateClassAction({
+          classId: editClassId,
+          className: editClassName.trim(),
+          gradeLevel: editGradeLevel.trim() || undefined,
+        });
+
+        if (res.success) {
+          toast.success(`Data kelas "${editClassName}" berhasil diperbarui!`);
+          setIsEditModalOpen(false);
+          router.refresh();
+        } else {
+          toast.error(res.message || "Gagal memperbarui kelas");
+        }
+      } catch (err: unknown) {
+        toast.error((err as Error).message || "Terjadi kesalahan saat memperbarui kelas");
+      }
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -217,14 +259,30 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
                 {/* Divider */}
                 <div className="my-4 border-t border-slate-100"></div>
 
-                {/* Footer: Students Count + Schedule Config Action */}
+                {/* Footer: Students Count + Actions */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                     <Users className="w-4 h-4 text-teal-700" />
                     <span>{ctx.class._count.classStudents} Siswa</span>
                   </div>
 
-                  <div onClick={(e) => e.preventDefault()}>
+                  <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 rounded-xl text-xs font-bold text-slate-600 hover:text-teal-700 hover:bg-teal-50 gap-1"
+                      title="Edit Data Kelas"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleOpenEditModal(ctx.class.id, ctx.class.name, ctx.class.gradeLevel);
+                      }}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </Button>
+
                     <ScheduleConfigDialog
                       teachingContextId={ctx.id}
                       contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
@@ -386,6 +444,68 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
               </Button>
               <Button type="submit" loading={isPending}>
                 Simpan & Tambahkan
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dialog: Edit Kelas */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Edit3 className="h-5 w-5 text-teal-600" />
+              Edit Data Kelas
+            </DialogTitle>
+            <DialogDescription>
+              Ubah nama rombel atau tingkat kelas untuk {schoolName}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditSubmit} className="space-y-4 py-2">
+            {/* Nama Kelas */}
+            <div className="space-y-1.5">
+              <Label htmlFor="editClassName" className="text-sm font-semibold">
+                Nama Kelas / Rombel <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="editClassName"
+                placeholder="Contoh: 8-B, 7A, X IPA 1"
+                value={editClassName}
+                onChange={(e) => setEditClassName(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+
+            {/* Tingkat / Grade Level */}
+            <div className="space-y-1.5">
+              <Label htmlFor="editGradeLevel" className="text-sm font-semibold">
+                Tingkat / Jenjang Kelas <span className="text-xs font-normal text-muted-foreground">(Opsional)</span>
+              </Label>
+              <Input
+                id="editGradeLevel"
+                placeholder="Contoh: 8, 7, 10, atau SD 1"
+                value={editGradeLevel}
+                onChange={(e) => setEditGradeLevel(e.target.value)}
+              />
+              <p className="text-xs text-slate-500">
+                Isi dengan angka jenjang (contoh: 8) agar label tingkatan kelas tampil sesuai.
+              </p>
+            </div>
+
+            <DialogFooter className="pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={isPending}
+              >
+                Batal
+              </Button>
+              <Button type="submit" loading={isPending} className="bg-teal-700 hover:bg-teal-800 text-white font-bold">
+                Simpan Perubahan
               </Button>
             </DialogFooter>
           </form>

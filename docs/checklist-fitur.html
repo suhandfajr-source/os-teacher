@@ -100,12 +100,11 @@ const DATA = [
     ]}
   ]},
   { id:"r1", badge:"b-super", badgeText:"Superadmin", title:"1. Superadmin (platform)", groups:[
-    { name:"Panel & Persetujuan Guru", items:[
+    { name:"Panel & Kendali Guru", items:[
       "Login dengan akun yang emailnya terdaftar di <code>SUPERADMIN_EMAILS</code>",
-      "<code>/admin</code> — panel persetujuan guru terbuka; guru pending tampil",
-      "Setujui / tolak pendaftar guru → guru bisa / tidak bisa login",
-      "Force approve eskalasi (backstop) berfungsi",
-      "Ban guru → sesi guru ter-revoke, akses ditolak",
+      "<code>/admin</code> — tab Guru menampilkan daftar akun guru, status (Aktif/Banned), dan pencarian relevansi",
+      "Tab Siswa: Force approve / reject pendaftaran siswa berstatus PENDING (L3 Backstop)",
+      "Ban guru → sesi guru ter-revoke, akses ditolak; Unban → akses dipulihkan",
       "Reset password guru → guru login dengan password baru"
     ]},
     { name:"Sekolah & Audit", items:[
@@ -117,7 +116,7 @@ const DATA = [
   ]},
   { id:"r2", badge:"b-guru", badgeText:"Guru", title:"2. Guru", groups:[
     { name:"Onboarding & Akun", items:[
-      "<code>/register</code> → akun pending → disetujui superadmin → masuk onboarding",
+      "<code>/register</code> → registrasi guru mandiri → diarahkan ke wizard onboarding 4-step",
       "<code>/onboarding</code> — setup sekolah → periode aktif → mapel → rombel (join code)",
       "<code>/onboarding/mid-semester</code> — alur tengah semester",
       "<code>/pengaturan</code> & <code>/pengaturan/setup</code> — profil & konfigurasi"

@@ -318,20 +318,205 @@ export async function getSchoolTeachers() {
           },
         },
       },
+      revocationRequests: {
+        where: { status: "PENDING" },
+        include: {
+          requesterProfile: {
+            include: { user: { select: { name: true, email: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
     orderBy: [{ workspaceRole: "asc" }, { createdAt: "asc" }],
   });
 
-  return memberships.map((m) => ({
-    id: m.id,
-    teacherProfileId: m.teacherProfileId,
-    name: m.teacherProfile.user.name,
-    email: m.teacherProfile.user.email,
-    image: m.teacherProfile.user.image,
-    workspaceRole: m.workspaceRole,
-    status: m.status,
-    createdAt: m.createdAt,
-  }));
+  return memberships.map((m: any) => {
+    const pendingReq = m.revocationRequests && m.revocationRequests[0];
+    return {
+      id: m.id,
+      teacherProfileId: m.teacherProfileId,
+      name: m.teacherProfile.user.name,
+      email: m.teacherProfile.user.email,
+      image: m.teacherProfile.user.image,
+      workspaceRole: m.workspaceRole,
+      status: m.status,
+      createdAt: m.createdAt,
+      pendingRevocationRequest: pendingReq
+        ? {
+            id: pendingReq.id,
+            reason: pendingReq.reason,
+            requesterName: pendingReq.requesterProfile.user.name,
+            requesterEmail: pendingReq.requesterProfile.user.email,
+            requesterProfileId: pendingReq.requesterProfileId,
+            createdAt: pendingReq.createdAt,
+          }
+        : null,
+    };
+  });
+}
+
+/**
+ * Mengajukan permohonan pencabutan akses guru di sekolah ke Superadmin.
+ */
+export async function requestRevokeTeacherMembership(data: {
+  teacherSchoolMembershipId: string;
+  reason: string;
+}) {
+  const { profile, activeSchoolId, session } = await verifyActiveSchoolMembership();
+
+  const cleanReason = (data.reason || "").trim();
+  if (cleanReason.length < 5) {
+    throw new Error("Alasan pencabutan akses minimal 5 karakter.");
+  }
+
+  // 1. Verifikasi membership pemanggil
+  const callerMembership = await prisma.teacherSchoolMembership.findUnique({
+    where: {
+      teacherProfileId_schoolId: {
+        teacherProfileId: profile.id,
+        schoolId: activeSchoolId,
+      },
+    },
+  });
+
+  if (!callerMembership || callerMembership.status !== "ACTIVE") {
+    throw new Error("Anda bukan anggota aktif dari sekolah ini.");
+  }
+
+  // 2. Ambil keanggotaan target
+  const targetMembership = await prisma.teacherSchoolMembership.findUnique({
+    where: { id: data.teacherSchoolMembershipId },
+    include: {
+      teacherProfile: {
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      },
+      revocationRequests: {
+        where: { status: "PENDING" },
+      },
+    },
+  });
+
+  if (!targetMembership || targetMembership.schoolId !== activeSchoolId) {
+    throw new Error("Keanggotaan guru tidak ditemukan di sekolah aktif Anda.");
+  }
+
+  if (targetMembership.teacherProfileId === profile.id) {
+    throw new Error("Tidak dapat mengajukan pencabutan akses diri sendiri.");
+  }
+
+  if (targetMembership.status === "REVOKED") {
+    throw new Error("Keanggotaan guru ini sudah dicabut sebelumnya.");
+  }
+
+  // Cek apakah sudah ada pengajuan pending
+  if (targetMembership.revocationRequests.length > 0) {
+    throw new Error("Pengajuan pencabutan akses untuk guru ini sudah ada dan sedang menunggu persetujuan Superadmin.");
+  }
+
+  // Buat request permohonan pencabutan akses
+  const newRequest = await prisma.$transaction(async (tx) => {
+    const req = await tx.teacherRevocationRequest.create({
+      data: {
+        teacherSchoolMembershipId: targetMembership.id,
+        schoolId: activeSchoolId,
+        requesterProfileId: profile.id,
+        reason: cleanReason,
+        status: "PENDING",
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorType: "USER",
+        actorId: session.user.id,
+        action: "TEACHER_REVOCATION_REQUESTED",
+        targetType: "TEACHER_REVOCATION_REQUEST",
+        targetId: req.id,
+        metadata: {
+          schoolId: activeSchoolId,
+          targetTeacherProfileId: targetMembership.teacherProfileId,
+          targetTeacherName: targetMembership.teacherProfile.user.name,
+          requesterTeacherProfileId: profile.id,
+          reason: cleanReason,
+        },
+      },
+    });
+
+    return req;
+  });
+
+  return {
+    success: true,
+    message: "Permohonan pencabutan akses berhasil diajukan ke Superadmin.",
+    requestId: newRequest.id,
+  };
+}
+
+/**
+ * Membatalkan pengajuan pencabutan akses guru yang masih berstatus PENDING.
+ */
+export async function cancelRevokeTeacherMembershipRequest(requestId: string) {
+  const { profile, activeSchoolId, session } = await verifyActiveSchoolMembership();
+
+  const req = await prisma.teacherRevocationRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      teacherSchoolMembership: true,
+    },
+  });
+
+  if (!req || req.schoolId !== activeSchoolId) {
+    throw new Error("Permohonan pencabutan akses tidak ditemukan.");
+  }
+
+  if (req.status !== "PENDING") {
+    throw new Error("Hanya permohonan berstatus PENDING yang dapat dibatalkan.");
+  }
+
+  // Hanya pemohon atau Owner sekolah yang boleh membatalkan
+  const callerMembership = await prisma.teacherSchoolMembership.findUnique({
+    where: {
+      teacherProfileId_schoolId: {
+        teacherProfileId: profile.id,
+        schoolId: activeSchoolId,
+      },
+    },
+  });
+
+  const isOwner = callerMembership?.workspaceRole === "OWNER";
+  const isRequester = req.requesterProfileId === profile.id;
+
+  if (!isOwner && !isRequester) {
+    throw new Error("Hanya guru yang mengajukan atau Pengelola Sekolah yang dapat membatalkan pengajuan ini.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.teacherRevocationRequest.update({
+      where: { id: requestId },
+      data: { status: "CANCELLED" },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorType: "USER",
+        actorId: session.user.id,
+        action: "TEACHER_REVOCATION_REQUEST_CANCELLED",
+        targetType: "TEACHER_REVOCATION_REQUEST",
+        targetId: req.id,
+        metadata: {
+          schoolId: activeSchoolId,
+          requestId: req.id,
+          cancelledBy: session.user.id,
+        },
+      },
+    });
+  });
+
+  return { success: true, message: "Pengajuan pencabutan akses berhasil dibatalkan." };
 }
 
 export async function revokeTeacherMembership(teacherSchoolMembershipId: string) {

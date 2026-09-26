@@ -704,6 +704,7 @@ export async function listTeachersAdminAction(params: {
     where.OR = [
       { name: { contains: q, mode: "insensitive" } },
       { email: { contains: q, mode: "insensitive" } },
+      { teacherProfile: { memberships: { some: { school: { name: { contains: q, mode: "insensitive" } } } } } },
     ];
   }
 
@@ -793,6 +794,7 @@ export async function listStudentsAdminAction(params: {
     where.OR = [
       { fullName: { contains: q, mode: "insensitive" } },
       { nis: { contains: q, mode: "insensitive" } },
+      { school: { name: { contains: q, mode: "insensitive" } } },
       { id: q },
     ];
   }
@@ -880,6 +882,8 @@ export async function listClassesAdminAction(params: {
     where.OR = [
       { name: { contains: q, mode: "insensitive" } },
       { gradeLevel: { contains: q, mode: "insensitive" } },
+      { school: { name: { contains: q, mode: "insensitive" } } },
+      { joinCode: { contains: q, mode: "insensitive" } },
     ];
   }
 
@@ -1501,6 +1505,211 @@ export async function getAiUsageStatsAdminAction(schoolIdFilter?: string) {
     return { success: true, data: stats };
   } catch {
     return { success: false, message: GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Daftar Permohonan Pencabutan Akses Guru untuk Superadmin
+ */
+export async function listTeacherRevocationRequestsAdminAction(params?: {
+  statusFilter?: "ALL" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  schoolId?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  await requireSuperAdmin();
+
+  const status = params?.statusFilter && params.statusFilter !== "ALL" ? params.statusFilter : undefined;
+  const schoolId = params?.schoolId && params.schoolId !== "ALL" ? params.schoolId : undefined;
+  const page = Math.max(1, params?.page || 1);
+  const pageSize = Math.min(100, Math.max(1, params?.pageSize || 50));
+
+  const where: Prisma.TeacherRevocationRequestWhereInput = {
+    ...(status ? { status } : {}),
+    ...(schoolId ? { schoolId } : {}),
+  };
+
+  const [total, requests] = await Promise.all([
+    prisma.teacherRevocationRequest.count({ where }),
+    prisma.teacherRevocationRequest.findMany({
+      where,
+      include: {
+        school: { select: { id: true, name: true, city: true, npsn: true } },
+        teacherSchoolMembership: {
+          include: {
+            teacherProfile: {
+              include: { user: { select: { id: true, name: true, email: true } } },
+            },
+          },
+        },
+        requesterProfile: {
+          include: { user: { select: { id: true, name: true, email: true } } },
+        },
+        reviewedBy: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  return {
+    success: true,
+    data: requests.map((r) => ({
+      id: r.id,
+      status: r.status,
+      reason: r.reason,
+      rejectionReason: r.rejectionReason,
+      createdAt: r.createdAt,
+      reviewedAt: r.reviewedAt,
+      school: r.school,
+      targetTeacher: {
+        membershipId: r.teacherSchoolMembership.id,
+        teacherProfileId: r.teacherSchoolMembership.teacherProfileId,
+        name: r.teacherSchoolMembership.teacherProfile.user.name,
+        email: r.teacherSchoolMembership.teacherProfile.user.email,
+        workspaceRole: r.teacherSchoolMembership.workspaceRole,
+        membershipStatus: r.teacherSchoolMembership.status,
+      },
+      requester: {
+        teacherProfileId: r.requesterProfileId,
+        name: r.requesterProfile.user.name,
+        email: r.requesterProfile.user.email,
+      },
+      reviewedBy: r.reviewedBy ? { name: r.reviewedBy.name, email: r.reviewedBy.email } : null,
+    })),
+    meta: { total, page, pageSize, totalPages: Math.ceil(total / pageSize) },
+  };
+}
+
+/**
+ * Setujui Permohonan Pencabutan Akses Guru (Superadmin Backstop)
+ */
+export async function approveTeacherRevocationRequestAction(requestId: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const req = await tx.teacherRevocationRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          teacherSchoolMembership: {
+            include: {
+              teacherProfile: { select: { id: true, activeSchoolId: true, user: { select: { name: true, email: true } } } },
+            },
+          },
+          school: { select: { id: true, name: true } },
+        },
+      });
+
+      if (!req || req.status !== "PENDING") {
+        throw new Error("Permohonan tidak ditemukan atau sudah diproses.");
+      }
+
+      // 1. Update request status
+      await tx.teacherRevocationRequest.update({
+        where: { id: req.id },
+        data: {
+          status: "APPROVED",
+          reviewedById: userId,
+          reviewedAt: new Date(),
+        },
+      });
+
+      // 2. Update target membership to REVOKED
+      await tx.teacherSchoolMembership.update({
+        where: { id: req.teacherSchoolMembershipId },
+        data: { status: "REVOKED" },
+      });
+
+      // 3. Reset activeSchoolId if target currently active at this school
+      if (req.teacherSchoolMembership.teacherProfile.activeSchoolId === req.schoolId) {
+        await tx.teacherProfile.update({
+          where: { id: req.teacherSchoolMembership.teacherProfileId },
+          data: { activeSchoolId: null },
+        });
+      }
+
+      // 4. Audit Log
+      await writeAudit(tx, {
+        actorType: "SUPERADMIN",
+        actorId: userId,
+        action: "TEACHER_REVOCATION_REQUEST_APPROVED",
+        targetType: "TEACHER_REVOCATION_REQUEST",
+        targetId: req.id,
+        metadata: {
+          schoolId: req.schoolId,
+          schoolName: req.school.name,
+          targetTeacherProfileId: req.teacherSchoolMembership.teacherProfileId,
+          targetTeacherName: req.teacherSchoolMembership.teacherProfile.user.name,
+          requesterProfileId: req.requesterProfileId,
+          reason: req.reason,
+        },
+      });
+
+      return true;
+    });
+
+    return { success: true, message: "Pencabutan akses guru berhasil disetujui." };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : GENERIC_ADMIN_ERROR };
+  }
+}
+
+/**
+ * Tolak Permohonan Pencabutan Akses Guru (Superadmin Backstop)
+ */
+export async function rejectTeacherRevocationRequestAction(requestId: string, rejectionReason?: string) {
+  const { userId } = await requireSuperAdmin();
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const req = await tx.teacherRevocationRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          teacherSchoolMembership: {
+            include: { teacherProfile: { select: { user: { select: { name: true } } } } },
+          },
+          school: { select: { id: true, name: true } },
+        },
+      });
+
+      if (!req || req.status !== "PENDING") {
+        throw new Error("Permohonan tidak ditemukan atau sudah diproses.");
+      }
+
+      await tx.teacherRevocationRequest.update({
+        where: { id: req.id },
+        data: {
+          status: "REJECTED",
+          reviewedById: userId,
+          reviewedAt: new Date(),
+          rejectionReason: rejectionReason?.trim() || null,
+        },
+      });
+
+      await writeAudit(tx, {
+        actorType: "SUPERADMIN",
+        actorId: userId,
+        action: "TEACHER_REVOCATION_REQUEST_REJECTED",
+        targetType: "TEACHER_REVOCATION_REQUEST",
+        targetId: req.id,
+        metadata: {
+          schoolId: req.schoolId,
+          schoolName: req.school.name,
+          targetTeacherProfileId: req.teacherSchoolMembership.teacherProfileId,
+          targetTeacherName: req.teacherSchoolMembership.teacherProfile.user.name,
+          requesterProfileId: req.requesterProfileId,
+          rejectionReason: rejectionReason?.trim() || null,
+        },
+      });
+
+      return true;
+    });
+
+    return { success: true, message: "Permohonan pencabutan akses telah ditolak." };
+  } catch (err) {
+    return { success: false, message: err instanceof Error ? err.message : GENERIC_ADMIN_ERROR };
   }
 }
 

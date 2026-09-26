@@ -18,10 +18,9 @@ Prasyarat env: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GEMINI_
 
 Login: akun yang emailnya ada di `SUPERADMIN_EMAILS`.
 
-- [ ] `/admin` — panel persetujuan guru terbuka; guru pending tampil
-- [ ] Setujui / tolak pendaftar guru → guru bisa/tidak bisa login
-- [ ] Force approve eskalasi (backstop) berfungsi
-- [ ] Ban guru → sesi guru ter-revoke, akses ditolak
+- [ ] `/admin` — tab Guru menampilkan daftar akun guru, status (Aktif/Banned), dan pencarian relevansi
+- [ ] Tab Siswa: Force approve / reject pendaftaran siswa berstatus PENDING (L3 Backstop)
+- [ ] Ban guru → sesi guru ter-revoke, akses ditolak; Unban → akses dipulihkan
 - [ ] Reset password guru → guru login dengan password baru
 - [ ] Nonaktifkan sekolah → guru & siswa sekolah itu fail-closed (sesi ditolak)
 - [ ] Reaktifkan sekolah → akses kembali normal
@@ -40,7 +39,7 @@ Login: akun yang emailnya ada di `SUPERADMIN_EMAILS`.
 ## 2. GURU
 
 ### Onboarding & akun
-- [ ] `/register` → akun pending → disetujui superadmin → masuk onboarding
+- [ ] `/register` → registrasi guru mandiri → diarahkan ke wizard onboarding 4-step
 - [ ] `/onboarding` — setup sekolah → periode aktif → mapel → rombel (join code)
 - [ ] `/onboarding/mid-semester` — alur tengah semester
 - [ ] `/pengaturan`, `/pengaturan/setup` — profil & konfigurasi
