@@ -65,9 +65,9 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-16">
       {/* 1. GREETING HEADER */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Beranda</h1>
-        <p className="text-muted-foreground text-xs sm:text-sm mt-1">
-          Selamat datang, <span className="font-semibold text-foreground">{session.user.name}</span>. 
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Beranda</h1>
+        <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm mt-1">
+          Selamat datang, <span className="font-bold text-slate-900 dark:text-white">{session.user.name}</span>. 
           {activeSchool ? ` Anda mengajar di ${activeSchool.name}.` : ""}
         </p>
       </div>

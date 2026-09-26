@@ -11,7 +11,16 @@ export async function requireAuthSession() {
   return session;
 }
 
-export async function verifyActiveSchoolMembership() {
+export type ActiveSchoolMembershipContext = {
+  session: Awaited<ReturnType<typeof requireAuthSession>>;
+  profile: NonNullable<Awaited<ReturnType<typeof prisma.teacherProfile.findUnique<{ where: { userId: string }; include: { memberships: { where: { status: "ACTIVE" }; include: { school: true } } } }>>>>;
+  activeSchoolId: string;
+  activeSchool: NonNullable<NonNullable<Awaited<ReturnType<typeof prisma.teacherProfile.findUnique<{ where: { userId: string }; include: { memberships: { where: { status: "ACTIVE" }; include: { school: true } } } }>>>>["memberships"][number]["school"]>;
+  isBanned?: boolean;
+  banReason?: string | null;
+};
+
+export async function verifyActiveSchoolMembership(): Promise<ActiveSchoolMembershipContext> {
   const session = await requireAuthSession();
 
   const profile = await prisma.teacherProfile.findUnique({
@@ -47,7 +56,29 @@ export async function verifyActiveSchoolMembership() {
     throw new Error("Not an active member of the school workspace");
   }
 
-  return { session, profile, activeSchoolId: profile.activeSchoolId, activeSchool: activeMembership.school };
+  // Check user ban status
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { banned: true, banReason: true },
+  });
+
+  const isBanned = !!user?.banned;
+  const banReason = user?.banReason ?? null;
+
+  return {
+    session,
+    profile,
+    activeSchoolId: profile.activeSchoolId,
+    activeSchool: activeMembership.school,
+    isBanned,
+    banReason,
+  };
+}
+
+export function assertNotBanned(authContext: { isBanned?: boolean }) {
+  if (authContext.isBanned) {
+    throw new Error("Akses ditolak: Akun Anda telah dinonaktifkan oleh administrator.");
+  }
 }
 
 export async function verifyTeachingContextAccess(teachingContextId: string) {

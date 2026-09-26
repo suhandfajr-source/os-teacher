@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { editTeachingSession, completeTeachingSession } from "@/modules/teaching/teaching.actions";
 import { saveAttendance } from "@/modules/attendance/attendance.actions";
+import { saveSessionAssignmentAction } from "@/modules/assignments/assignment.actions";
+import { SaveAsAssessmentDialog } from "@/components/assignments/SaveAsAssessmentDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,7 +31,10 @@ import {
   Lock,
   FileText,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  ClipboardList,
+  Calendar as CalendarIcon,
+  Award
 } from "lucide-react";
 
 type AttendanceData = { status: AttendanceStatus; note: string };
@@ -57,17 +62,28 @@ type RecordData = {
   status: AttendanceStatus;
   note?: string | null;
 };
+type AssignmentData = {
+  id: string;
+  title: string;
+  description?: string | null;
+  dueDate?: Date | string | null;
+  _count?: { submissions: number };
+} | null;
 
 export default function SessionClient({
   session,
   context,
   roster,
   attendanceRecords,
+  existingAssignment,
+  assessmentTypes = [],
 }: {
   session: SessionData;
   context: ContextData;
   roster: RosterData[];
   attendanceRecords: RecordData[];
+  existingAssignment?: AssignmentData;
+  assessmentTypes?: Array<{ id: string; name: string; category: string }>;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -78,6 +94,16 @@ export default function SessionClient({
   const [plannedTopic, setPlannedTopic] = useState(session.plannedTopic || "");
   const [activitySummary, setActivitySummary] = useState(session.activitySummary || "");
   const [recordedAt, setRecordedAt] = useState<Date | string | null>(session.attendanceRecordedAt || null);
+
+  // Assignment state
+  const [giveAssignment, setGiveAssignment] = useState(!!existingAssignment);
+  const [assignmentTitle, setAssignmentTitle] = useState(existingAssignment?.title || "");
+  const [assignmentDesc, setAssignmentDesc] = useState(existingAssignment?.description || "");
+  const [assignmentDueDate, setAssignmentDueDate] = useState<string>(
+    existingAssignment?.dueDate
+      ? format(new Date(existingAssignment.dueDate), "yyyy-MM-dd'T'HH:mm")
+      : ""
+  );
 
   // Attendance state
   const [attendance, setAttendance] = useState<Record<string, AttendanceData>>(() => {
@@ -178,7 +204,16 @@ export default function SessionClient({
     try {
       setLoading(true);
       await editTeachingSession(session.id, { actualTopic, plannedTopic, activitySummary });
-      toast.success("Detail jurnal berhasil disimpan");
+      if (giveAssignment && assignmentTitle.trim()) {
+        await saveSessionAssignmentAction({
+          teachingContextId: context.id,
+          teachingSessionId: session.id,
+          title: assignmentTitle.trim(),
+          description: assignmentDesc.trim() || undefined,
+          dueDate: assignmentDueDate ? new Date(assignmentDueDate) : undefined,
+        });
+      }
+      toast.success("Detail jurnal & tugas berhasil disimpan");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Gagal menyimpan jurnal");
     } finally {
@@ -221,6 +256,17 @@ export default function SessionClient({
         }));
         await saveAttendance(session.id, records);
         setRecordedAt(new Date());
+      }
+
+      // Save assignment if enabled
+      if (giveAssignment && assignmentTitle.trim()) {
+        await saveSessionAssignmentAction({
+          teachingContextId: context.id,
+          teachingSessionId: session.id,
+          title: assignmentTitle.trim(),
+          description: assignmentDesc.trim() || undefined,
+          dueDate: assignmentDueDate ? new Date(assignmentDueDate) : undefined,
+        });
       }
 
       // Save latest details first
@@ -398,6 +444,104 @@ export default function SessionClient({
       </Card>
 
       {/* ─────────────────────────────────────────────────────────────
+          2. KARTU TENGAH: TUGAS & TINDAK LANJUT PERTEMUAN (OPSIONAL)
+      ───────────────────────────────────────────────────────────── */}
+      <Card className="border shadow-xs">
+        <CardHeader className="pb-3 pt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center">
+                <ClipboardList className="w-4 h-4" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">2. Tugas & Catatan Tambahan Pertemuan (Opsional)</CardTitle>
+                <CardDescription className="text-xs">
+                  Berikan tugas/PR untuk siswa setelah sesi ini, yang otomatis tampil di akun siswa & reminder guru.
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-lg transition-colors">
+                <input
+                  type="checkbox"
+                  checked={giveAssignment}
+                  onChange={(e) => setGiveAssignment(e.target.checked)}
+                  className="rounded text-teal-600 focus:ring-teal-500 w-3.5 h-3.5 cursor-pointer"
+                />
+                <span>Aktifkan Tugas</span>
+              </label>
+            </div>
+          </div>
+        </CardHeader>
+
+        {giveAssignment && (
+          <CardContent className="space-y-4 pt-1">
+            <div className="p-3 bg-teal-50/60 border border-teal-200/80 rounded-xl space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="assignmentTitle" className="text-xs font-semibold text-slate-800">
+                    Judul Tugas / PR <span className="text-rose-500">*</span>
+                  </Label>
+                  <Input
+                    id="assignmentTitle"
+                    value={assignmentTitle}
+                    onChange={(e) => setAssignmentTitle(e.target.value)}
+                    placeholder="Contoh: Latihan Soal Pythagoras Hal. 45"
+                    className="text-sm bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="assignmentDueDate" className="text-xs font-semibold text-slate-800">
+                    Batas Waktu Pengumpulan (Deadline)
+                  </Label>
+                  <Input
+                    id="assignmentDueDate"
+                    type="datetime-local"
+                    value={assignmentDueDate}
+                    onChange={(e) => setAssignmentDueDate(e.target.value)}
+                    className="text-sm bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="assignmentDesc" className="text-xs font-medium text-slate-700">
+                  Petunjuk Pengerjaan / Catatan Siswa (Opsional)
+                </Label>
+                <Textarea
+                  id="assignmentDesc"
+                  value={assignmentDesc}
+                  onChange={(e) => setAssignmentDesc(e.target.value)}
+                  rows={2}
+                  placeholder="Contoh: Kerjakan nomor 1-5 di buku tugas. Foto lembar jawaban dan upload ke portal siswa."
+                  className="text-sm bg-white"
+                />
+              </div>
+
+              {/* Status & Actions for existing assignment */}
+              {existingAssignment && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-teal-200/60 text-xs">
+                  <span className="text-teal-900 font-medium">
+                    📌 Tugas telah terdaftar ({existingAssignment._count?.submissions || 0} siswa mengumpulkan)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/kelas/${context.id}/tugas/${existingAssignment.id}`}
+                      className="inline-flex items-center text-xs font-semibold text-teal-700 bg-white border border-teal-300 hover:bg-teal-50 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      Periksa Pengumpulan Siswa
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ─────────────────────────────────────────────────────────────
           3. KARTU BAWAH: PRESENSI CEPAT SISWA (QUICK ATTENDANCE)
       ───────────────────────────────────────────────────────────── */}
       <Card className="border shadow-xs">
@@ -409,7 +553,7 @@ export default function SessionClient({
               </div>
               <div>
                 <CardTitle className="text-base font-semibold">
-                  2. Presensi Siswa ({attendanceStats.total} Siswa)
+                  3. Presensi Siswa ({attendanceStats.total} Siswa)
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {recordedAt ? (

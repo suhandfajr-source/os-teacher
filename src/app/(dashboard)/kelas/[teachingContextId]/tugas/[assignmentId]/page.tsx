@@ -4,6 +4,7 @@ import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { getSubmissionQueueAction } from "@/modules/assignments/assignment.actions";
 import { ReviewSubmissionForm } from "./ReviewSubmissionForm";
+import { SaveAsAssessmentDialog } from "@/components/assignments/SaveAsAssessmentDialog";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -42,27 +43,48 @@ export default async function SubmissionQueuePage({
   // Satu sumber kebenaran antrean: action yang sama dipakai test & API.
   const submissions = await getSubmissionQueueAction(teachingContextId, assignmentId);
 
+  const assessmentTypes = await prisma.assessmentType.findMany({
+    where: { teachingContextId },
+    select: { id: true, name: true, category: true },
+    orderBy: { name: "asc" },
+  });
+
   const pendingCount = submissions.filter((s) => s.status === "SUBMITTED").length;
+  const gradedCount = submissions.filter((s) => s.status === "REVIEWED" && s.score !== null).length;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1 pb-1 border-b">
-        <Link
-          href={`/kelas/${teachingContextId}/tugas`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Tugas
-        </Link>
-        <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-          <ClipboardCheck className="w-5 h-5 text-teal-600" />
-          Antrean Koreksi — {assignment.title}
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          {assignment.teachingContext.subject.name}
-          {assignment.dueDate &&
-            ` • Tenggat ${format(assignment.dueDate, "dd MMM yyyy", { locale: id })}`}
-          {` • ${pendingCount} menunggu koreksi dari ${submissions.length} pengumpulan`}
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b">
+        <div>
+          <Link
+            href={`/kelas/${teachingContextId}/tugas`}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground w-fit mb-1"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Tugas
+          </Link>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <ClipboardCheck className="w-5 h-5 text-teal-600" />
+            Antrean Koreksi — {assignment.title}
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {assignment.teachingContext.subject.name}
+            {assignment.dueDate &&
+              ` • Tenggat ${format(assignment.dueDate, "dd MMM yyyy", { locale: id })}`}
+            {` • ${pendingCount} menunggu koreksi • ${gradedCount} telah dinilai dari ${submissions.length} pengumpulan`}
+          </p>
+        </div>
+
+        {gradedCount > 0 && (
+          <div className="shrink-0">
+            <SaveAsAssessmentDialog
+              teachingContextId={teachingContextId}
+              assignmentId={assignmentId}
+              defaultTitle={`Tugas: ${assignment.title}`}
+              gradedCount={gradedCount}
+              assessmentTypes={assessmentTypes}
+            />
+          </div>
+        )}
       </div>
 
       {submissions.length === 0 ? (

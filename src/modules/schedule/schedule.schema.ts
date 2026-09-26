@@ -6,10 +6,12 @@ import { z } from "zod";
 export function normalizeTime(val: string): string {
   if (typeof val !== "string") return "";
   const parts = val.trim().split(":");
-  if (parts.length !== 2) return val.trim();
-  const h = parts[0].padStart(2, "0");
-  const m = parts[1].padStart(2, "0");
-  return `${h}:${m}`;
+  if (parts.length >= 2) {
+    const h = parts[0].padStart(2, "0");
+    const m = parts[1].padStart(2, "0");
+    return `${h}:${m}`;
+  }
+  return val.trim();
 }
 
 export const CreateScheduleSlotSchema = z

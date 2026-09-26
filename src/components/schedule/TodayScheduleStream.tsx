@@ -110,20 +110,20 @@ export function TodayScheduleStream({ initialData, schoolName }: TodayScheduleSt
             <Calendar className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
               <span>Jadwal Mengajar Hari Ini</span>
-              <span className="text-xs font-mono font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
                 {currentTime} WIB
               </span>
             </h2>
-            <p className="text-xs text-muted-foreground">{todayFormatted}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{todayFormatted}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Link
             href="/pengaturan/setup"
-            className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
+            className="text-xs text-teal-700 dark:text-teal-400 hover:underline flex items-center gap-1 font-bold"
           >
             <span>Atur Jadwal Mingguan</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -136,7 +136,7 @@ export function TodayScheduleStream({ initialData, schoolName }: TodayScheduleSt
       ───────────────────────────────────────────────────────────── */}
       {!hasItems ? (
         /* HARI BEBAS / BELUM ADA JADWAL HARI INI */
-        <Card className="border border-dashed bg-card/60 shadow-xs">
+        <Card className="border border-dashed border-slate-200/80 bg-white dark:bg-slate-900/60 shadow-xs">
           <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center shrink-0">
@@ -148,10 +148,10 @@ export function TodayScheduleStream({ initialData, schoolName }: TodayScheduleSt
                     Hari Bebas Mengajar
                   </Badge>
                 </div>
-                <h3 className="text-sm sm:text-base font-bold text-foreground">
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   Tidak Ada Jadwal Tatap Muka Hari Ini
                 </h3>
-                <p className="text-xs text-muted-foreground max-w-lg">
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-lg">
                   Anda tidak memiliki jadwal mengajar di kelas hari {getDayNameIndonesia(streamData.todayDayOfWeek)}. 
                   Gunakan waktu luang untuk menyiapkan materi pembelajaran atau mengevaluasi tugas siswa.
                 </p>

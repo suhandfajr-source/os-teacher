@@ -17,11 +17,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isBannedError, setIsBannedError] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setIsBannedError(false);
     
     const { error } = await authClient.signIn.email({
       email: email.trim().toLowerCase(),
@@ -29,7 +31,13 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message || "Email atau kata sandi tidak sesuai");
+      const msg = error.message?.toLowerCase() || "";
+      if (msg.includes("ban") || error.status === 403) {
+        setIsBannedError(true);
+        setError("Akun Anda telah dinonaktifkan / diblokir oleh Administrator. Silakan hubungi admin sekolah untuk mengaktifkan kembali akun Anda.");
+      } else {
+        setError(error.message || "Email atau kata sandi tidak sesuai");
+      }
       setLoading(false);
     } else {
       toast.success("Selamat datang kembali di KLASSA!");
@@ -60,8 +68,13 @@ export default function LoginPage() {
       {/* Form Body */}
       <form onSubmit={handleLogin} className="space-y-2.5">
         {error && (
-          <Alert variant="destructive" className="rounded-xl py-1.5 px-3">
-            <AlertDescription className="text-[11px]">{error}</AlertDescription>
+          <Alert variant={isBannedError ? "destructive" : "destructive"} className="rounded-xl py-2 px-3 border-red-300 bg-red-50 text-red-900">
+            <AlertDescription className="text-[11px] leading-relaxed">
+              <strong className="block font-bold text-red-700 mb-0.5">
+                {isBannedError ? "⚠️ Akses Akun Dibatasi" : "Gagal Masuk"}
+              </strong>
+              {error}
+            </AlertDescription>
           </Alert>
         )}
 

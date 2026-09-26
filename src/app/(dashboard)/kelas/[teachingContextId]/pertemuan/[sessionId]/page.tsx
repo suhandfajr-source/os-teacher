@@ -42,9 +42,22 @@ export default async function SessionPage(props: { params: Promise<{ teachingCon
   });
 
   // Load historical attendance if it exists
-  const attendanceRecords = await prisma.attendanceRecord.findMany({
-    where: { teachingSessionId: params.sessionId },
-  });
+  const [attendanceRecords, existingAssignment, assessmentTypes] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where: { teachingSessionId: params.sessionId },
+    }),
+    prisma.assignment.findFirst({
+      where: { teachingSessionId: params.sessionId },
+      include: {
+        _count: { select: { submissions: true } },
+      },
+    }),
+    prisma.assessmentType.findMany({
+      where: { teachingContextId: context.id },
+      select: { id: true, name: true, category: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -52,7 +65,9 @@ export default async function SessionPage(props: { params: Promise<{ teachingCon
         session={session} 
         context={context} 
         roster={roster} 
-        attendanceRecords={attendanceRecords} 
+        attendanceRecords={attendanceRecords}
+        existingAssignment={existingAssignment}
+        assessmentTypes={assessmentTypes}
       />
     </div>
   );

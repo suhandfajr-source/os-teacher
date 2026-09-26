@@ -217,15 +217,19 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
           const gradient = badgeGradients[index % badgeGradients.length];
 
           return (
-            <Link href={`/kelas/${ctx.id}`} key={ctx.id} className="block group">
-              <div className="bg-white rounded-3xl p-6 pt-9 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100/90 relative flex flex-col justify-between h-full transition-all duration-200 cursor-pointer">
-                {/* Floating Squircle Icon Overlap */}
-                <div
-                  className={`absolute -top-5 left-6 w-12 h-12 rounded-2xl bg-gradient-to-tr ${gradient} text-white flex items-center justify-center shadow-floating-badge group-hover:scale-110 group-hover:-translate-y-1 transition-transform`}
-                >
-                  <BookOpen className="w-6 h-6" />
-                </div>
+            <div
+              key={ctx.id}
+              className="bg-white rounded-3xl p-6 pt-9 shadow-squircle-card hover:shadow-squircle-card-hover border border-slate-100/90 relative flex flex-col justify-between h-full transition-all duration-200 group"
+            >
+              {/* Floating Squircle Icon Overlap */}
+              <div
+                className={`absolute -top-5 left-6 w-12 h-12 rounded-2xl bg-gradient-to-tr ${gradient} text-white flex items-center justify-center shadow-floating-badge group-hover:scale-110 group-hover:-translate-y-1 transition-transform`}
+              >
+                <BookOpen className="w-6 h-6" />
+              </div>
 
+              {/* Main Card Content as Link to class detail */}
+              <Link href={`/kelas/${ctx.id}`} className="block flex-1 cursor-pointer">
                 {/* Top Status Tag */}
                 <div className="flex items-center justify-end mb-3">
                   {ctx.class.gradeLevel ? (
@@ -255,56 +259,51 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
                     </span>
                   </div>
                 </div>
+              </Link>
 
-                {/* Divider */}
-                <div className="my-4 border-t border-slate-100"></div>
+              {/* Divider */}
+              <div className="my-4 border-t border-slate-100"></div>
 
-                {/* Footer: Students Count + Actions */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                    <Users className="w-4 h-4 text-teal-700" />
-                    <span>{ctx.class._count.classStudents} Siswa</span>
-                  </div>
+              {/* Footer: Students Count + Actions */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <Users className="w-4 h-4 text-teal-700" />
+                  <span>{ctx.class._count.classStudents} Siswa</span>
+                </div>
 
-                  <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 rounded-xl text-xs font-bold text-slate-600 hover:text-teal-700 hover:bg-teal-50 gap-1"
-                      title="Edit Data Kelas"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleOpenEditModal(ctx.class.id, ctx.class.name, ctx.class.gradeLevel);
-                      }}
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 rounded-xl text-xs font-bold text-slate-600 hover:text-teal-700 hover:bg-teal-50 gap-1"
+                    title="Edit Data Kelas"
+                    onClick={() => {
+                      handleOpenEditModal(ctx.class.id, ctx.class.name, ctx.class.gradeLevel);
+                    }}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit</span>
+                  </Button>
 
-                    <ScheduleConfigDialog
-                      teachingContextId={ctx.id}
-                      contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
-                      triggerButton={
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2.5 rounded-xl text-xs font-bold text-teal-700 hover:bg-teal-50 gap-1.5"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                        >
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>Jadwal</span>
-                        </Button>
-                      }
-                    />
-                  </div>
+                  <ScheduleConfigDialog
+                    teachingContextId={ctx.id}
+                    contextTitle={`${ctx.subject.name} — ${ctx.class.name}`}
+                    triggerButton={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2.5 rounded-xl text-xs font-bold text-teal-700 hover:bg-teal-50 gap-1.5"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Jadwal</span>
+                      </Button>
+                    }
+                  />
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { revalidatePath } from "next/cache";
 import {
@@ -151,4 +152,135 @@ export async function reviewSubmissionAction(data: {
     console.error("[reviewSubmissionAction]", err);
     return { success: false, error: "Gagal menyimpan umpan balik." };
   }
+}
+
+/**
+ * Menyimpan atau memperbarui tugas yang terikat dengan sesi mengajar tertentu.
+ */
+export async function saveSessionAssignmentAction(data: {
+  teachingContextId: string;
+  teachingSessionId: string;
+  title: string;
+  description?: string;
+  dueDate?: Date | null;
+}) {
+  await verifyTeachingContextAccess(data.teachingContextId);
+
+  const existing = await prisma.assignment.findFirst({
+    where: {
+      teachingSessionId: data.teachingSessionId,
+      teachingContextId: data.teachingContextId,
+    },
+  });
+
+  let assignment;
+  if (existing) {
+    assignment = await prisma.assignment.update({
+      where: { id: existing.id },
+      data: {
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        dueDate: data.dueDate,
+      },
+    });
+  } else {
+    assignment = await prisma.assignment.create({
+      data: {
+        teachingContextId: data.teachingContextId,
+        teachingSessionId: data.teachingSessionId,
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        dueDate: data.dueDate,
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  revalidatePath(`/kelas/${data.teachingContextId}/pertemuan/${data.teachingSessionId}`);
+  revalidatePath(`/kelas/${data.teachingContextId}/tugas`);
+  revalidatePath("/siswa/portal/tugas");
+  revalidatePath("/siswa/portal");
+
+  return assignment;
+}
+
+/**
+ * Mengonversi seluruh skor tugas siswa menjadi penilaian resmi (Assessment & AssessmentResult) di Buku Nilai.
+ */
+export async function convertAssignmentToAssessmentAction(data: {
+  teachingContextId: string;
+  assignmentId: string;
+  title: string;
+  assessmentTypeId: string;
+  passingScore?: number | null;
+}) {
+  await verifyTeachingContextAccess(data.teachingContextId);
+
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: data.assignmentId },
+    include: {
+      submissions: {
+        where: { score: { not: null } },
+        select: { studentId: true, score: true },
+      },
+    },
+  });
+
+  if (!assignment || assignment.teachingContextId !== data.teachingContextId) {
+    throw new Error("Tugas tidak ditemukan");
+  }
+
+  if (assignment.submissions.length === 0) {
+    throw new Error("Belum ada skor siswa yang dinilai pada tugas ini.");
+  }
+
+  const assessment = await prisma.$transaction(async (tx) => {
+    const createdAssessment = await tx.assessment.create({
+      data: {
+        teachingContextId: data.teachingContextId,
+        assessmentTypeId: data.assessmentTypeId,
+        title: data.title.trim() || assignment.title,
+        assessmentDate: new Date(),
+        maxScore: new Prisma.Decimal(100),
+        minimumPassingScore: new Prisma.Decimal(data.passingScore ?? 75),
+        status: "COMPLETED",
+      },
+    });
+
+    for (const sub of assignment.submissions) {
+      const scoreVal = sub.score !== null ? new Prisma.Decimal(sub.score) : null;
+      await tx.assessmentResult.upsert({
+        where: {
+          assessmentId_studentId: {
+            assessmentId: createdAssessment.id,
+            studentId: sub.studentId,
+          },
+        },
+        create: {
+          assessmentId: createdAssessment.id,
+          studentId: sub.studentId,
+          rawScore: scoreVal,
+          finalScore: scoreVal,
+          status: sub.score !== null ? "GRADED" : "PENDING",
+        },
+        update: {
+          rawScore: scoreVal,
+          finalScore: scoreVal,
+          status: sub.score !== null ? "GRADED" : "PENDING",
+        },
+      });
+    }
+
+    return createdAssessment;
+  });
+
+  revalidatePath(`/kelas/${data.teachingContextId}/penilaian`);
+  revalidatePath(`/kelas/${data.teachingContextId}/tugas/${data.assignmentId}`);
+  revalidatePath(`/kelas/${data.teachingContextId}/tugas`);
+
+  return {
+    success: true,
+    assessmentId: assessment.id,
+    syncedCount: assignment.submissions.length,
+  };
 }

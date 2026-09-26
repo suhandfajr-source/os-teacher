@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id" className="h-full antialiased font-sans" suppressHydrationWarning>
       <body className="flex flex-col h-full w-full bg-background text-foreground font-sans">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <Suspense fallback={null}>
             <NavigationProgressBar />
           </Suspense>

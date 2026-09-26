@@ -29,13 +29,14 @@ export async function createScheduleSlotAction(input: CreateScheduleSlotInput) {
   const parsed = CreateScheduleSlotSchema.parse(input);
   const { context, profile } = await verifyTeachingContextAccess(parsed.teachingContextId);
 
-  // 1. Ambil seluruh jadwal mengajar guru pada hari yang sama di seluruh kelas pada sekolah aktif
+  // 1. Ambil seluruh jadwal mengajar guru pada hari yang sama di seluruh kelas pada sekolah aktif & periode yang sama
   const existingSchedules = await prisma.teachingSchedule.findMany({
     where: {
       dayOfWeek: parsed.dayOfWeek,
       teachingContext: {
         teacherProfileId: profile.id,
         schoolId: context.schoolId,
+        academicPeriodId: context.academicPeriodId,
       },
     },
     include: {
@@ -68,7 +69,9 @@ export async function createScheduleSlotAction(input: CreateScheduleSlotInput) {
   });
 
   revalidatePath(`/kelas/${parsed.teachingContextId}`);
+  revalidatePath(`/kelas`);
   revalidatePath(`/hari-ini`);
+  revalidatePath(`/pengaturan/setup`);
   revalidatePath(`/`);
 
   return slot;
@@ -94,7 +97,9 @@ export async function deleteScheduleSlotAction(scheduleId: string) {
   });
 
   revalidatePath(`/kelas/${schedule.teachingContextId}`);
+  revalidatePath(`/kelas`);
   revalidatePath(`/hari-ini`);
+  revalidatePath(`/pengaturan/setup`);
   revalidatePath(`/`);
 
   return { success: true };

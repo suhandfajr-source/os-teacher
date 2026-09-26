@@ -47,7 +47,7 @@ export const AI_STUDIO_FLOWS: Record<AiStudioFlowType, FlowOptionMeta> = {
     title: "Bank Soal & Kisi-Kisi",
     subtitle: "Distribusi Taksonomi Bloom (LOTS/HOTS), kuota PG/Essay, kunci jawaban, dan rubrik",
     badge: "Matriks Evaluasi",
-    recommendedExport: "xlsx",
+    recommendedExport: "docx",
     iconName: "FileQuestion",
   },
   LKPD: {
