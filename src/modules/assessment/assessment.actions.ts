@@ -122,6 +122,43 @@ export async function renameAssessmentType(input: RenameAssessmentTypeInput) {
   return updated;
 }
 
+export async function updateAssessmentType(input: {
+  id: string;
+  name: string;
+  category?: "ASSIGNMENT" | "FORMATIVE" | "SUMMATIVE" | "MIDTERM" | "FINAL_TERM" | "SCHOOL_EXAM" | "PRACTICE" | "PROJECT" | "OTHER";
+}) {
+  const { assessmentType } = await verifyAssessmentTypeAccess(input.id);
+  const normalized = normalizeName(input.name);
+
+  // Check collision with other types
+  const existing = await prisma.assessmentType.findUnique({
+    where: {
+      teachingContextId_normalizedName: {
+        teachingContextId: assessmentType.teachingContextId,
+        normalizedName: normalized,
+      },
+    },
+  });
+
+  if (existing && existing.id !== assessmentType.id) {
+    throw new Error(`Jenis penilaian dengan nama "${input.name}" sudah ada.`);
+  }
+
+  const updated = await prisma.assessmentType.update({
+    where: { id: assessmentType.id },
+    data: {
+      name: input.name,
+      normalizedName: normalized,
+      ...(input.category ? { category: input.category } : {}),
+    },
+  });
+
+  revalidatePath(`/kelas/${assessmentType.teachingContextId}/pengaturan-nilai`);
+  revalidatePath(`/kelas/${assessmentType.teachingContextId}/penilaian`);
+  revalidatePath(`/assessment/new`);
+  return updated;
+}
+
 export async function archiveAssessmentType(assessmentTypeId: string) {
   const { assessmentType } = await verifyAssessmentTypeAccess(assessmentTypeId);
 
@@ -132,7 +169,44 @@ export async function archiveAssessmentType(assessmentTypeId: string) {
 
   revalidatePath(`/kelas/${assessmentType.teachingContextId}/pengaturan-nilai`);
   revalidatePath(`/kelas/${assessmentType.teachingContextId}/penilaian`);
+  revalidatePath(`/assessment/new`);
   return updated;
+}
+
+export async function deleteAssessmentType(assessmentTypeId: string) {
+  const { assessmentType } = await verifyAssessmentTypeAccess(assessmentTypeId);
+
+  // Check if any assessment is using this assessment type
+  const assessmentCount = await prisma.assessment.count({
+    where: { assessmentTypeId: assessmentType.id },
+  });
+
+  if (assessmentCount > 0) {
+    // If referenced by existing assessments, soft-delete (archive) so history is preserved
+    const updated = await prisma.assessmentType.update({
+      where: { id: assessmentType.id },
+      data: { isActive: false },
+    });
+    revalidatePath(`/kelas/${assessmentType.teachingContextId}/pengaturan-nilai`);
+    revalidatePath(`/kelas/${assessmentType.teachingContextId}/penilaian`);
+    revalidatePath(`/assessment/new`);
+    return { success: true, mode: "ARCHIVED" as const, type: updated };
+  }
+
+  // Remove from gradePolicyItem if attached
+  await prisma.gradePolicyItem.deleteMany({
+    where: { assessmentTypeId: assessmentType.id },
+  });
+
+  // Safe to hard delete
+  await prisma.assessmentType.delete({
+    where: { id: assessmentType.id },
+  });
+
+  revalidatePath(`/kelas/${assessmentType.teachingContextId}/pengaturan-nilai`);
+  revalidatePath(`/kelas/${assessmentType.teachingContextId}/penilaian`);
+  revalidatePath(`/assessment/new`);
+  return { success: true, mode: "DELETED" as const };
 }
 
 /**

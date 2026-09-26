@@ -284,3 +284,141 @@ export async function convertAssignmentToAssessmentAction(data: {
     syncedCount: assignment.submissions.length,
   };
 }
+
+/**
+ * Guru memberi nilai langsung per siswa (offline / tanpa submission online).
+ */
+export async function saveDirectAssignmentScoreAction(data: {
+  teachingContextId: string;
+  assignmentId: string;
+  studentId: string;
+  score: number | null;
+  feedback?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { profile, context } = await verifyTeachingContextAccess(data.teachingContextId);
+
+    if (data.score !== null && (data.score < 0 || data.score > 100)) {
+      return { success: false, error: "Skor harus berupa angka 0 - 100." };
+    }
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: data.assignmentId },
+      select: { id: true, teachingContextId: true },
+    });
+
+    if (!assignment || assignment.teachingContextId !== data.teachingContextId) {
+      return { success: false, error: "Tugas tidak ditemukan." };
+    }
+
+    await prisma.assignmentSubmission.upsert({
+      where: {
+        assignmentId_studentId: {
+          assignmentId: data.assignmentId,
+          studentId: data.studentId,
+        },
+      },
+      create: {
+        assignmentId: data.assignmentId,
+        studentId: data.studentId,
+        score: data.score,
+        feedback: data.feedback?.trim() || "Penilaian langsung oleh guru",
+        status: "REVIEWED",
+        submittedAt: new Date(),
+        reviewedAt: new Date(),
+        reviewedByProfileId: profile.id,
+      },
+      update: {
+        score: data.score,
+        feedback: data.feedback?.trim() || undefined,
+        status: "REVIEWED",
+        reviewedAt: new Date(),
+        reviewedByProfileId: profile.id,
+      },
+    });
+
+    revalidatePath(`/kelas/${context.id}/tugas/${data.assignmentId}`);
+    revalidatePath(`/kelas/${context.id}/tugas`);
+    revalidatePath("/siswa/portal/tugas");
+
+    return { success: true };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Gagal menyimpan nilai.",
+    };
+  }
+}
+
+/**
+ * Guru menyimpan nilai tugas massal untuk seluruh siswa di kelas.
+ */
+export async function batchSaveDirectAssignmentScoresAction(data: {
+  teachingContextId: string;
+  assignmentId: string;
+  items: Array<{
+    studentId: string;
+    score: number | null;
+    feedback?: string;
+  }>;
+}): Promise<{ success: boolean; updatedCount: number; error?: string }> {
+  try {
+    const { profile, context } = await verifyTeachingContextAccess(data.teachingContextId);
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: data.assignmentId },
+      select: { id: true, teachingContextId: true },
+    });
+
+    if (!assignment || assignment.teachingContextId !== data.teachingContextId) {
+      return { success: false, updatedCount: 0, error: "Tugas tidak ditemukan." };
+    }
+
+    let updatedCount = 0;
+    await prisma.$transaction(
+      data.items.map((item) => {
+        const score =
+          item.score !== null && item.score >= 0 && item.score <= 100 ? item.score : null;
+        if (score !== null) updatedCount++;
+
+        return prisma.assignmentSubmission.upsert({
+          where: {
+            assignmentId_studentId: {
+              assignmentId: data.assignmentId,
+              studentId: item.studentId,
+            },
+          },
+          create: {
+            assignmentId: data.assignmentId,
+            studentId: item.studentId,
+            score,
+            feedback: item.feedback?.trim() || "Penilaian langsung oleh guru",
+            status: "REVIEWED",
+            submittedAt: new Date(),
+            reviewedAt: new Date(),
+            reviewedByProfileId: profile.id,
+          },
+          update: {
+            score,
+            feedback: item.feedback?.trim() || undefined,
+            status: "REVIEWED",
+            reviewedAt: new Date(),
+            reviewedByProfileId: profile.id,
+          },
+        });
+      })
+    );
+
+    revalidatePath(`/kelas/${context.id}/tugas/${data.assignmentId}`);
+    revalidatePath(`/kelas/${context.id}/tugas`);
+    revalidatePath("/siswa/portal/tugas");
+
+    return { success: true, updatedCount };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      updatedCount: 0,
+      error: err instanceof Error ? err.message : "Gagal menyimpan nilai massal.",
+    };
+  }
+}

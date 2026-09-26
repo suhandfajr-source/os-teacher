@@ -3,8 +3,11 @@ import { ArrowLeft, ClipboardCheck } from "lucide-react";
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { getSubmissionQueueAction } from "@/modules/assignments/assignment.actions";
-import { ReviewSubmissionForm } from "./ReviewSubmissionForm";
 import { SaveAsAssessmentDialog } from "@/components/assignments/SaveAsAssessmentDialog";
+import {
+  AssignmentRosterGradingView,
+  type StudentRosterItem,
+} from "./AssignmentRosterGradingView";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -16,15 +19,21 @@ export default async function SubmissionQueuePage({
   const { teachingContextId, assignmentId } = await params;
   await verifyTeachingContextAccess(teachingContextId);
 
-  const assignment = await prisma.assignment.findFirst({
-    where: { id: assignmentId, teachingContextId },
-    select: {
-      id: true,
-      title: true,
-      dueDate: true,
-      teachingContext: { select: { subject: { select: { name: true } } } },
-    },
-  });
+  const [assignment, context] = await Promise.all([
+    prisma.assignment.findFirst({
+      where: { id: assignmentId, teachingContextId },
+      select: {
+        id: true,
+        title: true,
+        dueDate: true,
+        teachingContext: { select: { subject: { select: { name: true } }, class: { select: { name: true } } } },
+      },
+    }),
+    prisma.teachingContext.findUnique({
+      where: { id: teachingContextId },
+      select: { classId: true, academicPeriodId: true },
+    }),
+  ]);
 
   if (!assignment) {
     return (
@@ -40,14 +49,35 @@ export default async function SubmissionQueuePage({
     );
   }
 
-  // Satu sumber kebenaran antrean: action yang sama dipakai test & API.
-  const submissions = await getSubmissionQueueAction(teachingContextId, assignmentId);
+  // Ambil data antrean submission dan daftar siswa di kelas
+  const [submissions, assessmentTypes, rosterRaw] = await Promise.all([
+    getSubmissionQueueAction(teachingContextId, assignmentId),
+    prisma.assessmentType.findMany({
+      where: { teachingContextId },
+      select: { id: true, name: true, category: true },
+      orderBy: { name: "asc" },
+    }),
+    context
+      ? prisma.classStudent.findMany({
+          where: {
+            classId: context.classId,
+            academicPeriodId: context.academicPeriodId,
+          },
+          include: {
+            student: { select: { id: true, fullName: true, nis: true } },
+          },
+          orderBy: {
+            student: { fullName: "asc" },
+          },
+        })
+      : [],
+  ]);
 
-  const assessmentTypes = await prisma.assessmentType.findMany({
-    where: { teachingContextId },
-    select: { id: true, name: true, category: true },
-    orderBy: { name: "asc" },
-  });
+  const roster: StudentRosterItem[] = rosterRaw.map((r) => ({
+    id: r.student.id,
+    fullName: r.student.fullName,
+    nis: r.student.nis,
+  }));
 
   const pendingCount = submissions.filter((s) => s.status === "SUBMITTED").length;
   const gradedCount = submissions.filter((s) => s.status === "REVIEWED" && s.score !== null).length;
@@ -64,13 +94,13 @@ export default async function SubmissionQueuePage({
           </Link>
           <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <ClipboardCheck className="w-5 h-5 text-teal-600" />
-            Antrean Koreksi — {assignment.title}
+            Penilaian Tugas — {assignment.title}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {assignment.teachingContext.subject.name}
+            {assignment.teachingContext.subject.name} • {assignment.teachingContext.class.name}
             {assignment.dueDate &&
               ` • Tenggat ${format(assignment.dueDate, "dd MMM yyyy", { locale: id })}`}
-            {` • ${pendingCount} menunggu koreksi • ${gradedCount} telah dinilai dari ${submissions.length} pengumpulan`}
+            {` • ${pendingCount} menunggu koreksi online • ${gradedCount} telah dinilai dari ${roster.length} siswa`}
           </p>
         </div>
 
@@ -87,67 +117,12 @@ export default async function SubmissionQueuePage({
         )}
       </div>
 
-      {submissions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Belum ada siswa yang mengumpulkan tugas ini.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {submissions.map((s) => (
-            <div key={s.id} className="p-4 rounded-xl border bg-card space-y-3">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div>
-                  <p className="font-medium text-sm">
-                    {s.studentName}
-                    {s.nis && (
-                      <span className="ml-2 text-xs text-muted-foreground">NIS {s.nis}</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Dikumpulkan {format(s.submittedAt, "dd MMM yyyy, HH:mm", { locale: id })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {s.isLate && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase text-rose-600 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                      Terlambat
-                    </span>
-                  )}
-                  <span
-                    className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-full border ${
-                      s.status === "SUBMITTED"
-                        ? "text-amber-700 bg-amber-50 border-amber-200"
-                        : "text-emerald-700 bg-emerald-50 border-emerald-200"
-                    }`}
-                  >
-                    {s.status === "SUBMITTED" ? "Menunggu" : "Dinilai"}
-                  </span>
-                </div>
-              </div>
-
-              {(s.textContent || s.linkUrl) && (
-                <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
-                  {s.textContent && (
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{s.textContent}</p>
-                  )}
-                  {s.linkUrl && (
-                    <a
-                      href={s.linkUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-teal-700 hover:underline"
-                    >
-                      {s.linkUrl}
-                    </a>
-                  )}
-                </div>
-              )}
-
-              <ReviewSubmissionForm teachingContextId={teachingContextId} item={s} />
-            </div>
-          ))}
-        </div>
-      )}
+      <AssignmentRosterGradingView
+        teachingContextId={teachingContextId}
+        assignmentId={assignmentId}
+        roster={roster}
+        submissions={submissions}
+      />
     </div>
   );
 }
