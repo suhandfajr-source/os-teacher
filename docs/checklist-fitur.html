@@ -3,308 +3,410 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checklist Fitur Komprehensif — KLASSA</title>
+<title>Checklist Fitur Komprehensif — KLASSA (End-to-End Flow)</title>
 <style>
   :root {
-    --teal: #0F766E; --teal-dark: #115E59; --teal-50: #f0fdfa;
+    --teal: #0F766E; --teal-dark: #115E59; --teal-50: #f0fdfa; --teal-100: #ccfbf1;
     --slate-900: #0f172a; --slate-700: #334155; --slate-500: #64748b;
-    --slate-200: #e2e8f0; --slate-50: #f8fafc;
-    --amber: #d97706; --rose: #e11d48; --emerald: #059669;
+    --slate-200: #e2e8f0; --slate-100: #f1f5f9; --slate-50: #f8fafc;
+    --amber: #d97706; --rose: #e11d48; --emerald: #059669; --indigo: #4f46e5;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--slate-50); color: var(--slate-900); line-height: 1.6; padding-bottom: 4rem; }
-  .hero { background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%); color: #fff; padding: 2rem 1.25rem 1.5rem; }
-  .hero-inner { max-width: 880px; margin: 0 auto; }
-  .hero h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
-  .hero p { font-size: .85rem; color: #ccfbf1; margin-top: .35rem; }
-  .hero .commit { font-size: .72rem; opacity: .8; margin-top: .5rem; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 0 1.25rem; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--slate-50); color: var(--slate-900); line-height: 1.6; padding-bottom: 5rem; }
+  
+  .hero { background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%); color: #fff; padding: 2.25rem 1.25rem 1.75rem; }
+  .hero-inner { max-width: 920px; margin: 0 auto; }
+  .hero h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+  .hero p { font-size: .88rem; color: #ccfbf1; margin-top: .4rem; }
+  .hero .commit { font-size: .74rem; opacity: .85; margin-top: .6rem; }
+  
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 1.25rem; }
 
-  .progress-card { background: #fff; border: 1px solid var(--slate-200); border-radius: 1rem; padding: 1rem 1.25rem; margin-top: -1.25rem; box-shadow: 0 4px 12px rgba(15,23,42,.06); position: relative; }
+  .progress-card { background: #fff; border: 1px solid var(--slate-200); border-radius: 1rem; padding: 1.25rem 1.5rem; margin-top: -1.5rem; box-shadow: 0 4px 14px rgba(15,23,42,.07); position: relative; }
   .progress-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-  .progress-row strong { font-size: .95rem; }
-  .progress-pct { font-size: 1.4rem; font-weight: 800; color: var(--teal); }
-  .bar { height: 8px; background: var(--slate-200); border-radius: 99px; overflow: hidden; margin-top: .5rem; }
+  .progress-row strong { font-size: 1rem; }
+  .progress-pct { font-size: 1.6rem; font-weight: 800; color: var(--teal); }
+  .bar { height: 10px; background: var(--slate-200); border-radius: 99px; overflow: hidden; margin-top: .6rem; }
   .bar > div { height: 100%; background: linear-gradient(90deg, var(--teal), var(--emerald)); width: 0; transition: width .35s ease; border-radius: 99px; }
-  .actions { display: flex; gap: .5rem; margin-top: .75rem; flex-wrap: wrap; }
-  .btn { border: 1px solid var(--slate-200); background: #fff; color: var(--slate-700); font-size: .78rem; font-weight: 600; padding: .4rem .85rem; border-radius: .6rem; cursor: pointer; }
-  .btn:hover { border-color: var(--teal); color: var(--teal); }
+  
+  .actions { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
+  .btn { border: 1px solid var(--slate-200); background: #fff; color: var(--slate-700); font-size: .78rem; font-weight: 700; padding: .45rem .9rem; border-radius: .6rem; cursor: pointer; transition: all .15s; }
+  .btn:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-50); }
 
-  nav.toc { display: flex; gap: .4rem; flex-wrap: wrap; margin: 1rem 0 0; }
-  nav.toc a { font-size: .75rem; font-weight: 700; text-decoration: none; color: var(--slate-700); background: #fff; border: 1px solid var(--slate-200); padding: .35rem .7rem; border-radius: 99px; }
-  nav.toc a:hover { border-color: var(--teal); color: var(--teal); }
+  nav.toc { display: flex; gap: .45rem; flex-wrap: wrap; margin: 1.25rem 0 .5rem; }
+  nav.toc a { font-size: .74rem; font-weight: 700; text-decoration: none; color: var(--slate-700); background: #fff; border: 1px solid var(--slate-200); padding: .35rem .75rem; border-radius: 99px; transition: all .15s; }
+  nav.toc a:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-50); }
 
-  section.role { background: #fff; border: 1px solid var(--slate-200); border-radius: 1rem; margin-top: 1.25rem; overflow: hidden; }
-  .role-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1.25rem; border-bottom: 1px solid var(--slate-50); cursor: pointer; user-select: none; }
-  .role-head h2 { font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: .5rem; }
-  .role-head .chev { transition: transform .25s; color: var(--slate-500); font-size: .8rem; }
+  section.stage { background: #fff; border: 1px solid var(--slate-200); border-radius: 1rem; margin-top: 1.25rem; overflow: hidden; box-shadow: 0 2px 6px rgba(15,23,42,.03); transition: border-color .2s; }
+  section.stage:hover { border-color: #cbd5e1; }
+  .stage-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--slate-100); cursor: pointer; user-select: none; background: #fff; }
+  .stage-head:hover { background: #fdfdfd; }
+  .stage-head h2 { font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: .6rem; }
+  .stage-head .chev { transition: transform .25s; color: var(--slate-500); font-size: .85rem; }
+  section.collapsed .stage-head { border-bottom-color: transparent; }
+  section.collapsed .group { display: none; }
   section.collapsed .chev { transform: rotate(-90deg); }
-  .role-head .mini { font-size: .75rem; font-weight: 700; color: var(--slate-500); white-space: nowrap; }
-  .role-head .mini.done { color: var(--emerald); }
-  .badge { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .15rem .5rem; border-radius: 99px; }
-  .b-super { background: #fef3c7; color: var(--amber); } .b-guru { background: #e0f2fe; color: #0369a1; }
-  .b-siswa { background: var(--teal-50); color: var(--teal); } .b-cross { background: #fce7f3; color: #be185d; }
+  .stage-head .mini { font-size: .75rem; font-weight: 700; color: var(--slate-500); white-space: nowrap; }
+  .stage-head .mini.done { color: var(--emerald); font-weight: 800; }
+  
+  .badge { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .2rem .6rem; border-radius: 99px; display: inline-flex; align-items: center; gap: .3rem; }
+  .b-stage { background: var(--teal-50); color: var(--teal-dark); border: 1px solid var(--teal-100); }
+  .b-actor { background: #e0e7ff; color: var(--indigo); }
 
-  .group { padding: .25rem 1.25rem .75rem; }
-  .group h3 { font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--slate-500); margin: .9rem 0 .35rem; }
-  label.item { display: flex; align-items: flex-start; gap: .6rem; padding: .45rem .6rem; border-radius: .6rem; cursor: pointer; font-size: .88rem; color: var(--slate-700); }
+  .group { padding: .75rem 1.25rem 1.25rem; }
+  .desc { font-size: .82rem; color: var(--slate-500); margin-bottom: .85rem; font-style: italic; }
+  
+  label.item { display: flex; align-items: flex-start; gap: .75rem; padding: .55rem .75rem; border-radius: .65rem; cursor: pointer; font-size: .9rem; color: var(--slate-700); transition: background .15s; }
   label.item:hover { background: var(--slate-50); }
-  label.item input { margin-top: .28rem; accent-color: var(--teal); width: 1rem; height: 1rem; flex-shrink: 0; cursor: pointer; }
+  label.item input { margin-top: .3rem; accent-color: var(--teal); width: 1.1rem; height: 1.1rem; flex-shrink: 0; cursor: pointer; }
   label.item.checked { color: var(--slate-500); }
-  label.item.checked .txt { text-decoration: line-through; text-decoration-color: rgba(100,116,139,.6); }
-  code { font-family: ui-monospace, Consolas, monospace; font-size: .8em; background: var(--slate-50); border: 1px solid var(--slate-200); padding: .05rem .35rem; border-radius: .35rem; color: var(--teal-dark); }
-  .neg { color: var(--rose); font-weight: 600; font-size: .72rem; }
-  .new-tag { font-size: .62rem; font-weight: 800; background: #dcfce7; color: var(--emerald); padding: .1rem .45rem; border-radius: 99px; margin-left: .4rem; vertical-align: middle; white-space: nowrap; }
-  footer { text-align: center; font-size: .72rem; color: var(--slate-500); margin-top: 2rem; }
-  @media print { .actions, nav.toc, .chev { display: none !important; } body { background: #fff; } section.role { break-inside: avoid; } }
+  label.item.checked .txt { text-decoration: line-through; text-decoration-color: rgba(100,116,139,.55); }
+  
+  .sub-item { margin-left: 2rem; border-left: 2px solid var(--slate-200); padding-left: .75rem; }
+  
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .82em; background: var(--slate-100); border: 1px solid var(--slate-200); padding: .08rem .4rem; border-radius: .35rem; color: var(--teal-dark); }
+  footer { text-align: center; font-size: .78rem; color: var(--slate-500); margin-top: 2.5rem; }
+  @media print { .actions, nav.toc, .chev { display: none !important; } body { background: #fff; } section.stage { break-inside: avoid; } }
 </style>
 </head>
 <body>
 
 <div class="hero">
   <div class="hero-inner">
-    <h1>✅ Checklist Fitur Komprehensif — KLASSA</h1>
-    <p>Panduan uji manual per role: Superadmin · Guru · Siswa (+ Mode Keluarga) · Lintas-role. Progress tersimpan otomatis di browser.</p>
-    <p class="commit">Dibuat 2026-09-24 pasca-sunset portal ortu (<code style="background:rgba(255,255,255,.15);color:#fff;border:none">9af533e</code>) · Sumber: stories 1a–8 <em>spec-student-portal-auth</em></p>
+    <h1>Checklist Fitur Komprehensif — KLASSA</h1>
+    <p>Panduan Uji Manual Berbasis Alur Nyata (End-to-End User Journey)</p>
+    <div class="commit">Prasyarat: DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, GEMINI_API_KEY, SUPERADMIN_EMAILS</div>
   </div>
 </div>
 
 <div class="wrap">
   <div class="progress-card">
     <div class="progress-row">
-      <strong>📊 Progres Uji Keseluruhan</strong>
-      <span class="progress-pct" id="pct">0%</span>
+      <div>
+        <strong>Progress Uji Alur Keseluruhan</strong>
+        <div style="font-size:.78rem;color:var(--slate-500);margin-top:.15rem;">Centang setiap langkah setelah diverifikasi di lokal browser</div>
+      </div>
+      <div class="progress-pct" id="pct">0%</div>
     </div>
     <div class="bar"><div id="bar"></div></div>
     <div class="actions">
-      <button class="btn" onclick="resetAll()">↺ Reset Semua</button>
-      <button class="btn" onclick="toggleAll(true)">☑ Centang Semua</button>
-      <button class="btn" onclick="window.print()">🖨 Cetak</button>
+      <button class="btn" onclick="toggleAll(false)">Buka Semua Tahap</button>
+      <button class="btn" onclick="toggleAll(true)">Tutup Semua Tahap</button>
+      <button class="btn" onclick="resetChecks()" style="color:var(--rose);">Reset Centang</button>
+      <span style="font-size:.76rem;color:var(--slate-500);margin-left:auto;" id="stats">0 / 0 item</span>
     </div>
-    <nav class="toc">
-      <a href="#r0">0. Persiapan</a><a href="#r1">1. Superadmin</a><a href="#r2">2. Guru</a><a href="#r3">3. Siswa</a><a href="#r4">4. Lintas-Role</a><a href="#r5">5. Lane Detil</a>
-    </nav>
   </div>
-  <div id="sections"></div>
-  <footer>KLASSA • Naik Kelas Bersama — buka via <code>docs/checklist-fitur.html</code> atau server lokal apa pun.</footer>
+
+  <nav class="toc">
+    <a href="#t1">1. Inisialisasi</a>
+    <a href="#t2">2. Register Guru</a>
+    <a href="#t3">3. Superadmin Check</a>
+    <a href="#t4">4. Kelas & Jadwal</a>
+    <a href="#t5">5. Klaim Akun Siswa</a>
+    <a href="#t6">6. Approval Guru</a>
+    <a href="#t7">7. KBM & Konten</a>
+    <a href="#t8">8. Portal Siswa</a>
+    <a href="#t9">9. Penilaian & Koreksi</a>
+    <a href="#t10">10. Mode Keluarga</a>
+    <a href="#t11">11. Laporan & Rollover</a>
+  </nav>
+
+  <!-- TAHAP 1 -->
+  <section class="stage" id="t1">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 1</span> Inisialisasi & Setup Awal Platform</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Persiapan environment lokal dan verifikasi kesiapan sistem.</div>
+      <label class="item"><input type="checkbox"><span class="txt"><code>npx prisma migrate dev</code> — Skema database sinkron (seluruh chain migrasi terpasang).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><code>npm run seed:superadmin</code> — Akun Superadmin ter-seed dari env <code>SUPERADMIN_EMAILS</code>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><code>npm run dev</code> — Server dev aktif berjalan di <code>http://localhost:3000</code>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><code>npm test</code> — Seluruh suite test unit & integrasi hijau (770 / 770 passed).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Login Superadmin — Otomatis diarahkan ke <code>/admin</code> (bukan onboarding guru).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Access Guard — Superadmin membuka <code>/dashboard</code> atau <code>/onboarding</code> otomatis dilempar kembali ke <code>/admin</code>.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 2 -->
+  <section class="stage" id="t2">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 2</span> Registrasi & Onboarding Guru Baru</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Guru mendaftar mandiri dan menyiapkan ekosistem mengajarnya via wizard onboarding.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/register</code> → Registrasi akun guru baru (Nama, Email, Password).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Masuk ke wizard onboarding 4 langkah (<code>/onboarding</code>).</span></label>
+      <div class="sub-item">
+        <label class="item"><input type="checkbox"><span class="txt"><strong>Step 1 (Sekolah):</strong> Pilih sekolah yang ada atau daftarkan nama sekolah baru.</span></label>
+        <label class="item"><input type="checkbox"><span class="txt"><strong>Step 2 (Periode Akademik):</strong> Konfirmasi tahun ajaran aktif (misal: 2024/2025 Ganjil).</span></label>
+        <label class="item"><input type="checkbox"><span class="txt"><strong>Step 3 (Mata Pelajaran):</strong> Pilih dari daftar atau input mapel baru (misal: Informatika).</span></label>
+        <label class="item"><input type="checkbox"><span class="txt"><strong>Step 4 (Rombel/Kelas):</strong> Buat rombel baru (misal: 8-B) → Kode gabung rombel 6 digit otomatis dibuat.</span></label>
+      </div>
+      <label class="item"><input type="checkbox"><span class="txt">Selesai onboarding → Guru diarahkan ke dashboard utama <code>/dashboard</code> dengan metrik nyata.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 3 -->
+  <section class="stage" id="t3">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 3</span> Verifikasi & Pengawasan Superadmin Pasca-Register Guru</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Superadmin memvalidasi data guru, sekolah, dan rombel yang baru terbentuk.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/admin</code> tab <strong>Sekolah</strong>: Sekolah baru muncul; klik rincian → nama guru terdaftar di detail anggota sekolah.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka tab <strong>Guru</strong>: Guru baru tampil dengan status <code>Aktif</code>, menampilkan nama sekolah asal dan email.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka tab <strong>Rombel / Kelas</strong>: Rombel baru muncul lengkap dengan nama rombel, tingkat, nama sekolah, dan kode gabung.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Uji Sortir Header Kolom: Klik header tabel (Sekolah, Guru, Rombel, Siswa) untuk mengurutkan (A-Z / Z-A).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Uji Pencarian Luas: Cari nama sekolah di tab Rombel → Data rombel di sekolah tersebut berhasil terfilter.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Uji Kontrol Akun: Cek tombol Ban/Unban, Reset Password guru, dan AuditLog di <code>/admin/audit</code>.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 4 -->
+  <section class="stage" id="t4">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 4</span> Manajemen Kelas & Penjadwalan Mengajar (Guru)</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Guru mengelola kelas, mengoreksi data kelas jika salah input, dan mengatur jadwal.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka menu <code>/kelas</code> → Kartu rombel kelas yang diampu muncul.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><strong>Edit Mandiri Data Kelas:</strong> Klik tombol <strong>Edit</strong> pada kartu kelas → Ubah nama rombel atau tingkat kelas (misal koreksi tingkat 7 ke 8) → Simpan → Badge ter-update.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><strong>Pengaturan Jadwal:</strong> Klik tombol <strong>Jadwal</strong> → Atur hari, jam mulai, jam selesai, ruangan → Simpan.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><strong>Salin Kode Gabung Rombel:</strong> Ambil kode gabung 6 digit dari kartu kelas untuk dibagikan ke siswa.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><strong>Impor Roster Siswa (Opsional):</strong> Buka <code>/kelas/[id]/import</code> untuk uji coba upload Excel NIS siswa.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 5 -->
+  <section class="stage" id="t5">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 5</span> Registrasi & Klaim Akun Siswa</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Siswa atau orang tua mendaftarkan akun pertama kali menggunakan kode rombel dari guru.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/portal-siswa</code> dan pilih menu pendaftaran / klaim akun siswa.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Masukkan <strong>Kode Gabung Rombel</strong> (6 karakter dari Tahap 4).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Masukkan <strong>NIS</strong> dan <strong>Nama Lengkap Siswa</strong>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buat <strong>PIN 4 Digit</strong> (contoh: <code>1234</code>).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Kirim pendaftaran → Notifikasi pendaftaran berhasil diajukan dengan status <code>PENDING</code>.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 6 -->
+  <section class="stage" id="t6">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 6</span> Persetujuan Siswa (Approval Flow)</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Guru menyetujui akun siswa agar aktif dan bisa masuk ke portal.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka menu <code>/persetujuan</code> di dashboard guru → Siswa pending muncul di antrean.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Klik tombol <strong>Setujui (Approve)</strong> (atau coba <em>Batch Approve</em>) → Status siswa menjadi <code>ACTIVE</code>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Uji tombol <strong>Pindah Rombel</strong> jika siswa salah kelas.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Uji tombol <strong>Reset PIN Siswa</strong> jika siswa lupa PIN 4 digit.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Superadmin Backstop: Buka <code>/admin</code> tab Siswa → Cek tombol force approve / reject darurat oleh admin.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 7 -->
+  <section class="stage" id="t7">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 7</span> Aktivitas Pembelajaran Harian (Guru)</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Guru melaksanakan KBM, presensi, publikasi materi AI, kuis, dan tugas.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/pertemuan</code> → Buat Sesi Pertemuan baru (Topik rencana & aktual).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/absensi</code> → Catat presensi siswa (Hadir / Terlambat / Sakit / Izin / Alpa).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Tandai sesi sebagai <strong>COMPLETED</strong>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/ai-studio</code> → Generate bahan ajar dengan Gemini AI → Simpan draf → <strong>Publish ke Rombel</strong>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/quiz/new</code> → Buat kuis interaktif dan salin link share token (<code>/q/[token]</code>).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/tugas</code> → Buat tugas baru dengan judul, petunjuk, dan tenggat waktu.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 8 -->
+  <section class="stage" id="t8">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 8</span> Aktivitas Belajar di Portal Siswa (Siswa)</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Siswa login dan mengakses seluruh materi, jadwal, kuis, serta tugas kelas.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/portal-siswa</code> → Login menggunakan NIS + PIN 4 digit → Masuk ke <code>/siswa/portal</code>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/siswa/portal/jadwal</code> → Jadwal pelajaran hari ini & mingguan tampil sesuai.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/siswa/portal/materi</code> → Materi ajar yang dipublish guru dapat dibaca.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka link kuis <code>/q/[token]</code> → Kerjakan kuis interaktif dan lihat pembahasan di <code>/quiz/[token]/review</code>.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/siswa/portal/tugas</code> → Kumpulkan tugas (jawaban teks / tautan dokumen).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/siswa/portal/profil</code> → Periksa profil siswa dan coba fitur ganti PIN.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 9 -->
+  <section class="stage" id="t9">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 9</span> Penilaian & Umpan Balik Guru</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Guru mengoreksi tugas siswa dan melakukan penilaian sumatif/formatif.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/tugas</code> → Muncul badge counter *Antrean Koreksi*.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Klik detail tugas <code>/kelas/[id]/tugas/[assignmentId]</code> → Berikan <strong>Feedback</strong> (wajib) & <strong>Skor 0–100</strong> (opsional) → Simpan.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Cek portal siswa: Jawaban siswa terkunci dan feedback serta skor dari guru tampil.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/pengaturan-nilai</code> → Konfigurasi bobot nilai & KKTP.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/penilaian</code> → Buat asesmen baru dan input nilai siswa.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Lakukan <strong>Finalisasi Nilai</strong> (status <code>FINAL</code> / <code>GRADED</code>) agar teragregasi ke portal siswa.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 10 -->
+  <section class="stage" id="t10">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 10</span> Pemantauan Siswa & Mode Transparansi Keluarga</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Orang tua dan guru memantau perkembangan akademik serta rekap kehadiran siswa.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <strong>Mode Keluarga</strong> di <code>/siswa/portal/keluarga</code> via portal siswa.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Cek rekapitulasi kehadiran bulanan (persentase Hadir, Sakit, Izin, Alpa).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Cek <strong>Rincian Penilaian</strong>: Nilai FINAL tampil dengan indikator KKM (merah jika di bawah KKM).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Cek <strong>Aktivitas Belajar</strong>: Rekap topik pertemuan sesi COMPLETED beserta status kehadiran siswa.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Cek <strong>Status Tugas</strong>: Menampilkan status tugas dan feedback dari guru.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Verifikasi Keamanan: Halaman Mode Keluarga 100% read-only tanpa tombol manipulasi data.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Monitoring Guru: Buka <code>/kelas/[id]/monitoring</code> untuk cek ketuntasan TP & rekomendasi remedial.</span></label>
+    </div>
+  </section>
+
+  <!-- TAHAP 11 -->
+  <section class="stage" id="t11">
+    <div class="stage-head" onclick="toggleStage(this)">
+      <h2><span class="badge b-stage">Tahap 11</span> Pelaporan, Ekspor & Rollover Tahun Ajaran</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span class="mini"></span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="group">
+      <div class="desc">Pencetakan rekapitulasi serta transisi ke periode akademik berikutnya.</div>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/kelas/[id]/jurnal</code> → Tinjau dan cetak Jurnal Mengajar berkala.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka <code>/laporan</code> dan <code>/laporan/print</code> → Ekspor rekap nilai siswa.</span></label>
+      <label class="item"><input type="checkbox"><span class="txt">Buka menu ekspor presentasi → Unduh slide ringkasan materi (PPT/HTML).</span></label>
+      <label class="item"><input type="checkbox"><span class="txt"><strong>Rollover Tahun Ajaran Baru:</strong> Aktifkan Tahun Ajaran baru → Siswa login kembali dengan NIS + PIN lama dan mengklaim kode rombel baru tanpa mendaftar ulang dari awal.</span></label>
+    </div>
+  </section>
+
+  <footer>
+    KLASSA — AI Teacher Assistant &copy; 2026. Data checklist tersimpan otomatis di local storage browser.
+  </footer>
 </div>
 
 <script>
-const DATA = [
-  { id:"r0", badge:"b-cross", badgeText:"Setup", title:"0. Persiapan", groups:[
-    { name:"Lingkungan", items:[
-      "Jalankan <code>npx prisma migrate dev</code> — skema sinkron (chain 21+ migrasi)",
-      "Jalankan <code>npm run seed:superadmin</code> — superadmin ter-seed dari <code>SUPERADMIN_EMAILS</code>",
-      "Jalankan <code>npm run dev</code> — server jalan di http://localhost:3000",
-      "Jalankan <code>npm test</code> — 68 file / 760 test hijau (baseline)"
-    ]}
-  ]},
-  { id:"r1", badge:"b-super", badgeText:"Superadmin", title:"1. Superadmin (platform)", groups:[
-    { name:"Panel & Kendali Guru", items:[
-      "Login dengan akun yang emailnya terdaftar di <code>SUPERADMIN_EMAILS</code>",
-      "<code>/admin</code> — tab Guru menampilkan daftar akun guru, status (Aktif/Banned), dan pencarian relevansi",
-      "Tab Siswa: Force approve / reject pendaftaran siswa berstatus PENDING (L3 Backstop)",
-      "Ban guru → sesi guru ter-revoke, akses ditolak; Unban → akses dipulihkan",
-      "Reset password guru → guru login dengan password baru"
-    ]},
-    { name:"Sekolah & Audit", items:[
-      "Nonaktifkan sekolah → guru & siswa sekolah itu fail-closed (sesi ditolak)",
-      "Reaktifkan sekolah → akses kembali normal",
-      "<code>/admin/audit</code> — setiap aksi superadmin tercatat di AuditLog",
-      "<span class='neg'>Negatif:</span> register via <code>/register</code> TIDAK bisa menghasilkan superadmin (allowlist env saja)"
-    ]}
-  ]},
-  { id:"r2", badge:"b-guru", badgeText:"Guru", title:"2. Guru", groups:[
-    { name:"Onboarding & Akun", items:[
-      "<code>/register</code> → registrasi guru mandiri → diarahkan ke wizard onboarding 4-step",
-      "<code>/onboarding</code> — setup sekolah → periode aktif → mapel → rombel (join code)",
-      "<code>/onboarding/mid-semester</code> — alur tengah semester",
-      "<code>/pengaturan</code> & <code>/pengaturan/setup</code> — profil & konfigurasi"
-    ]},
-    { name:"Beranda & Kelas", items:[
-      "<code>/dashboard</code> — metric cards (konteks mengajar, sesi hari ini, siswa terdaftar) angka nyata",
-      "<code>/kelas</code> — daftar teaching context; buat konteks baru",
-      "Tab kelas: Pertemuan, Absensi, Penilaian, Tugas, Monitoring, Akademik, Import, Jurnal, Laporan, Pengaturan Nilai"
-    ]},
-    { name:"Sesi & Presensi", items:[
-      "<code>/kelas/[id]/pertemuan</code> — buat sesi, isi topik rencana/aktual",
-      "<code>/kelas/[id]/pertemuan/[sessionId]</code> — detail sesi",
-      "<code>/kelas/[id]/absensi</code> — catat H/L/S/I/A per siswa",
-      "Tandai sesi COMPLETED → muncul di Aktivitas Belajar Mode Keluarga"
-    ]},
-    { name:"Penilaian", items:[
-      "<code>/kelas/[id]/penilaian</code> + <code>/assessment/new</code> — buat assessment (tipe, KKM, max skor)",
-      "<code>/kelas/[id]/pengaturan-nilai</code> — GradePolicy / KKTP",
-      "Input nilai → finalisasi → GRADED/FINAL → muncul di Nilai siswa & Mode Keluarga",
-      "<span class='neg'>Negatif:</span> nilai non-FINAL tidak bocor ke siswa"
-    ]},
-    { name:"Tugas (Story 8)", items:[
-      "<code>/kelas/[id]/tugas</code> — buat tugas (judul, deskripsi, tenggat)",
-      "Badge \u201CAntrean koreksi N\u201D — hanya menghitung submission SUBMITTED",
-      "<code>/kelas/[id]/tugas/[assignmentId]</code> — antrean koreksi: feedback (wajib) + skor (opsional 0–100)",
-      "Re-review: tombol \u201CPerbarui\u201D setelah REVIEWED — feedback/skor ter-edit, skor bisa dikosongkan",
-      "Badge terlambat muncul untuk submit lewat tenggat"
-    ]},
-    { name:"Quiz", items:[
-      "<code>/quiz/new</code> — buat quiz; <code>/quiz</code>, <code>/quiz/[quizId]</code> — kelola",
-      "Share token <code>/q/[token]</code> — tautan kuis bisa dibuka siswa"
-    ]},
-    { name:"AI Studio", items:[
-      "<code>/ai-studio</code> — generate konten (Gemini): materi ajar / RPP / lainnya",
-      "Simpan draf; arsip draf",
-      "Publish / Tarik materi LEARNING_MATERIAL → tampil / hilang di <code>/siswa/portal/materi</code>",
-      "<span class='neg'>Negatif:</span> non-LEARNING_MATERIAL & draf tanpa rombel tak bisa dipublish"
-    ]},
-    { name:"Siswa & Monitoring", items:[
-      "<code>/kelas/[id]/import</code> — impor roster siswa (NIS)",
-      "<code>/kelas/[id]/monitoring</code> + <code>/monitoring/[studentId]</code> — pantau siswa",
-      "<code>/persetujuan</code> — setujui siswa pending (satu/batch), pindah rombel",
-      "Reset PIN siswa (terbatas pengampu)",
-      "<code>/siswa</code>, <code>/siswa/[studentId]</code> — direktori & detail siswa"
-    ]},
-    { name:"Lain-lain", items:[
-      "<code>/akademik</code>, <code>/kelas/[id]/akademik</code> — Prota/Prosem",
-      "<code>/kelas/[id]/jurnal</code>, <code>/kelas/[id]/laporan</code>, <code>/laporan</code>, <code>/laporan/print</code>",
-      "<code>/hari-ini</code> — ringkasan harian",
-      "Rollover TA: saklar periode baru → siswa klaim ulang NIS+PIN tetap (playbook story 6)"
-    ]}
-  ]},
-  { id:"r3", badge:"b-siswa", badgeText:"Siswa", title:"3. Siswa", groups:[
-    { name:"Masuk", items:[
-      "<code>/portal-siswa</code> — login NIS + PIN 4 digit",
-      "<span class='neg'>Negatif:</span> NIS/PIN salah ditolak; sesi kedaluwarsa → kembali login"
-    ]},
-    { name:"Portal", items:[
-      "<code>/siswa/portal</code> — beranda: jadwal, widget capaian, kartu Materi",
-      "<code>/siswa/portal/jadwal</code> — jadwal pelajaran",
-      "<code>/siswa/portal/tugas</code> — daftar tugas; Kumpulkan (teks/tautan); edit sebelum dinilai",
-      "Submit terlambat → badge \u201CTerlambat\u201D (tetap terkirim)",
-      "Setelah dinilai: feedback + skor tampil, jawaban TERKUNCI (resubmit ditolak)",
-      "<span class='neg'>Negatif:</span> link non-http(s), kosong, teks &gt;10.000 karakter ditolak",
-      "<code>/siswa/portal/materi</code> — baca materi published (expand/collapse)",
-      "<code>/siswa/portal/quiz</code> — kerjakan quiz dari share token; review pembahasan",
-      "<code>/siswa/portal/nilai</code> — nilai FINAL per mapel + pohon ketuntasan TP",
-      "<code>/siswa/portal/profil</code> — profil; ganti PIN"
-    ]},
-    { name:"Mode Keluarga (dari kartu di Profil)", items:[
-      "<code>/siswa/portal/keluarga</code> — hero pantauan ortu",
-      "Nilai per mapel + TP tuntas x/y",
-      "Presensi bulanan (H/L/S/I/A)",
-      "Rincian Penilaian per mapel: judul, tanggal, KKM, skor (merah &lt; KKM) <span class='new-tag'>BARU</span>",
-      "Aktivitas Belajar: topik per sesi terakhir + status kehadiran <span class='new-tag'>BARU</span>",
-      "Status tugas + umpan balik guru",
-      "Read-only: tidak ada tombol aksi tulis apa pun"
-    ]}
-  ]},
-  { id:"r4", badge:"b-cross", badgeText:"Regresi", title:"4. Lintas-Role & Regresi", groups:[
-    { name:"Keamanan & Sunset", items:[
-      "<code>/parent</code> & <code>/parent/:path*</code> → redirect ke <code>/portal-siswa</code> (sunset ortu)",
-      "Guru membuka <code>/admin</code> → ditolak (deny-by-default, ter-audit)",
-      "Siswa membuka <code>/dashboard</code> → ditolak / dilempar ke portal",
-      "Inactivity guard sesi siswa aktif",
-      "<code>/q/[token]</code> — quiz share tetap hijau (N9)"
-    ]}
-  ]},
-  { id:"r5", badge:"b-super", badgeText:"Lane", title:"5. Single-Admin Lane — Uji Detil", groups:[
-    { name:"A. Status akun superadminmu (positif)", items:[
-      "Jalankan <code>npm run seed:superadmin -- --dry-run</code> → akunmu tampil <code>role=ADMIN, verified=true, origin=PLATFORM_SEED</code> + label <b>sudah-ADMIN</b>",
-      "Baris akhir laporan: <code>promoted=0, created=0, adopted=0</code> (no-op — bukti idempoten)",
-      "Akunmu TIDAK muncul di bagian PERINGATAN drift (artinya origin & role bersih)"
-    ]},
-    { name:"B. Login & lane redirect (positif)", items:[
-      "Buka <code>http://localhost:3000/login</code> → masuk dengan email + password superadmin",
-      "Setelah toast sukses → mendarat di <code>/admin</code> — header “KLASSA Admin — Backstop Platform”",
-      "Ketik manual <code>/dashboard</code> di address bar → otomatis dilempar balik ke <code>/admin</code> (BUKAN wizard onboarding guru)",
-      "Ketik manual <code>/onboarding</code> → tetap dilempar ke <code>/admin</code>",
-      "Ketik manual <code>/quiz</code>, <code>/persetujuan</code>, <code>/ai-studio</code> → semua berujung <code>/admin</code>",
-      "Buka <code>/admin/audit</code> → riwayat aksi admin terlihat"
-    ]},
-    { name:"C. Email reserved (negatif — butuh 1 email cadangan)", items:[
-      "Edit <code>.env</code>: SUPERADMIN_EMAILS ditambah koma + <code>reserved-probe@klassa.test</code> (email yang belum ada di DB)",
-      "Restart <code>npm run dev</code> (env baru kebaca setelah restart)",
-      "Logout → buka <code>/register</code> → daftar dengan <code>reserved-probe@klassa.test</code>",
-      "DITOLAK — pendaftaran gagal, akun tidak tercipta (pesan API bisa generik; intinya TIDAK sukses)",
-      "Negatif-kontrol: daftar dengan email biasa lain → BERHASIL (jalur publik guru tetap hidup) → akun ini dipakai lagi di bagian D"
-    ]},
-    { name:"D. Seeder gate & create-when-missing (negatif + positif)", items:[
-      "Masih dengan probe di allowlist & akun TIDAK ada di DB: <code>npm run seed:superadmin</code> → ABORT “Email tidak dikenal … sediakan bootstrap” (nol row)",
-      "Set <code>SUPERADMIN_INITIAL_PASSWORD=PassUji123!</code> di .env → jalankan <code>npm run seed:superadmin -- --create-name “Probe Lane”</code> → <code>created=1</code>",
-      "Login di /login dengan <code>reserved-probe@klassa.test</code> + <code>PassUji123!</code> → masuk → mendarat di <code>/admin</code> (bukti hash akun-kredensial valid)",
-      "Tambahkan email akun guru-uji (dari C) ke SUPERADMIN_EMAILS → <code>npm run seed:superadmin</code> → ABORT “PUBLIC_REGISTER — TIDAK bisa dipromosikan (I2)”",
-      "Cek <code>/admin</code> — akun guru-uji TIDAK menjadi admin (platformRole tetap USER)",
-      "Uji --adopt pada akun guru BARU yang belum onboarding: <code>npm run seed:superadmin -- --adopt</code> → <code>adopted=1</code>; jalankan ulang → <code>adopted=0</code> (idempoten)",
-      "Uji guru yang SUDAH onboarding (punya TeacherProfile/kelas): tambahkan emailnya → <code>--adopt</code> → ABORT “ber-TeacherProfile dilarang (I2)” — bahkan --adopt tak bisa menembus"
-    ]},
-    { name:"E. Bersih-bersih pasca-uji", items:[
-      "Hapus email probe & guru-uji dari SUPERADMIN_EMAILS (sisakan hanya punyamu)",
-      "Hapus SUPERADMIN_INITIAL_PASSWORD dari .env",
-      "<code>npm run seed:superadmin -- --dry-run</code> → hanya akunmu; akun yang dihapus muncul sebagai drift warning (aman — tidak didemosi otomatis, BH7)",
-      "Opsional: hapus akun probe lewat <code>npx prisma studio</code> (tabel user)",
-      "Jalankan <code>npm test</code> → 766 test hijau"
-    ]},
-    { name:"F. Regresi lintas-lane", items:[
-      "Guru biasa login → <code>/dashboard</code> normal (tidak terlempar ke /admin)",
-      "Guru buka <code>/admin</code> → ditolak ke /login",
-      "Siswa portal + Mode Keluarga tetap normal"
-    ]}
-  ]}
-];
+  const STORAGE_KEY = 'klassa_journey_checklist_v2';
 
-const KEY = "klassa-checklist-v1";
-let state = JSON.parse(localStorage.getItem(KEY) || "{}");
-
-function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
-function total() { return DATA.reduce((n, s) => n + s.groups.reduce((m, g) => m + g.items.length, 0), 0); }
-function done() { return Object.values(state).filter(Boolean).length; }
-
-function render() {
-  const host = document.getElementById("sections");
-  host.innerHTML = "";
-  let idx = 0;
-  DATA.forEach(sec => {
-    const el = document.createElement("section");
-    el.className = "role"; el.id = sec.id;
-    const secTotal = sec.groups.reduce((m, g) => m + g.items.length, 0);
-    const secDone = sec.groups.reduce((m, g) => m + g.items.filter((_, i) => state["c" + (idx + i)]).length, 0);
-    let head =
-      `<div class="role-head" onclick="this.parentElement.classList.toggle('collapsed')">
-         <h2><span class="badge ${sec.badge}">${sec.badgeText}</span> ${sec.title}</h2>
-         <span style="display:flex;align-items:center;gap:.6rem">
-           <span class="mini ${secDone === secTotal ? "done" : ""}">${secDone}/${secTotal}</span>
-           <span class="chev">▼</span>
-         </span>
-       </div>`;
-    let body = "";
-    sec.groups.forEach(g => {
-      body += `<div class="group"><h3>${g.name}</h3>`;
-      g.items.forEach(item => {
-        const id = "c" + idx++;
-        body += `<label class="item ${state[id] ? "checked" : ""}">
-                   <input type="checkbox" ${state[id] ? "checked" : ""} onchange="toggle('${id}', this)">
-                   <span class="txt">${item}</span>
-                 </label>`;
+  function init() {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const inputs = document.querySelectorAll('input[type="checkbox"]');
+    inputs.forEach((inp, idx) => {
+      if (saved[idx]) {
+        inp.checked = true;
+        inp.closest('label.item').classList.add('checked');
+      }
+      inp.addEventListener('change', () => {
+        inp.closest('label.item').classList.toggle('checked', inp.checked);
+        save();
+        updateProgress();
       });
-      body += `</div>`;
     });
-    el.innerHTML = head + body;
-    host.appendChild(el);
-  });
-  const d = done(), t = total(), p = t ? Math.round(d / t * 100) : 0;
-  document.getElementById("pct").textContent = `${d}/${t} — ${p}%`;
-  document.getElementById("bar").style.width = p + "%";
-}
+    updateProgress();
+  }
 
-function toggle(id, input) {
-  state[id] = input.checked;
-  input.closest("label").classList.toggle("checked", input.checked);
-  save();
-  // refresh counters without full rerender losing scroll: rerender is cheap & preserves scroll pos mostly
-  render();
-}
-function resetAll() { if (confirm("Reset semua centang?")) { state = {}; save(); render(); } }
-function toggleAll(v) { const t = total(); for (let i = 0; i < t; i++) state["c" + i] = v; save(); render(); }
+  function save() {
+    const inputs = document.querySelectorAll('input[type="checkbox"]');
+    const state = {};
+    inputs.forEach((inp, idx) => {
+      if (inp.checked) state[idx] = true;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
 
-render();
+  function updateProgress() {
+    const inputs = document.querySelectorAll('input[type="checkbox"]');
+    const total = inputs.length;
+    const checked = Array.from(inputs).filter(i => i.checked).length;
+    const pct = total === 0 ? 0 : Math.round((checked / total) * 100);
+
+    document.getElementById('pct').textContent = pct + '%';
+    document.getElementById('bar').style.width = pct + '%';
+    document.getElementById('stats').textContent = `${checked} / ${total} item selesai`;
+
+    document.querySelectorAll('section.stage').forEach(stage => {
+      const stageInputs = stage.querySelectorAll('input[type="checkbox"]');
+      const stageTotal = stageInputs.length;
+      const stageChecked = Array.from(stageInputs).filter(i => i.checked).length;
+      const mini = stage.querySelector('.mini');
+      if (mini) {
+        mini.textContent = `${stageChecked}/${stageTotal}`;
+        mini.classList.toggle('done', stageChecked === stageTotal && stageTotal > 0);
+      }
+    });
+  }
+
+  function toggleStage(head) {
+    head.closest('section.stage').classList.toggle('collapsed');
+  }
+
+  function toggleAll(collapse) {
+    document.querySelectorAll('section.stage').forEach(s => {
+      s.classList.toggle('collapsed', collapse);
+    });
+  }
+
+  function resetChecks() {
+    if (!confirm('Reset semua centang checklist ke awal?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    document.querySelectorAll('input[type="checkbox"]').forEach(inp => {
+      inp.checked = false;
+      inp.closest('label.item').classList.remove('checked');
+    });
+    updateProgress();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
