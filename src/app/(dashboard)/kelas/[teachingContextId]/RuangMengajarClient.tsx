@@ -172,8 +172,14 @@ export default function RuangMengajarClient({
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(context.joinCode!);
-                      toast.success(`Kode rombel ${context.className} (${context.joinCode}) disalin!`);
+                      navigator.clipboard
+                        ?.writeText(context.joinCode!)
+                        .then(() => {
+                          toast.success(`Kode rombel ${context.className} (${context.joinCode}) disalin!`);
+                        })
+                        .catch(() => {
+                          toast.error(`Gagal menyalin. Salin manual: ${context.joinCode}`);
+                        });
                     }}
                     className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-teal-200 bg-teal-900/60 hover:bg-teal-800/80 active:scale-95 px-2.5 py-0.5 rounded-full border border-teal-500/40 transition-all cursor-pointer"
                     title="Klik untuk salin kode rombel siswa"

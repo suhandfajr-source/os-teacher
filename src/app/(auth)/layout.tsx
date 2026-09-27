@@ -2,7 +2,6 @@ import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { redirect } from "next/navigation";
 import { KlassaLogo, ModularCockpitArtwork } from "@/components/brand";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   let authContext = null;

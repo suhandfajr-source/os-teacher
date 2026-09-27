@@ -99,6 +99,90 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
       expect(res.success).toBe(false);
       expect(res.message).toBe("Kode rombel tidak ditemukan.");
     });
+
+    // Review 36c5321 (VG-3): payload roster tidak pernah ter-assert —
+    // satu-satunya entry point self-registration bisa rusak tanpa sinyal test.
+    it("memetakan roster dari classStudents: hasAccount = accessPinHash && accountStatus ACTIVE", async () => {
+      (prisma.class.findUnique as any).mockResolvedValue({
+        id: "cls_1",
+        name: "7-A",
+        gradeLevel: "7",
+        joinCodeLocked: false,
+        school: { id: "sch_1", name: "SMP Negeri 1", city: "Surabaya", deactivatedAt: null },
+        teachingContexts: [
+          {
+            academicPeriod: { id: "prd_1", year: "2026/2027", semester: "Ganjil", status: "ACTIVE" },
+            teacherProfile: { user: { name: "Pak Budi" } },
+          },
+        ],
+        classStudents: [
+          {
+            student: {
+              id: "std_1",
+              fullName: "Ahmad Aktif",
+              nis: "1001A",
+              accessPinHash: "scrypt:hash",
+              accountStatus: "ACTIVE",
+            },
+          },
+          {
+            student: {
+              id: "std_2",
+              fullName: "Budi Pending",
+              nis: "1002B",
+              accessPinHash: null,
+              accountStatus: "PENDING",
+            },
+          },
+          {
+            student: {
+              id: "std_3",
+              fullName: "Cici Ditolak",
+              nis: null,
+              accessPinHash: "scrypt:hash2",
+              accountStatus: "REJECTED",
+            },
+          },
+        ],
+      });
+
+      const res = await lookupJoinCode("ABC234");
+      expect(res.success).toBe(true);
+      if (res.success && res.data) {
+        expect(res.data.roster).toHaveLength(3);
+        expect(res.data.roster[0]).toEqual({
+          id: "std_1",
+          fullName: "Ahmad Aktif",
+          nis: "1001A",
+          hasAccount: true,
+          accountStatus: "ACTIVE",
+        });
+        // Tanpa PIN hash -> hasAccount false meski ada baris Student
+        expect(res.data.roster[1].hasAccount).toBe(false);
+        // REJECTED ber-PIN pun tetap false (bukan akun aktif)
+        expect(res.data.roster[2]).toEqual(
+          expect.objectContaining({ nis: null, hasAccount: false })
+        );
+      }
+    });
+
+    it("roster kosong bila classStudents undefined — fallback [] tidak melempar", async () => {
+      (prisma.class.findUnique as any).mockResolvedValue({
+        id: "cls_1",
+        name: "7-A",
+        gradeLevel: null,
+        joinCodeLocked: false,
+        school: { id: "sch_1", name: "SMP Negeri 1", city: "Surabaya", deactivatedAt: null },
+        teachingContexts: [],
+        classStudents: undefined,
+      });
+
+      const res = await lookupJoinCode("ABC234");
+      expect(res.success).toBe(true);
+      if (res.success && res.data) {
+        expect(res.data.roster).toEqual([]);
+      }
+    });
   });
 
   describe("registerStudent (State Machine 4 Cabang & Anti-Takeover F1)", () => {
@@ -162,7 +246,7 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
       expect(prisma.student.update).not.toHaveBeenCalled();
     });
 
-    it("Skenario A (L0 Otomatis): NIS match & name match exact -> ACTIVE & auto-login session", async () => {
+    it("Skenario A: NIS & nama cocok roster -> PENDING (verifikasi tgl lahir + approval guru, tanpa auto-login)", async () => {
       (prisma.class.findUnique as any).mockResolvedValue(validClassRecord);
       (prisma.classStudent.findFirst as any).mockResolvedValue(null);
 
@@ -172,13 +256,15 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
         fullName: "Ahmad Siswa",
         nis: "1001A",
         accessPinHash: null,
+        accountStatus: "PENDING",
+        accountRequestedAt: null, // siswa import roster — belum pernah mengajukan akun
       });
 
       (prisma.student.update as any).mockResolvedValue({
         id: "std_1",
         fullName: "Ahmad Siswa",
         nis: "1001A",
-        accountStatus: "ACTIVE",
+        accountStatus: "PENDING",
       });
 
       const res = await registerStudent({
@@ -186,21 +272,26 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
         fullName: "  ahmad siswa  ", // Case-insensitive and trimmed match
         nis: "1001a",
         pin: "1234",
+        birthDate: "2012-05-10",
       });
 
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.status).toBe("ACTIVE");
+        expect(res.status).toBe("PENDING");
+        expect((res as any).reason).toBe("MATCHED_ROSTER");
       }
       expect(prisma.student.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            accountStatus: "ACTIVE",
+            accountStatus: "PENDING",
+            birthDate: "2012-05-10",
+            birthDateConflict: false,
+            accountRequestedAt: expect.any(Date),
           }),
         })
       );
-      // Auto-session cookie created
-      expect(setStudentSessionCookie).toHaveBeenCalled();
+      // Review 36c5321: tidak ada auto-login — akun menunggu persetujuan guru
+      expect(setStudentSessionCookie).not.toHaveBeenCalled();
     });
 
     it("Skenario B (L1 Pending): NIS match but name differs -> PENDING without session", async () => {
@@ -275,6 +366,120 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
         })
       );
       expect(setStudentSessionCookie).not.toHaveBeenCalled();
+    });
+
+    // Review 36c5321 (VG-4): cabang re-registrasi PENDING / deteksi konflik
+    // tanggal lahir sepenuhnya tak teruji sebelumnya.
+    describe("Re-registrasi saat PENDING (deteksi konflik tanggal lahir)", () => {
+      const pendingStudentBase = {
+        id: "std_p",
+        fullName: "Ahmad Siswa",
+        nis: "1001A",
+        accessPinHash: null,
+        accountStatus: "PENDING",
+        accountRequestedAt: new Date("2026-09-01T00:00:00Z"),
+      };
+
+      it("tanggal lahir sama persis -> notifikasi sudah tercatat, tanpa mutasi row", async () => {
+        (prisma.class.findUnique as any).mockResolvedValue(validClassRecord);
+        (prisma.classStudent.findFirst as any).mockResolvedValue(null);
+        (prisma.student.findFirst as any).mockResolvedValue({
+          ...pendingStudentBase,
+          birthDate: "2012-05-10",
+        });
+
+        const res = await registerStudent({
+          joinCode: "ABC234",
+          fullName: "Ahmad Siswa",
+          nis: "1001A",
+          pin: "1234",
+          birthDate: "2012-05-10",
+        });
+
+        expect(res.success).toBe(true);
+        if (res.success) {
+          expect(res.status).toBe("PENDING");
+          expect(res.message).toContain("sudah tercatat");
+        }
+        expect(prisma.student.update).not.toHaveBeenCalled();
+      });
+
+      it("tanggal lahir berbeda -> flag birthDateConflict + note ter-persist untuk verifikasi guru", async () => {
+        (prisma.class.findUnique as any).mockResolvedValue(validClassRecord);
+        (prisma.classStudent.findFirst as any).mockResolvedValue(null);
+        (prisma.student.findFirst as any).mockResolvedValue({
+          ...pendingStudentBase,
+          birthDate: "2012-05-10",
+        });
+        (prisma.student.update as any).mockResolvedValue({
+          ...pendingStudentBase,
+          birthDateConflict: true,
+          conflictBirthDates: "2012-05-10 vs 2011-01-01",
+        });
+
+        const res = await registerStudent({
+          joinCode: "ABC234",
+          fullName: "Ahmad Siswa",
+          nis: "1001A",
+          pin: "1234",
+          birthDate: "2011-01-01",
+        });
+
+        expect(res.success).toBe(true);
+        if (res.success) {
+          expect(res.message).toContain("perbedaan data tanggal lahir");
+        }
+        expect(prisma.student.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: "std_p" },
+            data: expect.objectContaining({
+              birthDateConflict: true,
+              conflictBirthDates: "2012-05-10 vs 2011-01-01",
+              accountRequestedAt: expect.any(Date),
+            }),
+          })
+        );
+      });
+
+      it("tanggal lahir pertama kali -> simpan birthDate + accessPinHash dan kembalikan row ter-update", async () => {
+        (prisma.class.findUnique as any).mockResolvedValue(validClassRecord);
+        (prisma.classStudent.findFirst as any).mockResolvedValue(null);
+        (prisma.student.findFirst as any).mockResolvedValue({
+          ...pendingStudentBase,
+          birthDate: null,
+        });
+        const updatedRow = {
+          ...pendingStudentBase,
+          birthDate: "2012-05-10",
+          accessPinHash: "scrypt:16384:8:1:salt:1234",
+        };
+        (prisma.student.update as any).mockResolvedValue(updatedRow);
+
+        const res = await registerStudent({
+          joinCode: "ABC234",
+          fullName: "Ahmad Siswa",
+          nis: "1001A",
+          pin: "1234",
+          birthDate: "2012-05-10",
+        });
+
+        expect(res.success).toBe(true);
+        expect(prisma.student.update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: "std_p" },
+            data: expect.objectContaining({
+              birthDate: "2012-05-10",
+              accessPinHash: expect.any(String),
+            }),
+          })
+        );
+        // Review 36c5321: respons membawa row TER-UPDATE, bukan snapshot basi
+        if (res.success) {
+          expect((res as any).student).toEqual(
+            expect.objectContaining({ id: "std_p", birthDate: "2012-05-10" })
+          );
+        }
+      });
     });
   });
 
@@ -488,7 +693,8 @@ describe("Student Auth Actions (CAP-1 & F1–F8)", () => {
           studentId: "std_1",
           classId: "cls_1",
           academicPeriodId: "prd_1",
-        })
+        }),
+        { persistent: true } // review 36c5321: opsi rememberMe — default persisten
       );
     });
   });

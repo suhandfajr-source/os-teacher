@@ -7,13 +7,12 @@ import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Eye, EyeOff, Mail, Lock, ArrowRight, GraduationCap } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -123,17 +122,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Remember me & Forgot Password */}
-        <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium pt-0.5">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-3 h-3 rounded border-slate-300 text-teal-700 focus:ring-teal-500 accent-teal-700 cursor-pointer"
-            />
-            <span>Ingat sesi saya</span>
-          </label>
+        {/* Forgot Password */}
+        <div className="flex items-center justify-end text-[10px] text-slate-500 font-medium pt-0.5">
           <span className="text-teal-700 hover:underline font-bold cursor-pointer">
             Lupa kata sandi?
           </span>

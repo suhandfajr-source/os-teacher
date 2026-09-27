@@ -271,7 +271,7 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
   });
 
   describe("2. State Machine Pendaftaran Siswa & Anti-Takeover F1", () => {
-    it("Cabang A (L0 Otomatis): klaim akun NIS cocok persis -> status ACTIVE & auto-session", async () => {
+    it("Cabang A: NIS & nama cocok roster -> PENDING (verifikasi tgl lahir + approval guru, tanpa auto-session)", async () => {
       if (!dbAvailable) return;
 
       const res = await registerStudent({
@@ -279,20 +279,23 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
         fullName: "  ahmad siswa l0  ", // Case-insensitive trim match
         nis: "nis001a", // Lowercase input -> terkanonisasi
         pin: "1234",
+        birthDate: "2012-05-10", // Review 36c5321: bahan verifikasi guru
       });
 
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.status).toBe("ACTIVE");
+        expect(res.status).toBe("PENDING");
+        expect((res as any).reason).toBe("MATCHED_ROSTER");
       }
 
-      // Verifikasi record di database Neon
+      // Verifikasi record di database Neon — akun menunggu persetujuan guru
       const dbStudent = await prisma.student.findUnique({
         where: { id: studentL0Id },
       });
-      expect(dbStudent?.accountStatus).toBe("ACTIVE");
+      expect(dbStudent?.accountStatus).toBe("PENDING");
       expect(dbStudent?.accessPinHash).toContain("scrypt:16384:8:1");
       expect(dbStudent?.pinUpdatedAt).toBeInstanceOf(Date);
+      expect(dbStudent?.birthDate).toBe("2012-05-10");
 
       // Verifikasi pendaftaran di ClassStudent
       const enrollment = await prisma.classStudent.findUnique({
@@ -453,6 +456,13 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
 
     it("B3 & F6: Eskalasi lockout persisten di DB setelah 5x salah (15 menit)", async () => {
       if (!dbAvailable) return;
+
+      // Review 36c5321: kontrak baru — Cabang A kini PENDING (menunggu persetujuan
+      // guru). Simulasikan persetujuan guru agar audit login atas akun AKTIF valid.
+      await prisma.student.update({
+        where: { id: studentL0Id },
+        data: { accountStatus: "ACTIVE", approvedAt: new Date() },
+      });
 
       // 4 kali salah
       for (let i = 1; i <= 4; i++) {

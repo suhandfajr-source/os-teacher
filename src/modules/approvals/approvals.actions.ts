@@ -545,7 +545,18 @@ export async function getPendingStudentsForMyClassesAction() {
     where: {
       classId: { in: classIds },
       academicPeriodId: activePeriod.id,
-      student: { accountStatus: "PENDING", status: "ACTIVE", schoolId: activeSchoolId },
+      student: {
+        accountStatus: "PENDING",
+        status: "ACTIVE",
+        schoolId: activeSchoolId,
+        // Review 36c5321: adopsi guard "hanya pengajuan nyata" — selaras dengan
+        // getPendingStudentsForClassAction & getPendingStudentsForSchoolAction,
+        // agar panel Daftar Siswa dan panel Persetujuan tidak saling kontradiksi.
+        OR: [
+          { accountRequestedAt: { not: null } },
+          { accessPinHash: { not: null } },
+        ],
+      },
     },
     include: PENDING_INCLUDE,
     orderBy: [{ student: { accountRequestedAt: "asc" } }],

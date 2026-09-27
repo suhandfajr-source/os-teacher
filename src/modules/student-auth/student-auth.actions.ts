@@ -139,7 +139,7 @@ export type JoinCodeContext = {
 
 export type RegisterStudentResult =
   | { success: true; status: "ACTIVE"; student: any; message: string; redirect?: string }
-  | { success: true; status: "PENDING"; reason: "MISMATCH_NAME" | "NEW_STUDENT"; student: any; message: string }
+  | { success: true; status: "PENDING"; reason: "MISMATCH_NAME" | "NEW_STUDENT" | "MATCHED_ROSTER"; student: any; message: string }
   | { success: false; message: string };
 
 /**
@@ -149,106 +149,7 @@ function canonicalStudentName(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-export type VerifyStudentIdentityResult =
-  | {
-      success: true;
-      status: "MATCHED_ROSTER" | "ALREADY_REGISTERED" | "NAME_MISMATCH" | "NEW_STUDENT";
-      message: string;
-      studentName?: string;
-      officialName?: string;
-    }
-  | {
-      success: false;
-      message: string;
-    };
-
 /**
- * Memverifikasi kecocokan Nama dan NIS terhadap data master sekolah / rombel
- * sebelum siswa membuat PIN 4-digit.
- */
-export async function verifyStudentIdentity(data: {
-  joinCode: string;
-  fullName: string;
-  nis: string;
-}): Promise<VerifyStudentIdentityResult> {
-  if (!data.joinCode || data.joinCode.trim().length < 6) {
-    return { success: false, message: "Kode rombel tidak valid." };
-  }
-  if (!data.fullName || !data.fullName.trim()) {
-    return { success: false, message: "Nama lengkap wajib diisi." };
-  }
-  if (!data.nis || !data.nis.trim()) {
-    return { success: false, message: "NIS wajib diisi." };
-  }
-
-  const cleanNis = data.nis.trim().toUpperCase();
-  const cleanFullName = data.fullName.trim();
-  const cleanCode = data.joinCode.trim().toUpperCase();
-
-  const classRecord = await prisma.class.findUnique({
-    where: { joinCode: cleanCode },
-    include: {
-      school: {
-        select: { id: true, name: true, deactivatedAt: true },
-      },
-    },
-  });
-
-  if (!classRecord || classRecord.school?.deactivatedAt) {
-    return { success: false, message: "Kode rombel tidak ditemukan." };
-  }
-
-  if (classRecord.joinCodeLocked) {
-    return { success: false, message: "Kode rombel telah dikunci oleh guru." };
-  }
-
-  const existingStudent = await prisma.student.findFirst({
-    where: {
-      schoolId: classRecord.schoolId,
-      nis: { equals: cleanNis, mode: "insensitive" },
-    },
-  });
-
-  if (!existingStudent) {
-    return {
-      success: true,
-      status: "NEW_STUDENT",
-      message: "NIS belum terdata di rombel ini. Akun Anda akan didaftarkan sebagai siswa baru dan memerlukan persetujuan guru pengampu.",
-    };
-  }
-
-  // Sudah punya akun aktif & PIN (kecuali REJECTED)
-  if (existingStudent.accessPinHash !== null && existingStudent.accountStatus !== "REJECTED") {
-    return {
-      success: true,
-      status: "ALREADY_REGISTERED",
-      studentName: existingStudent.fullName,
-      message: `Akun siswa dengan NIS ${cleanNis} (${existingStudent.fullName}) sudah terdaftar dan aktif. Silakan langsung masuk menggunakan NIS dan PIN Anda.`,
-    };
-  }
-
-  // Cek kecocokan nama kanonik
-  const isMatch = canonicalStudentName(existingStudent.fullName) === canonicalStudentName(cleanFullName);
-
-  if (isMatch) {
-    return {
-      success: true,
-      status: "MATCHED_ROSTER",
-      studentName: existingStudent.fullName,
-      message: `Identitas terverifikasi di rombel! Nama "${existingStudent.fullName}" terdaftar pada sistem sekolah. Silakan buat PIN 4-digit di bawah untuk aktivasi otomatis.`,
-    };
-  } else {
-    return {
-      success: true,
-      status: "NAME_MISMATCH",
-      officialName: existingStudent.fullName,
-      message: `NIS ${cleanNis} terdaftar di sekolah atas nama "${existingStudent.fullName}". Karena nama yang Anda ketik berbeda, pendaftaran akan diteruskan ke guru untuk persetujuan (Pending).`,
-    };
-  }
-}
-
-/**
-
  * Pendaftaran akun siswa via kode rombel dengan state machine 4 cabang (A-D)
  * dan proteksi Re-registration Account Takeover (F1).
  */
@@ -716,18 +617,19 @@ export async function registerStudent(data: {
     }
     // Jika data tanggal lahir belum ada sebelumnya, simpan data baru
     if (cleanBirthDate && !existingStudent.birthDate) {
-      await prisma.student.update({
+      const updatedStudent = await prisma.student.update({
         where: { id: existingStudent.id },
         data: { birthDate: cleanBirthDate, accessPinHash: pinHash },
+        select: SAFE_STUDENT_SELECT,
       });
+      return {
+        success: true,
+        status: "PENDING",
+        reason: "MISMATCH_NAME",
+        student: updatedStudent,
+        message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
+      };
     }
-    return {
-      success: true,
-      status: "PENDING",
-      reason: "MISMATCH_NAME",
-      student: existingStudent,
-      message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
-    };
   }
 
   // Skenario (a): NIS dan nama cocok dengan data rombel -> PENDING (Memerlukan verifikasi & persetujuan guru)
@@ -776,7 +678,7 @@ export async function registerStudent(data: {
     return {
       success: true,
       status: "PENDING",
-      reason: "MATCHED_ROSTER" as any,
+      reason: "MATCHED_ROSTER",
       student: pendingStudent,
       message: "Pendaftaran terkirim! Akun Anda sedang menunggu verifikasi tanggal lahir & persetujuan guru pengampu.",
     };
@@ -889,6 +791,7 @@ export async function loginStudent(data: {
   schoolId: string;
   nis: string;
   pin: string;
+  rememberMe?: boolean;
 }): Promise<LoginStudentResult> {
   const genericErrorMessage = "NIS atau PIN salah.";
 
@@ -1045,7 +948,7 @@ export async function loginStudent(data: {
     nis: student.nis || cleanNis,
     fullName: student.fullName,
     pinUpdatedAt: student.pinUpdatedAt ? student.pinUpdatedAt.toISOString() : null,
-  });
+  }, { persistent: data.rememberMe !== false });
 
   return {
     success: true,

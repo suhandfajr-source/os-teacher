@@ -137,6 +137,10 @@ export default async function SiswaDetailPage({
                 <Badge className="bg-amber-100 text-amber-800 border-amber-200">
                   ⏳ Menunggu Persetujuan Guru
                 </Badge>
+              ) : student.accountStatus === "REJECTED" ? (
+                <Badge className="bg-rose-100 text-rose-800 border-rose-200">
+                  ✕ Ditolak Guru (Akses Ditutup)
+                </Badge>
               ) : (
                 <Badge variant="outline" className="text-slate-500 bg-slate-50">
                   Belum Registrasi Mandiri

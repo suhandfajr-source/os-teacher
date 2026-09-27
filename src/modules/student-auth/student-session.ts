@@ -193,7 +193,8 @@ export async function verifyStudentSession(): Promise<StudentSessionPayload | nu
  * Menulis cookie sesi siswa ke response store (HttpOnly, Secure in prod, SameSite=Lax).
  */
 export async function setStudentSessionCookie(
-  payload: Omit<StudentSessionPayload, "issuedAt" | "expiresAt">
+  payload: Omit<StudentSessionPayload, "issuedAt" | "expiresAt">,
+  options?: { persistent?: boolean }
 ): Promise<string> {
   const token = signStudentSessionToken(payload);
 
@@ -204,7 +205,9 @@ export async function setStudentSessionCookie(
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: Math.floor(THIRTY_DAYS_MS / 1000), // Max cap 30 hari
+      // rememberMe = false → cookie sesi (hilang saat browser ditutup);
+      // default persisten (max cap 30 hari) menjaga perilaku lama.
+      ...(options?.persistent === false ? {} : { maxAge: Math.floor(THIRTY_DAYS_MS / 1000) }),
     });
   } catch {
     // Graceful fallback jika dijalankan di luar Next.js request store (misal test runner)

@@ -517,22 +517,31 @@ describe("Story 5 Deep Real-Database Integration & Security Audit (Neon PostgreS
     const sNew = await prisma.student.create({ data: { schoolId, fullName: "Pending Baru", nis: `NW${`${ts}`.slice(-7)}`, accountStatus: "PENDING", accountRequestedAt: new Date() } });
     await prisma.classStudent.create({ data: { studentId: sNew.id, classId: classAId, academicPeriodId: activePeriodId } });
 
-    // L2 sekolah-wide: keduanya tampil
+    // Review 36c5321 (V1/V2): siswa hasil import roster — PENDING default TANPA
+    // pengajuan akun (accountRequestedAt & PIN kosong) — tidak boleh membanjiri
+    // panel persetujuan manapun (guard "hanya pengajuan nyata").
+    const sImport = await prisma.student.create({ data: { schoolId, fullName: "Siswa Import", nis: `IM${`${ts}`.slice(-7)}`, accountStatus: "PENDING" } });
+    await prisma.classStudent.create({ data: { studentId: sImport.id, classId: classAId, academicPeriodId: activePeriodId } });
+
+    // L2 sekolah-wide: keduanya tampil; siswa import TIDAK (belum mengajukan akun)
     const l2 = await getPendingStudentsForSchoolAction();
     expect(l2.success).toBe(true);
     const l2Ids = l2.pending.map((p) => p.studentId);
     expect(l2Ids).toContain(sOld.id);
     expect(l2Ids).toContain(sNew.id);
+    expect(l2Ids).not.toContain(sImport.id);
 
     // L1 per-rombel: hanya periode aktif (sOld tidak muncul di classA/classB)
     const l1 = await getPendingStudentsForClassAction(classAId);
     expect(l1.success).toBe(true);
     expect(l1.pending.map((p) => p.studentId)).toContain(sNew.id);
     expect(l1.pending.map((p) => p.studentId)).not.toContain(sOld.id);
+    expect(l1.pending.map((p) => p.studentId)).not.toContain(sImport.id);
 
-    // L1 multi-rombel (tab Daftar Siswa)
+    // L1 multi-rombel (tab Daftar Siswa) — guard identik (review 36c5321 V1)
     const mine = await getPendingStudentsForMyClassesAction();
     expect(mine.pending.map((p) => p.studentId)).toContain(sNew.id);
+    expect(mine.pending.map((p) => p.studentId)).not.toContain(sImport.id);
   });
 
   it("L1 matrix: guru bukan pengampu ditolak server-side di panel L1", async () => {

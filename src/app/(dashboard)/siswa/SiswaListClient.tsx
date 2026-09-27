@@ -70,7 +70,11 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
   const q = searchQuery.toLowerCase().trim();
 
   // Compute status metrics across all students
-  const allStudents = classGroups.flatMap((cg) => cg.students);
+  // Review 36c5321: dedupe per id — siswa yang terdaftar di dua rombel guru
+  // tidak boleh terhitung ganda (totalStudents server sudah ter-dedupe).
+  const allStudents = Array.from(
+    new Map(classGroups.flatMap((cg) => cg.students).map((s) => [s.id, s])).values()
+  );
   const countActive = allStudents.filter((s) => s.accountStatus === "ACTIVE").length;
   const countPending = allStudents.filter((s) => s.accountStatus === "PENDING").length;
   const countUnregistered = allStudents.filter((s) => s.accountStatus === "UNREGISTERED").length;
@@ -142,6 +146,14 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           onClick={() => setSelectedStatus("ALL")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedStatus("ALL");
+            }
+          }}
           className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
             selectedStatus === "ALL"
               ? "bg-primary/10 border-primary ring-1 ring-primary"
@@ -158,6 +170,14 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
 
         <div
           onClick={() => setSelectedStatus("ACTIVE")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedStatus("ACTIVE");
+            }
+          }}
           className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
             selectedStatus === "ACTIVE"
               ? "bg-emerald-500/15 border-emerald-500 ring-1 ring-emerald-500"
@@ -174,6 +194,14 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
 
         <div
           onClick={() => setSelectedStatus("PENDING")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedStatus("PENDING");
+            }
+          }}
           className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
             selectedStatus === "PENDING"
               ? "bg-amber-500/15 border-amber-500 ring-1 ring-amber-500"
@@ -190,6 +218,14 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
 
         <div
           onClick={() => setSelectedStatus("UNREGISTERED")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelectedStatus("UNREGISTERED");
+            }
+          }}
           className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
             selectedStatus === "UNREGISTERED"
               ? "bg-slate-500/15 border-slate-500 ring-1 ring-slate-500"

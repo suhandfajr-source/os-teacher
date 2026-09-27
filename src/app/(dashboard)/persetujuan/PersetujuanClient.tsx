@@ -47,6 +47,20 @@ interface Props {
 
 const BATCH_APPROVE_MAX = 100; // G-8 — mirror validasi server-side
 
+/**
+ * Format tanggal lahir ke DD/MM/YYYY untuk tampilan guru.
+ * Menerima "YYYY-MM-DD" (input type=date) maupun "DD/MM/YYYY";
+ * nilai tak dikenal dikembalikan apa adanya.
+ */
+function formatBirthDateId(value: string): string {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (iso.test(value)) {
+    const [y, m, d] = value.split("-");
+    return `${d}/${m}/${y}`;
+  }
+  return value;
+}
+
 export function PersetujuanClient({ initialPending, escalatedThresholdHours, classes }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<PendingStudentView[]>(initialPending);
@@ -217,13 +231,13 @@ export function PersetujuanClient({ initialPending, escalatedThresholdHours, cla
                     {p.birthDate && (
                       <Badge variant="outline" className="text-teal-700 border-teal-200 bg-teal-50/50">
                         <Calendar className="h-3 w-3 mr-1" />
-                        Lahir: {p.birthDate}
+                        Lahir: {formatBirthDateId(p.birthDate)}
                       </Badge>
                     )}
                     {p.birthDateConflict && (
                       <Badge className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100">
                         <AlertTriangle className="h-3 w-3 mr-1" />
-                        Konflik Tgl Lahir: {p.conflictBirthDates || p.birthDate}
+                        Konflik Tgl Lahir: {p.conflictBirthDates ? p.conflictBirthDates.split(" vs ").map(formatBirthDateId).join(" vs ") : formatBirthDateId(p.birthDate || "")}
                       </Badge>
                     )}
                     <Badge variant="secondary">

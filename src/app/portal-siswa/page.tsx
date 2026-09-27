@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,25 @@ export default function PortalSiswaAuthPage() {
   const [regPinConfirm, setRegPinConfirm] = useState("");
   const [showRegPin, setShowRegPin] = useState(false);
   const [regSubmitting, setRegSubmitting] = useState(false);
+
+  // Review 36c5321: tutup dropdown nama saat klik di luar / tekan Esc (a11y)
+  const nameFieldRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (nameFieldRef.current && !nameFieldRef.current.contains(e.target as Node)) {
+        setShowNameDropdown(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowNameDropdown(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   // Load saved school from localStorage on mount (DEV_STAGE_11 §3.2)
   useEffect(() => {
@@ -199,6 +218,7 @@ export default function PortalSiswaAuthPage() {
         schoolId: selectedSchool.id,
         nis: loginNis.trim(),
         pin: loginPin.trim(),
+        rememberMe,
       });
 
       if (res.success) {
@@ -276,7 +296,11 @@ export default function PortalSiswaAuthPage() {
       return;
     }
     if (!isNisMatched) {
-      setJoinError("NIS belum sesuai dengan data rombel.");
+      setJoinError(
+        expectedNis
+          ? "NIS belum sesuai dengan data rombel."
+          : "NIS Anda belum tercatat di data rombel. Hubungi guru pengampu agar NIS dilengkapi terlebih dahulu — NIS dibutuhkan sebagai kunci login portal."
+      );
       return;
     }
     if (!regBirthDate) {
@@ -350,7 +374,7 @@ export default function PortalSiswaAuthPage() {
           
           {/* Header Text & Branding */}
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-[#0F766E] text-[11px] font-extrabold tracking-wider uppercase border border-teal-200/60">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 text-[11px] font-extrabold tracking-wider uppercase border border-teal-200/60">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-600 animate-pulse"></span>
               <span>{mode === "join" ? "PENDAFTARAN & GABUNG ROMBEL" : "PORTAL BELAJAR SISWA"}</span>
             </div>
@@ -381,8 +405,8 @@ export default function PortalSiswaAuthPage() {
             <div className="space-y-3 pt-1">
               <div className={`p-4 rounded-2xl border ${
                 notice.type === "PENDING" 
-                  ? "bg-amber-50/90 border-amber-200 text-amber-900" 
-                  : "bg-rose-50/90 border-rose-200 text-rose-900"
+                  ? "bg-amber-50/90 border-amber-200 text-amber-900 dark:bg-amber-950/50 dark:border-amber-900 dark:text-amber-100" 
+                  : "bg-rose-50/90 border-rose-200 text-rose-900 dark:bg-rose-950/50 dark:border-rose-900 dark:text-rose-100"
               }`}>
                 <div className="flex items-start gap-3">
                   {notice.type === "PENDING" ? (
@@ -394,18 +418,18 @@ export default function PortalSiswaAuthPage() {
                     <h3 className="font-bold text-xs">
                       {notice.type === "PENDING" ? "Menunggu Persetujuan Guru" : "Pendaftaran Belum Disetujui"}
                     </h3>
-                    <p className="text-xs text-slate-700 leading-relaxed">
-                      Halo <span className="font-semibold text-slate-900">{notice.studentName}</span>, {notice.message}
+                    <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                      Halo <span className="font-semibold text-slate-900 dark:text-white">{notice.studentName}</span>, {notice.message}
                     </p>
-                    <div className="text-[11px] text-slate-500 pt-0.5">
-                      Sekolah: <span className="font-medium text-slate-700">{notice.schoolName}</span>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
+                      Sekolah: <span className="font-medium text-slate-700 dark:text-slate-300">{notice.schoolName}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-600 space-y-1">
-                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+                <span className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-teal-600" /> Tips Tindak Lanjut:
                 </span>
                 <p className="text-[11px] text-slate-500">
@@ -425,7 +449,7 @@ export default function PortalSiswaAuthPage() {
                   setLoginNis("");
                   setLoginPin("");
                 }}
-                className="w-full h-12 rounded-2xl font-bold text-xs text-slate-700 hover:bg-slate-50"
+                className="w-full h-12 rounded-2xl font-bold text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900"
               >
                 Kembali ke Halaman Masuk
               </Button>
@@ -436,7 +460,7 @@ export default function PortalSiswaAuthPage() {
             ───────────────────────────────────────────────────────────── */
             <form onSubmit={handleLoginSubmit} className="space-y-3">
               {loginError && (
-                <Alert variant="destructive" className="rounded-2xl py-2 px-3 border-red-300 bg-red-50 text-red-900">
+                <Alert variant="destructive" className="rounded-2xl py-2 px-3 border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/60 text-red-900 dark:text-red-200">
                   <AlertDescription className="text-xs flex items-center gap-1.5">
                     <ShieldAlert className="w-4 h-4 shrink-0" />
                     <span>{loginError}</span>
@@ -461,7 +485,7 @@ export default function PortalSiswaAuthPage() {
                     onFocus={() => {
                       if (schoolResults.length > 0) setShowSchoolDropdown(true);
                     }}
-                    className="w-full h-11 pl-11 pr-8 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+                    className="w-full h-11 pl-11 pr-8 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
                   />
                   {isSearchingSchool && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -472,7 +496,7 @@ export default function PortalSiswaAuthPage() {
 
                 {/* Dropdown Hasil Pencarian Sekolah */}
                 {showSchoolDropdown && schoolResults.length > 0 && (
-                  <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-lg border border-slate-200 max-h-44 overflow-y-auto divide-y divide-slate-100">
+                  <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 max-h-44 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
                     {schoolResults.map((s) => (
                       <button
                         key={s.id}
@@ -488,7 +512,7 @@ export default function PortalSiswaAuthPage() {
                 )}
 
                 {selectedSchool && (
-                  <div className="flex items-center gap-1.5 text-xs text-teal-700 bg-teal-50/80 px-3 py-1.5 rounded-xl border border-teal-200/50 font-medium">
+                  <div className="flex items-center gap-1.5 text-xs text-teal-700 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/60 px-3 py-1.5 rounded-xl border border-teal-200/50 dark:border-teal-800/60 font-medium">
                     <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
                     <span className="truncate">Sekolah: <b>{selectedSchool.name}</b></span>
                   </div>
@@ -504,7 +528,7 @@ export default function PortalSiswaAuthPage() {
                     placeholder="Nomor Induk Siswa (NIS)"
                     value={loginNis}
                     onChange={(e) => setLoginNis(e.target.value.toUpperCase())}
-                    className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-mono font-bold tracking-wider text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none uppercase"
+                    className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-xs font-mono font-bold tracking-wider text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none uppercase"
                   />
                 </div>
               </div>
@@ -522,7 +546,7 @@ export default function PortalSiswaAuthPage() {
                       const val = e.target.value.replace(/\D/g, "").slice(0, 4);
                       setLoginPin(val);
                     }}
-                    className="w-full h-11 pl-11 pr-11 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-mono font-black tracking-widest text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+                    className="w-full h-11 pl-11 pr-11 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-xs font-mono font-black tracking-widest text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
                   />
                   <button
                     type="button"
@@ -574,7 +598,7 @@ export default function PortalSiswaAuthPage() {
                     setMode("join");
                     setLoginError("");
                   }}
-                  className="px-5 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 border-none text-slate-700 text-xs font-bold transition-all flex items-center justify-center"
+                  className="px-5 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center justify-center"
                 >
                   Gabung Rombel
                 </Button>
@@ -586,7 +610,7 @@ export default function PortalSiswaAuthPage() {
             ───────────────────────────────────────────────────────────── */
             <div className="space-y-3.5 pt-0.5">
               {joinError && (
-                <Alert variant="destructive" className="rounded-2xl py-2 px-3 border-red-300 bg-red-50 text-red-900">
+                <Alert variant="destructive" className="rounded-2xl py-2 px-3 border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-950/60 text-red-900 dark:text-red-200">
                   <AlertDescription className="text-xs flex items-center gap-1.5">
                     <ShieldAlert className="w-4 h-4 shrink-0" />
                     <span>{joinError}</span>
@@ -598,7 +622,7 @@ export default function PortalSiswaAuthPage() {
                 /* STEP 1: INPUT KODE ROMBEL */
                 <form onSubmit={handleCheckJoinCode} className="space-y-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                       Masukkan Kode Rombel dari Guru <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
@@ -610,7 +634,7 @@ export default function PortalSiswaAuthPage() {
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                         autoFocus
-                        className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-sm font-mono font-black tracking-widest text-slate-900 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none uppercase text-center"
+                        className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-sm font-mono font-black tracking-widest text-slate-900 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none uppercase text-center"
                       />
                     </div>
                     <p className="text-[11px] text-slate-400 leading-tight">
@@ -640,7 +664,7 @@ export default function PortalSiswaAuthPage() {
                         setMode("login");
                         setJoinError("");
                       }}
-                      className="px-5 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 border-none text-slate-700 text-xs font-bold transition-all"
+                      className="px-5 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
                     >
                       Batal
                     </Button>
@@ -687,8 +711,8 @@ export default function PortalSiswaAuthPage() {
                   </div>
 
                   {/* INPUT 1: NAMA LENGKAP DENGAN LIVE SEARCH & AUTOCOMPLETE */}
-                  <div className="space-y-1 relative">
-                    <label className="text-xs font-bold text-slate-700 block">
+                  <div className="space-y-1 relative" ref={nameFieldRef}>
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                       1. Nama Lengkap Siswa <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
@@ -704,6 +728,10 @@ export default function PortalSiswaAuthPage() {
                           if (selectedRosterStudent && selectedRosterStudent.fullName !== val) {
                             setSelectedRosterStudent(null);
                             setRegNis("");
+                            // Review 36c5321: jangan bocorkan data sensitif siswa sebelumnya
+                            setRegBirthDate("");
+                            setRegPin("");
+                            setRegPinConfirm("");
                           }
                         }}
                         onFocus={() => {
@@ -711,7 +739,7 @@ export default function PortalSiswaAuthPage() {
                             setShowNameDropdown(true);
                           }
                         }}
-                        className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
+                        className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
                       />
                     </div>
 
@@ -725,8 +753,8 @@ export default function PortalSiswaAuthPage() {
 
                     {/* Dropdown Nama Siswa yang Cocok */}
                     {showNameDropdown && matchingRoster.length > 0 && !selectedRosterStudent && (
-                      <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-200 max-h-48 overflow-y-auto divide-y divide-slate-100">
-                        <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 rounded-t-2xl">
+                      <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                        <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-900 rounded-t-2xl">
                           Pilih Nama Anda Dari Rombel:
                         </div>
                         {matchingRoster.map((s) => (
@@ -738,6 +766,10 @@ export default function PortalSiswaAuthPage() {
                               setRegFullName(s.fullName);
                               setShowNameDropdown(false);
                               setRegNis("");
+                              // Review 36c5321: reset data verifikasi & PIN milik pilihan siswa sebelumnya
+                              setRegBirthDate("");
+                              setRegPin("");
+                              setRegPinConfirm("");
                             }}
                             className="w-full px-4 py-2.5 text-left hover:bg-teal-50 transition-colors flex items-center justify-between group"
                           >
@@ -760,7 +792,7 @@ export default function PortalSiswaAuthPage() {
                     )}
 
                     {selectedRosterStudent && (
-                      <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 font-medium">
+                      <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 font-medium">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>Nama terkonfirmasi: <b>{selectedRosterStudent.fullName}</b></span>
                       </div>
@@ -769,7 +801,7 @@ export default function PortalSiswaAuthPage() {
 
                   {/* INPUT 2: NIS (HANYA AKTIF SETELAH PILIH NAMA, VALIDASI HANYA SAAT JUMLAH DIGIT PENUH) */}
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                       2. Nomor Induk Siswa (NIS) <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
@@ -779,15 +811,17 @@ export default function PortalSiswaAuthPage() {
                         disabled={!selectedRosterStudent}
                         placeholder={
                           selectedRosterStudent
-                            ? `Ketik ${expectedNisLength} digit NIS Anda...`
+                            ? expectedNis
+                              ? `Ketik ${expectedNisLength} digit NIS Anda...`
+                              : "NIS belum tercatat di rombel"
                             : "Pilih nama siswa di atas terlebih dahulu"
                         }
                         value={regNis}
                         onChange={(e) => setRegNis(e.target.value.toUpperCase().replace(/\s/g, ""))}
                         className={`w-full h-11 pl-11 pr-4 text-xs font-mono font-bold uppercase rounded-2xl border transition-all outline-none ${
                           !selectedRosterStudent
-                            ? "bg-slate-100/50 text-slate-400 border-transparent cursor-not-allowed"
-                            : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                            ? "bg-slate-100/50 text-slate-400 dark:bg-slate-800/50 dark:text-slate-500 border-transparent cursor-not-allowed"
+                            : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                         }`}
                       />
                     </div>
@@ -795,6 +829,12 @@ export default function PortalSiswaAuthPage() {
                     {/* Keterangan NIS Cocok / Tidak Cocok (Hanya muncul saat jumlah angka diketik >= maksimal) */}
                     {selectedRosterStudent && (
                       <div className="pt-0.5">
+                        {!expectedNis && (
+                          <div className="flex items-center gap-1 text-xs text-amber-600 font-bold">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span>NIS belum tercatat di rombel — hubungi guru pengampu untuk melengkapi NIS Anda.</span>
+                          </div>
+                        )}
                         {nisValidationStatus === "MATCHED" && (
                           <div className="flex items-center gap-1 text-xs text-emerald-600 font-bold animate-in fade-in duration-200">
                             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -813,7 +853,7 @@ export default function PortalSiswaAuthPage() {
 
                   {/* INPUT 3: TANGGAL LAHIR (BAHAN VERIFIKASI PERTIMBANGAN GURU) */}
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                       3. Tanggal Lahir Siswa <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative">
@@ -825,8 +865,8 @@ export default function PortalSiswaAuthPage() {
                         onChange={(e) => setRegBirthDate(e.target.value)}
                         className={`w-full h-11 pl-11 pr-4 text-xs font-semibold rounded-2xl border transition-all outline-none ${
                           !isNisMatched
-                            ? "bg-slate-100/50 text-slate-400 border-transparent cursor-not-allowed"
-                            : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                            ? "bg-slate-100/50 text-slate-400 dark:bg-slate-800/50 dark:text-slate-500 border-transparent cursor-not-allowed"
+                            : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                         }`}
                       />
                     </div>
@@ -837,7 +877,7 @@ export default function PortalSiswaAuthPage() {
 
                   {/* INPUT 4: BUAT PIN 4-DIGIT & KONFIRMASI PIN */}
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                       4. Buat PIN Keamanan (4 Angka) <span className="text-rose-500">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -851,8 +891,8 @@ export default function PortalSiswaAuthPage() {
                           onChange={(e) => setRegPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                           className={`w-full h-11 px-3 text-xs font-mono font-black tracking-widest text-center rounded-2xl border transition-all outline-none ${
                             !regBirthDate
-                              ? "bg-slate-100/50 text-slate-400 border-transparent cursor-not-allowed"
-                              : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                              ? "bg-slate-100/50 text-slate-400 dark:bg-slate-800/50 dark:text-slate-500 border-transparent cursor-not-allowed"
+                              : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                           }`}
                         />
                       </div>
@@ -866,8 +906,8 @@ export default function PortalSiswaAuthPage() {
                           onChange={(e) => setRegPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
                           className={`w-full h-11 px-3 text-xs font-mono font-black tracking-widest text-center rounded-2xl border transition-all outline-none ${
                             !regBirthDate
-                              ? "bg-slate-100/50 text-slate-400 border-transparent cursor-not-allowed"
-                              : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                              ? "bg-slate-100/50 text-slate-400 dark:bg-slate-800/50 dark:text-slate-500 border-transparent cursor-not-allowed"
+                              : "bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-slate-800 border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                           }`}
                         />
                       </div>
@@ -914,8 +954,11 @@ export default function PortalSiswaAuthPage() {
                       onClick={() => {
                         setJoinContext(null);
                         setMode("login");
+                        // Review 36c5321: bersihkan state sensitif saat batal
+                        setRegPin("");
+                        setRegPinConfirm("");
                       }}
-                      className="px-5 h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 border-none text-slate-700 text-xs font-bold transition-all"
+                      className="px-5 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border-none text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
                     >
                       Batal
                     </Button>

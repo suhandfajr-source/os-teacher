@@ -81,3 +81,10 @@
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/7-student-progress-gelombang-2.md`
   summary: Layer UI portal siswa (nav 6 item, halaman nilai, widget beranda) tanpa cakupan test render.
   evidence: Nol file `*.test.tsx` dan tanpa @testing-library/jsdom di devDependencies — repo belum punya infra test komponen; memperkenalkannya untuk satu item nav tidak proporsional untuk story ini.
+
+## Deferred from: code review (2026-09-27)
+
+- **[high] Cabang PENDING registerStudent (baris 684) tidak pernah terjangkau** — guard F1 (student-auth.actions.ts:536-543) menelan semua siswa PENDING ber-PIN, dan tidak ada flow yang menghasilkan PENDING + accountRequestedAt + tanpa PIN; seluruh fitur deteksi konflik tanggal lahir (birthDateConflict/conflictBirthDates) tidak pernah dieksekusi. Perlu redesign jalur re-registrasi PENDING (relaksasi F1 dengan bukti kepemilikan) — security-sensitive.
+- **[high] Kebocoran PII roster di lookupJoinCode** — nama lengkap + NIS seluruh siswa kelas dikirim tanpa autentikasi/rate-limit ke siapa pun yang memegang kode 6 karakter; NIS dibutuhkan client untuk gate NIS-matching, jadi fix butuh keputusan desain (validasi server-side vs kirim NIS).
+- **[medium] Roster kosong/kontrak client-server** — UI mewajibkan pilih roster (roster kosong = tak ada yang bisa daftar) sementara server masih mengizinkan jalur NEW_STUDENT tanpa cek keanggotaan roster (raw action bisa bypass gate UI). Butuh keputusan: enforce roster server-side atau sediakan jalur input manual.
+- **[medium] Guru belum punya aksi edit/hapus akses siswa** — narasi user menuntut lihat/edit/hapus; ter implementasi: lihat + approve/reject; reset PIN pre-existing (story 5); tidak ada revoke/hapus akses untuk guru. Perlu desain fitur baru (resetStudentPinAction-style revokeStudentAccessAction).

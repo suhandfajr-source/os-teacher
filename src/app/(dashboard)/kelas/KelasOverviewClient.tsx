@@ -232,41 +232,57 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
                 <BookOpen className="w-6 h-6" />
               </div>
 
-              {/* Main Card Content as Link to class detail */}
-              <Link href={`/kelas/${ctx.id}`} className="block flex-1 cursor-pointer">
-                {/* Top Status Tag & Kode Rombel */}
-                <div className="flex items-center justify-between gap-1.5 mb-3">
-                  {ctx.class.joinCode ? (
+              {/* Top Status Tag & Kode Rombel — tombol salin DI LUAR <Link> (review 36c5321:
+                  nested interactive element invalid + guru tidak boleh menyalin kode terkunci) */}
+              <div className="flex items-center justify-between gap-1.5 mb-3">
+                {ctx.class.joinCode ? (
+                  ctx.class.joinCodeLocked ? (
+                    <span
+                      className="inline-flex items-center gap-1 text-[11px] font-mono font-extrabold text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700"
+                      title="Kode rombel dikunci — buka kunci di detail kelas untuk membagikan"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                      <span>{ctx.class.joinCode}</span>
+                      <span className="text-[9px] font-sans font-bold uppercase tracking-wide">🔒 terkunci</span>
+                    </span>
+                  ) : (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(ctx.class.joinCode!);
-                        toast.success(`Kode rombel ${ctx.class.name} (${ctx.class.joinCode}) disalin!`);
+                      onClick={() => {
+                        navigator.clipboard
+                          ?.writeText(ctx.class.joinCode!)
+                          .then(() => {
+                            toast.success(`Kode rombel ${ctx.class.name} (${ctx.class.joinCode}) disalin!`);
+                          })
+                          .catch(() => {
+                            toast.error(`Gagal menyalin. Salin manual: ${ctx.class.joinCode}`);
+                          });
                       }}
-                      className="inline-flex items-center gap-1 text-[11px] font-mono font-extrabold text-teal-800 bg-teal-50 hover:bg-teal-100/90 active:scale-95 px-2 py-0.5 rounded-lg border border-teal-200/80 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1 text-[11px] font-mono font-extrabold text-teal-800 bg-teal-50 hover:bg-teal-100/90 dark:text-teal-300 dark:bg-teal-950/60 dark:hover:bg-teal-900/60 active:scale-95 px-2 py-0.5 rounded-lg border border-teal-200/80 dark:border-teal-800/60 transition-all cursor-pointer"
                       title="Klik untuk salin kode rombel siswa"
                     >
-                      <KeyRound className="w-3 h-3 text-teal-600" />
+                      <KeyRound className="w-3 h-3 text-teal-600 dark:text-teal-400" />
                       <span>{ctx.class.joinCode}</span>
-                      <Copy className="w-2.5 h-2.5 text-teal-600 opacity-60 ml-0.5" />
+                      <Copy className="w-2.5 h-2.5 text-teal-600 dark:text-teal-400 opacity-60 ml-0.5" />
                     </button>
-                  ) : (
-                    <span />
-                  )}
+                  )
+                ) : (
+                  <span />
+                )}
 
-                  {ctx.class.gradeLevel ? (
-                    <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
-                      Tingkat {ctx.class.gradeLevel}
-                    </span>
-                  ) : (
-                    <span className="text-[11px] font-semibold text-slate-500 bg-slate-50 px-2.5 py-0.5 rounded-full border border-slate-100">
-                      Reguler
-                    </span>
-                  )}
-                </div>
+                {ctx.class.gradeLevel ? (
+                  <span className="text-[11px] font-bold text-teal-800 bg-teal-50 dark:text-teal-300 dark:bg-teal-950/60 px-2.5 py-0.5 rounded-full border border-teal-100 dark:border-teal-800/60">
+                    Tingkat {ctx.class.gradeLevel}
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-50 dark:bg-slate-800/60 dark:text-slate-400 px-2.5 py-0.5 rounded-full border border-slate-100 dark:border-slate-700">
+                    Reguler
+                  </span>
+                )}
+              </div>
 
+              {/* Main Card Content as Link to class detail */}
+              <Link href={`/kelas/${ctx.id}`} className="block flex-1 cursor-pointer">
                 {/* Title & Subject */}
                 <div className="space-y-1.5">
                   <h3 className="text-base font-extrabold text-slate-900 group-hover:text-teal-700 transition-colors">
