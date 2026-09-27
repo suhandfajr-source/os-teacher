@@ -51,6 +51,29 @@ export async function lookupJoinCode(code: string) {
         },
         take: 1,
       },
+      classStudents: {
+        where: {
+          student: {
+            status: "ACTIVE",
+          },
+        },
+        include: {
+          student: {
+            select: {
+              id: true,
+              fullName: true,
+              nis: true,
+              accessPinHash: true,
+              accountStatus: true,
+            },
+          },
+        },
+        orderBy: {
+          student: {
+            fullName: "asc",
+          },
+        },
+      },
     },
   });
 
@@ -83,6 +106,13 @@ export async function lookupJoinCode(code: string) {
       academicYear: primaryContext?.academicPeriod.year || "2026/2027",
       semester: primaryContext?.academicPeriod.semester || "Semester Ganjil",
       teacherName: primaryContext?.teacherProfile.user.name || "Guru Pengampu",
+      roster: (classRecord.classStudents || []).map((cs) => ({
+        id: cs.student.id,
+        fullName: cs.student.fullName,
+        nis: cs.student.nis,
+        hasAccount: cs.student.accessPinHash !== null && cs.student.accountStatus === "ACTIVE",
+        accountStatus: cs.student.accountStatus,
+      })),
     },
   };
 }
@@ -98,6 +128,13 @@ export type JoinCodeContext = {
   academicYear: string;
   semester: string;
   teacherName: string;
+  roster: Array<{
+    id: string;
+    fullName: string;
+    nis: string | null;
+    hasAccount: boolean;
+    accountStatus: string | null;
+  }>;
 };
 
 export type RegisterStudentResult =
@@ -112,7 +149,106 @@ function canonicalStudentName(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+export type VerifyStudentIdentityResult =
+  | {
+      success: true;
+      status: "MATCHED_ROSTER" | "ALREADY_REGISTERED" | "NAME_MISMATCH" | "NEW_STUDENT";
+      message: string;
+      studentName?: string;
+      officialName?: string;
+    }
+  | {
+      success: false;
+      message: string;
+    };
+
 /**
+ * Memverifikasi kecocokan Nama dan NIS terhadap data master sekolah / rombel
+ * sebelum siswa membuat PIN 4-digit.
+ */
+export async function verifyStudentIdentity(data: {
+  joinCode: string;
+  fullName: string;
+  nis: string;
+}): Promise<VerifyStudentIdentityResult> {
+  if (!data.joinCode || data.joinCode.trim().length < 6) {
+    return { success: false, message: "Kode rombel tidak valid." };
+  }
+  if (!data.fullName || !data.fullName.trim()) {
+    return { success: false, message: "Nama lengkap wajib diisi." };
+  }
+  if (!data.nis || !data.nis.trim()) {
+    return { success: false, message: "NIS wajib diisi." };
+  }
+
+  const cleanNis = data.nis.trim().toUpperCase();
+  const cleanFullName = data.fullName.trim();
+  const cleanCode = data.joinCode.trim().toUpperCase();
+
+  const classRecord = await prisma.class.findUnique({
+    where: { joinCode: cleanCode },
+    include: {
+      school: {
+        select: { id: true, name: true, deactivatedAt: true },
+      },
+    },
+  });
+
+  if (!classRecord || classRecord.school?.deactivatedAt) {
+    return { success: false, message: "Kode rombel tidak ditemukan." };
+  }
+
+  if (classRecord.joinCodeLocked) {
+    return { success: false, message: "Kode rombel telah dikunci oleh guru." };
+  }
+
+  const existingStudent = await prisma.student.findFirst({
+    where: {
+      schoolId: classRecord.schoolId,
+      nis: { equals: cleanNis, mode: "insensitive" },
+    },
+  });
+
+  if (!existingStudent) {
+    return {
+      success: true,
+      status: "NEW_STUDENT",
+      message: "NIS belum terdata di rombel ini. Akun Anda akan didaftarkan sebagai siswa baru dan memerlukan persetujuan guru pengampu.",
+    };
+  }
+
+  // Sudah punya akun aktif & PIN (kecuali REJECTED)
+  if (existingStudent.accessPinHash !== null && existingStudent.accountStatus !== "REJECTED") {
+    return {
+      success: true,
+      status: "ALREADY_REGISTERED",
+      studentName: existingStudent.fullName,
+      message: `Akun siswa dengan NIS ${cleanNis} (${existingStudent.fullName}) sudah terdaftar dan aktif. Silakan langsung masuk menggunakan NIS dan PIN Anda.`,
+    };
+  }
+
+  // Cek kecocokan nama kanonik
+  const isMatch = canonicalStudentName(existingStudent.fullName) === canonicalStudentName(cleanFullName);
+
+  if (isMatch) {
+    return {
+      success: true,
+      status: "MATCHED_ROSTER",
+      studentName: existingStudent.fullName,
+      message: `Identitas terverifikasi di rombel! Nama "${existingStudent.fullName}" terdaftar pada sistem sekolah. Silakan buat PIN 4-digit di bawah untuk aktivasi otomatis.`,
+    };
+  } else {
+    return {
+      success: true,
+      status: "NAME_MISMATCH",
+      officialName: existingStudent.fullName,
+      message: `NIS ${cleanNis} terdaftar di sekolah atas nama "${existingStudent.fullName}". Karena nama yang Anda ketik berbeda, pendaftaran akan diteruskan ke guru untuk persetujuan (Pending).`,
+    };
+  }
+}
+
+/**
+
  * Pendaftaran akun siswa via kode rombel dengan state machine 4 cabang (A-D)
  * dan proteksi Re-registration Account Takeover (F1).
  */
@@ -121,6 +257,7 @@ export async function registerStudent(data: {
   fullName: string;
   nis: string;
   pin: string;
+  birthDate?: string;
 }): Promise<RegisterStudentResult> {
   // 1. Validasi format PIN 4-digit (Throws PinFormatError if invalid)
   validatePinFormat(data.pin);
@@ -136,6 +273,7 @@ export async function registerStudent(data: {
   const cleanNis = data.nis.trim().toUpperCase();
   const cleanFullName = data.fullName.trim();
   const cleanCode = data.joinCode.trim().toUpperCase();
+  const cleanBirthDate = data.birthDate?.trim() || null;
 
   // 2. Ambil data rombel & sekolah
   const classRecord = await prisma.class.findUnique({
@@ -543,22 +681,74 @@ export async function registerStudent(data: {
     };
   }
 
-  // Skenario (a): NIS ada, accessPinHash null, nama cocok exact (case-insensitive) -> L0 ACTIVE
+  // Skenario PENDING: Siswa mendaftar ulang saat pengajuan sebelumnya masih PENDING
+  if (existingStudent && existingStudent.accountStatus === "PENDING" && existingStudent.accountRequestedAt !== null) {
+    // Jika tanggal lahir sama persis -> beri notifikasi akun sudah tercatat & menunggu persetujuan
+    if (cleanBirthDate && existingStudent.birthDate && cleanBirthDate === existingStudent.birthDate) {
+      return {
+        success: true,
+        status: "PENDING",
+        reason: "MISMATCH_NAME",
+        student: existingStudent,
+        message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
+      };
+    }
+    // Jika tanggal lahir berbeda -> beri tanda konflik tanggal lahir untuk verifikasi guru
+    if (cleanBirthDate && existingStudent.birthDate && cleanBirthDate !== existingStudent.birthDate) {
+      const conflictNote = `${existingStudent.birthDate} vs ${cleanBirthDate}`;
+      const updated = await prisma.student.update({
+        where: { id: existingStudent.id },
+        data: {
+          birthDateConflict: true,
+          conflictBirthDates: conflictNote,
+          accountRequestedAt: now,
+        },
+        select: SAFE_STUDENT_SELECT,
+      });
+      return {
+        success: true,
+        status: "PENDING",
+        reason: "MISMATCH_NAME",
+        student: updated,
+        message:
+          "Pendaftaran tercatat. Terdapat perbedaan data tanggal lahir dengan pendaftaran sebelumnya, guru pengampu akan memverifikasi saat persetujuan.",
+      };
+    }
+    // Jika data tanggal lahir belum ada sebelumnya, simpan data baru
+    if (cleanBirthDate && !existingStudent.birthDate) {
+      await prisma.student.update({
+        where: { id: existingStudent.id },
+        data: { birthDate: cleanBirthDate, accessPinHash: pinHash },
+      });
+    }
+    return {
+      success: true,
+      status: "PENDING",
+      reason: "MISMATCH_NAME",
+      student: existingStudent,
+      message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
+    };
+  }
+
+  // Skenario (a): NIS dan nama cocok dengan data rombel -> PENDING (Memerlukan verifikasi & persetujuan guru)
   if (
     existingStudent &&
     existingStudent.accountStatus !== "REJECTED" &&
     existingStudent.fullName.trim().toLowerCase() === cleanFullName.toLowerCase()
   ) {
-    const updatedStudent = await prisma.$transaction(async (tx) => {
+    const pendingStudent = await prisma.$transaction(async (tx) => {
       const s = await tx.student.update({
         where: { id: existingStudent.id },
         data: {
           accessPinHash: pinHash,
-          accountStatus: "ACTIVE",
+          accountStatus: "PENDING",
+          birthDate: cleanBirthDate,
+          birthDateConflict: false,
+          conflictBirthDates: null,
           pinUpdatedAt: now,
-          lastLoginAt: now,
           failedAttempts: 0,
           lockedUntil: null,
+          accountRequestedAt: now, // Story 5 F2 — waktu pengajuan pendaftaran untuk panel persetujuan
         },
         select: SAFE_STUDENT_SELECT,
       });
@@ -583,23 +773,12 @@ export async function registerStudent(data: {
       return s;
     });
 
-    // Buat cookie sesi siswa seketika (Auto-login L0)
-    await setStudentSessionCookie({
-      studentId: updatedStudent.id,
-      schoolId: classRecord.schoolId,
-      classId: classRecord.id,
-      academicPeriodId,
-      nis: cleanNis,
-      fullName: updatedStudent.fullName,
-      pinUpdatedAt: now.toISOString(),
-    });
-
     return {
       success: true,
-      status: "ACTIVE",
-      student: updatedStudent,
-      redirect: "/siswa/portal",
-      message: "Pendaftaran berhasil! Akun Anda aktif otomatis.",
+      status: "PENDING",
+      reason: "MATCHED_ROSTER" as any,
+      student: pendingStudent,
+      message: "Pendaftaran terkirim! Akun Anda sedang menunggu verifikasi tanggal lahir & persetujuan guru pengampu.",
     };
   }
 
@@ -611,6 +790,9 @@ export async function registerStudent(data: {
         data: {
           accessPinHash: pinHash,
           accountStatus: "PENDING",
+          birthDate: cleanBirthDate,
+          birthDateConflict: false,
+          conflictBirthDates: null,
           pinUpdatedAt: now,
           failedAttempts: 0,
           lockedUntil: null,
@@ -656,6 +838,9 @@ export async function registerStudent(data: {
         schoolId: classRecord.schoolId,
         fullName: cleanFullName,
         nis: cleanNis,
+        birthDate: cleanBirthDate,
+        birthDateConflict: false,
+        conflictBirthDates: null,
         accessPinHash: pinHash,
         accountStatus: "PENDING",
         pinUpdatedAt: now,

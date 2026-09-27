@@ -122,6 +122,7 @@ export default async function KelasDetailPage({
         subjectName: fullContext.subject.name,
         academicPeriodYear: fullContext.academicPeriod.year,
         academicPeriodSemester: fullContext.academicPeriod.semester,
+        joinCode: fullContext.class.joinCode,
       }}
       sessions={sessions}
       roster={roster}

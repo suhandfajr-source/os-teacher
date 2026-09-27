@@ -27,6 +27,8 @@ import {
   Calendar,
   Clock,
   Edit3,
+  KeyRound,
+  Copy,
 } from "lucide-react";
 import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
 
@@ -37,6 +39,8 @@ interface ContextItem {
     id: string;
     name: string;
     gradeLevel: string | null;
+    joinCode?: string | null;
+    joinCodeLocked?: boolean;
     _count: { classStudents: number };
   };
   academicPeriod: { id: string; year: string; semester: string };
@@ -230,8 +234,28 @@ export function KelasOverviewClient({ contexts, schoolMaster, schoolName }: Prop
 
               {/* Main Card Content as Link to class detail */}
               <Link href={`/kelas/${ctx.id}`} className="block flex-1 cursor-pointer">
-                {/* Top Status Tag */}
-                <div className="flex items-center justify-end mb-3">
+                {/* Top Status Tag & Kode Rombel */}
+                <div className="flex items-center justify-between gap-1.5 mb-3">
+                  {ctx.class.joinCode ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(ctx.class.joinCode!);
+                        toast.success(`Kode rombel ${ctx.class.name} (${ctx.class.joinCode}) disalin!`);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-mono font-extrabold text-teal-800 bg-teal-50 hover:bg-teal-100/90 active:scale-95 px-2 py-0.5 rounded-lg border border-teal-200/80 transition-all cursor-pointer"
+                      title="Klik untuk salin kode rombel siswa"
+                    >
+                      <KeyRound className="w-3 h-3 text-teal-600" />
+                      <span>{ctx.class.joinCode}</span>
+                      <Copy className="w-2.5 h-2.5 text-teal-600 opacity-60 ml-0.5" />
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+
                   {ctx.class.gradeLevel ? (
                     <span className="text-[11px] font-bold text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-100">
                       Tingkat {ctx.class.gradeLevel}

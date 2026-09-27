@@ -22,12 +22,18 @@ import {
   Hourglass,
   Check,
   X,
+  CheckCircle2,
+  UserCheck,
+  UserX,
+  ShieldAlert,
 } from "lucide-react";
 
 interface StudentItem {
   id: string;
   fullName: string;
   nis: string | null;
+  accountStatus: "ACTIVE" | "PENDING" | "UNREGISTERED";
+  hasPin: boolean;
 }
 
 interface ClassGroup {
@@ -56,11 +62,18 @@ interface Props {
 export function SiswaListClient({ classGroups, totalStudents, pendingStudents = [] }: Props) {
   const router = useRouter();
   const [selectedClassId, setSelectedClassId] = useState<string>("ALL");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [pending, setPending] = useState<PendingStudentItem[]>(pendingStudents);
   const [isPendingTransition, startTransition] = useTransition();
 
   const q = searchQuery.toLowerCase().trim();
+
+  // Compute status metrics across all students
+  const allStudents = classGroups.flatMap((cg) => cg.students);
+  const countActive = allStudents.filter((s) => s.accountStatus === "ACTIVE").length;
+  const countPending = allStudents.filter((s) => s.accountStatus === "PENDING").length;
+  const countUnregistered = allStudents.filter((s) => s.accountStatus === "UNREGISTERED").length;
 
   const handleApprove = (studentId: string) => {
     startTransition(async () => {
@@ -68,7 +81,7 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
       if (res.success) {
         toast.success("Siswa disetujui. Akun aktif seketika.");
         setPending((prev) => prev.filter((p) => p.studentId !== studentId));
-        router.refresh(); // BH-11: roster & panel server-side ikut sinkron
+        router.refresh();
       } else {
         toast.error(res.message || "Aksi gagal.");
       }
@@ -94,33 +107,107 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
     });
   };
 
-  // Filter classes & students
+  // Filter classes & students by class, status, and query
   const filteredGroups = classGroups
     .filter((cg) => selectedClassId === "ALL" || cg.id === selectedClassId)
     .map((cg) => ({
       ...cg,
-      students: cg.students.filter(
-        (s) =>
-          !q ||
-          s.fullName.toLowerCase().includes(q) ||
-          (s.nis && s.nis.toLowerCase().includes(q))
-      ),
+      students: cg.students.filter((s) => {
+        // Status filter
+        if (selectedStatus !== "ALL" && s.accountStatus !== selectedStatus) {
+          return false;
+        }
+        // Search query
+        if (q) {
+          const matchName = s.fullName.toLowerCase().includes(q);
+          const matchNis = s.nis && s.nis.toLowerCase().includes(q);
+          return matchName || matchNis;
+        }
+        return true;
+      }),
     }))
-    .filter((cg) => cg.students.length > 0 || !q);
+    .filter((cg) => cg.students.length > 0 || (!q && selectedStatus === "ALL"));
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Daftar Siswa</h1>
         <p className="text-muted-foreground mt-1">
-          Daftar seluruh siswa terkelompok rapi berdasarkan kelas yang Anda ampu.
+          Daftar seluruh siswa terkelompok rapi berdasarkan kelas yang Anda ampu beserta status akun portal.
         </p>
+      </div>
+
+      {/* Overview Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div
+          onClick={() => setSelectedStatus("ALL")}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+            selectedStatus === "ALL"
+              ? "bg-primary/10 border-primary ring-1 ring-primary"
+              : "bg-card hover:bg-muted/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Total Siswa</span>
+            <Users className="h-4 w-4 text-primary" />
+          </div>
+          <div className="text-2xl font-bold mt-1 text-foreground">{totalStudents}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">Semua rombel diampu</div>
+        </div>
+
+        <div
+          onClick={() => setSelectedStatus("ACTIVE")}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+            selectedStatus === "ACTIVE"
+              ? "bg-emerald-500/15 border-emerald-500 ring-1 ring-emerald-500"
+              : "bg-card hover:bg-muted/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            <span>Akun Aktif</span>
+            <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <div className="text-2xl font-bold mt-1 text-emerald-800 dark:text-emerald-300">{countActive}</div>
+          <div className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Bisa login portal</div>
+        </div>
+
+        <div
+          onClick={() => setSelectedStatus("PENDING")}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+            selectedStatus === "PENDING"
+              ? "bg-amber-500/15 border-amber-500 ring-1 ring-amber-500"
+              : "bg-card hover:bg-muted/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-amber-700 dark:text-amber-400">
+            <span>Menunggu Approval</span>
+            <Hourglass className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="text-2xl font-bold mt-1 text-amber-800 dark:text-amber-300">{countPending}</div>
+          <div className="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-0.5">Perlu konfirmasi guru</div>
+        </div>
+
+        <div
+          onClick={() => setSelectedStatus("UNREGISTERED")}
+          className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+            selectedStatus === "UNREGISTERED"
+              ? "bg-slate-500/15 border-slate-500 ring-1 ring-slate-500"
+              : "bg-card hover:bg-muted/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Belum Registrasi</span>
+            <UserX className="h-4 w-4 text-slate-500" />
+          </div>
+          <div className="text-2xl font-bold mt-1 text-muted-foreground">{countUnregistered}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">Belum buat PIN mandiri</div>
+        </div>
       </div>
 
       {/* Story 5 — Panel L1: Menunggu Persetujuan (per-rombel pengampu) */}
       {pending.length > 0 && (
-        <Card className="border-amber-300/60 bg-amber-50/40">
+        <Card className="border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Hourglass className="h-4 w-4 text-amber-600" />
@@ -135,7 +222,7 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
               <div
                 key={p.studentId}
                 className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border p-3 ${
-                  p.escalated ? "border-red-300 bg-red-50/60" : "bg-white"
+                  p.escalated ? "border-red-300 bg-red-50/60 dark:bg-red-950/30" : "bg-card"
                 }`}
               >
                 <div className="min-w-0">
@@ -144,7 +231,7 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
                     {p.nis && <Badge variant="outline">NIS {p.nis}</Badge>}
                     <Badge variant="secondary">{p.className}</Badge>
                     {p.escalated && (
-                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">
                         Eskalasi &gt;{ESCALATION_L1_HOURS} jam
                       </Badge>
                     )}
@@ -153,6 +240,7 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="sm"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
                     disabled={isPendingTransition}
                     onClick={() => handleApprove(p.studentId)}
                   >
@@ -235,7 +323,7 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {cg.students.map((s) => (
                   <Link href={`/siswa/${s.id}`} key={s.id} className="group">
-                    <Card className="hover:border-primary transition-all duration-150 hover:shadow-xs cursor-pointer h-full">
+                    <Card className="hover:border-primary transition-all duration-150 hover:shadow-xs cursor-pointer h-full flex flex-col justify-between">
                       <CardHeader className="p-4 pb-2">
                         <div className="flex items-start justify-between gap-2">
                           <CardTitle className="text-base font-semibold group-hover:text-primary transition-colors flex items-center gap-2">
@@ -245,12 +333,45 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
                           <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                       </CardHeader>
-                      <CardContent className="p-4 pt-0">
+
+                      <CardContent className="p-4 pt-0 space-y-2">
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>NIS: {s.nis || "—"}</span>
                           <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-medium">
                             {cg.name}
                           </span>
+                        </div>
+
+                        {/* Status Akun Badge */}
+                        <div className="pt-1 flex items-center justify-between border-t border-dashed text-xs">
+                          <span className="text-[11px] text-muted-foreground">Status Portal:</span>
+                          {s.accountStatus === "ACTIVE" && (
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[11px] font-medium gap-1 py-0 px-2"
+                            >
+                              <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                              Akun Aktif
+                            </Badge>
+                          )}
+                          {s.accountStatus === "PENDING" && (
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800 text-[11px] font-medium gap-1 py-0 px-2"
+                            >
+                              <Hourglass className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                              Menunggu Approval
+                            </Badge>
+                          )}
+                          {s.accountStatus === "UNREGISTERED" && (
+                            <Badge
+                              variant="outline"
+                              className="bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 text-[11px] font-normal gap-1 py-0 px-2"
+                            >
+                              <UserX className="h-3 w-3 text-slate-400" />
+                              Belum Registrasi
+                            </Badge>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -259,7 +380,7 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
               </div>
             ) : (
               <p className="text-xs text-muted-foreground italic py-2">
-                Tidak ada siswa di kelas ini yang cocok dengan pencarian.
+                Tidak ada siswa di kelas ini yang cocok dengan filter atau pencarian.
               </p>
             )}
           </section>
@@ -277,6 +398,8 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
               {searchQuery
                 ? `Tidak ada siswa yang sesuai dengan kata kunci "${searchQuery}".`
+                : selectedStatus !== "ALL"
+                ? "Tidak ada siswa dengan filter status yang dipilih."
                 : "Belum ada data siswa di kelas yang Anda ampu."}
             </p>
           </div>

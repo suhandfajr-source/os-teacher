@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership } from "@/lib/authorization";
 import { redactMetadata } from "@/lib/audit-metadata";
+import { generateRandomJoinCode } from "./class-join-code.utils";
 import type { Prisma } from "@prisma/client";
 
 export async function getClassRoster(classId: string, academicPeriodId: string) {
@@ -119,12 +120,25 @@ export async function createClassAction(input: CreateClassActionInput) {
     });
 
     if (!classEntity) {
+      let uniqueCode: string | null = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = generateRandomJoinCode();
+        const exists = await tx.class.findUnique({ where: { joinCode: candidate } });
+        if (!exists) {
+          uniqueCode = candidate;
+          break;
+        }
+      }
+
       classEntity = await tx.class.create({
         data: {
           schoolId: activeSchoolId,
           name: className,
           normalizedName: normalizedClassName,
           gradeLevel: input.gradeLevel?.trim() || null,
+          joinCode: uniqueCode,
+          joinCodeLocked: false,
+          joinCodeUpdatedAt: new Date(),
         },
       });
     }

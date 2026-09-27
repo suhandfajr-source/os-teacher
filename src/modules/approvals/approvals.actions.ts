@@ -128,6 +128,9 @@ export interface PendingStudentView {
   studentId: string;
   fullName: string;
   nis: string | null;
+  birthDate?: string | null;
+  birthDateConflict?: boolean;
+  conflictBirthDates?: string | null;
   classId: string;
   className: string;
   academicPeriodId: string;
@@ -144,6 +147,9 @@ function toPendingView(
       id: string;
       fullName: string;
       nis: string | null;
+      birthDate?: string | null;
+      birthDateConflict?: boolean;
+      conflictBirthDates?: string | null;
       accountRequestedAt: Date | null;
     };
     class: { id: string; name: string };
@@ -156,6 +162,9 @@ function toPendingView(
     studentId: row.student.id,
     fullName: row.student.fullName,
     nis: row.student.nis,
+    birthDate: row.student.birthDate ?? null,
+    birthDateConflict: row.student.birthDateConflict ?? false,
+    conflictBirthDates: row.student.conflictBirthDates ?? null,
     classId: row.class.id,
     className: row.class.name,
     academicPeriodId: row.academicPeriod.id,
@@ -173,6 +182,9 @@ const PENDING_INCLUDE = {
       id: true,
       fullName: true,
       nis: true,
+      birthDate: true,
+      birthDateConflict: true,
+      conflictBirthDates: true,
       accountRequestedAt: true,
       status: true,
       accountStatus: true,
@@ -203,7 +215,15 @@ export async function getPendingStudentsForClassAction(classId: string) {
     where: {
       classId,
       academicPeriodId: activePeriod.id,
-      student: { accountStatus: "PENDING", status: "ACTIVE", schoolId: activeSchoolId },
+      student: {
+        accountStatus: "PENDING",
+        status: "ACTIVE",
+        schoolId: activeSchoolId,
+        OR: [
+          { accountRequestedAt: { not: null } },
+          { accessPinHash: { not: null } },
+        ],
+      },
     },
     include: PENDING_INCLUDE,
     orderBy: [{ student: { accountRequestedAt: "asc" } }],
@@ -226,7 +246,14 @@ export async function getPendingStudentsForSchoolAction() {
   const rows = await prisma.classStudent.findMany({
     where: {
       class: { schoolId: activeSchoolId },
-      student: { accountStatus: "PENDING", status: "ACTIVE" },
+      student: {
+        accountStatus: "PENDING",
+        status: "ACTIVE",
+        OR: [
+          { accountRequestedAt: { not: null } },
+          { accessPinHash: { not: null } },
+        ],
+      },
     },
     include: PENDING_INCLUDE,
     orderBy: [{ student: { accountRequestedAt: "asc" } }],

@@ -5,12 +5,14 @@ import { Sparkles, FileSpreadsheet, LayoutGrid, ShieldCheck } from "lucide-react
 
 export interface ModularCockpitArtworkProps {
   theme?: "teal" | "emerald";
-  portalType?: "teacher" | "parent";
+  portalType?: "teacher" | "parent" | "student";
+  className?: string;
 }
 
 export function ModularCockpitArtwork({
   theme = "teal",
   portalType = "teacher",
+  className = "",
 }: ModularCockpitArtworkProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
@@ -26,13 +28,14 @@ export function ModularCockpitArtwork({
   }, []);
 
   const isParent = portalType === "parent";
+  const isStudent = portalType === "student";
   const isEmerald = theme === "emerald" || isParent;
 
   return (
     <div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="w-full lg:w-1/2 relative flex items-center justify-center p-8 lg:p-12 xl:p-16 overflow-hidden bg-gradient-to-br from-slate-50 to-teal-50/40 select-none min-h-[440px] lg:min-h-screen"
+      className={`w-full lg:w-1/2 relative flex items-center justify-center p-6 sm:p-8 lg:p-12 xl:p-16 overflow-hidden bg-white dark:bg-slate-950 select-none min-h-[440px] lg:min-h-screen ${className}`}
     >
       {/* 1. PURE SVG ORGANIC S-CURVE WAVE BACKGROUND */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -119,22 +122,40 @@ export function ModularCockpitArtwork({
           >
             <div className="flex items-center justify-between text-[10px]">
               <span className="font-bold text-teal-300">
-                {isParent ? "Kehadiran Putra/Putri Anda" : "Jadwal Mengajar Hari Ini"}
+                {isParent
+                  ? "Kehadiran Putra/Putri Anda"
+                  : isStudent
+                  ? "Jadwal Belajar & Tugas Siswa"
+                  : "Jadwal Mengajar Hari Ini"}
               </span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
             </div>
             <div className="space-y-1 text-center py-1">
               <div className="text-xs font-bold text-white">
-                {isParent ? "Ahmad Fauzi • XI RPL 1" : "Biologi XI RPL 1"}
+                {isParent
+                  ? "Ahmad Fauzi • XI RPL 1"
+                  : isStudent
+                  ? "Matematika • VIII-B"
+                  : "Biologi XI RPL 1"}
               </div>
               <div className="text-[10px] text-slate-400">
-                {isParent ? "Tercatat Hadir (07:15 WIB)" : "07:30 - 09:00 WIB • Lab 2"}
+                {isParent
+                  ? "Tercatat Hadir (07:15 WIB)"
+                  : isStudent
+                  ? "Tugas: Bab 3 Geometri & Aljabar"
+                  : "07:30 - 09:00 WIB • Lab 2"}
               </div>
             </div>
             <div className="flex items-center justify-between text-[9px] text-slate-400 border-t border-slate-800 pt-1.5">
-              <span>{isParent ? "Status: 100% Hadir" : "Presensi 1-Klik"}</span>
+              <span>
+                {isParent
+                  ? "Status: 100% Hadir"
+                  : isStudent
+                  ? "Status: Aktif Belajar"
+                  : "Presensi 1-Klik"}
+              </span>
               <span className={isEmerald ? "text-emerald-400 font-bold" : "text-teal-400 font-bold"}>
-                {isParent ? "Tepat Waktu" : "Mulai Kelas →"}
+                {isParent ? "Tepat Waktu" : isStudent ? "Buka Materi →" : "Mulai Kelas →"}
               </span>
             </div>
           </div>
@@ -161,10 +182,20 @@ export function ModularCockpitArtwork({
           >
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-800">
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isParent ? "Ringkasan Nilai .PDF" : "Rekap Nilai .XLSX"}</span>
+              <span>
+                {isParent
+                  ? "Ringkasan Nilai .PDF"
+                  : isStudent
+                  ? "Portofolio Nilai Siswa"
+                  : "Rekap Nilai .XLSX"}
+              </span>
             </div>
             <div className="text-[9px] text-slate-500 mt-0.5">
-              {isParent ? "Capaian Belajar Transparan" : "Format Kurikulum Merdeka"}
+              {isParent
+                ? "Capaian Belajar Transparan"
+                : isStudent
+                ? "Transparan & Terintegrasi"
+                : "Format Kurikulum Merdeka"}
             </div>
           </div>
 
@@ -180,6 +211,11 @@ export function ModularCockpitArtwork({
             <>
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span>Portal Keluarga Modern</span>
+            </>
+          ) : isStudent ? (
+            <>
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+              <span>Ruang Belajar Siswa Mandiri</span>
             </>
           ) : (
             <>

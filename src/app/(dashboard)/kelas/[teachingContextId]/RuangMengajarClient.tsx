@@ -28,7 +28,9 @@ import {
   Sparkles,
   Edit3,
   ExternalLink,
-  GraduationCap
+  GraduationCap,
+  KeyRound,
+  Copy,
 } from "lucide-react";
 
 export type SessionWithAttendance = {
@@ -57,6 +59,7 @@ interface RuangMengajarClientProps {
     subjectName: string;
     academicPeriodYear: string;
     academicPeriodSemester: string;
+    joinCode?: string | null;
   };
   sessions: SessionWithAttendance[];
   roster: RosterItem[];
@@ -161,10 +164,25 @@ export default function RuangMengajarClient({
               <BookOpen className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/30 text-emerald-300 uppercase tracking-wider border border-emerald-500/40">
                   Ruang Mengajar Terpadu
                 </span>
+                {context.joinCode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(context.joinCode!);
+                      toast.success(`Kode rombel ${context.className} (${context.joinCode}) disalin!`);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-teal-200 bg-teal-900/60 hover:bg-teal-800/80 active:scale-95 px-2.5 py-0.5 rounded-full border border-teal-500/40 transition-all cursor-pointer"
+                    title="Klik untuk salin kode rombel siswa"
+                  >
+                    <KeyRound className="w-3 h-3 text-teal-400" />
+                    <span>Kode Rombel: {context.joinCode}</span>
+                    <Copy className="w-2.5 h-2.5 text-teal-400 opacity-70 ml-0.5" />
+                  </button>
+                )}
               </div>
               <h2 className="text-base font-bold text-white mt-1">
                 Mulai Pembelajaran Hari Ini — {context.className}

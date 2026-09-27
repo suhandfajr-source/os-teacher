@@ -729,10 +729,10 @@ export function AdminConsoleClient({
           </p>
         </div>
 
-        {/* Multi-Tenant School Filter */}
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1.5 rounded-xl shadow-xs">
-          <Building className="h-4 w-4 text-teal-600 dark:text-teal-400 ml-2" />
-          <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Filter Sekolah:</span>
+      {/* Multi-Tenant School Filter */}
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-2 rounded-2xl shadow-2xs">
+          <Building className="h-4 w-4 text-teal-700 dark:text-teal-400 ml-1.5" />
+          <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">Filter Sekolah:</span>
           <select
             value={selectedSchoolFilter}
             onChange={(e) => {
@@ -744,7 +744,7 @@ export function AdminConsoleClient({
                 reloadClasses(undefined, undefined, val);
               }, 50);
             }}
-            className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-3 py-1.5 outline-none focus:border-teal-500 transition-colors max-w-xs"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-xl px-3 py-1.5 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-colors max-w-xs cursor-pointer"
           >
             <option value="ALL">🌐 Semua Sekolah (Platform Global)</option>
             {allSchools.map((s) => (
@@ -757,7 +757,7 @@ export function AdminConsoleClient({
       </div>
 
       {/* Navigation Pills */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200/80 dark:border-slate-800/80 pb-3">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -765,20 +765,20 @@ export function AdminConsoleClient({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                 isActive
-                  ? "bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-400 border border-teal-300 dark:border-teal-500/30 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 border border-transparent"
+                  ? "bg-[#0F766E] text-white shadow-md shadow-teal-900/15 border border-teal-700"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-800 shadow-2xs"
               }`}
             >
-              <Icon className={`h-4 w-4 ${isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-400 dark:text-slate-500"}`} />
+              <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-slate-400 dark:text-slate-500"}`} />
               <span>{tab.label}</span>
               {tab.badge !== null && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
                     isActive
-                      ? "bg-teal-200 dark:bg-teal-400/20 text-teal-800 dark:text-teal-300"
-                      : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400"
+                      ? "bg-teal-800 text-teal-100 border border-teal-600/40"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                   }`}
                 >
                   {tab.badge}
@@ -797,18 +797,18 @@ export function AdminConsoleClient({
           {/* 4 KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Sekolah */}
-            <Card className="bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs">
+            <Card className="bg-white dark:bg-slate-900 rounded-3xl border-slate-200/80 dark:border-slate-800 hover:border-teal-200 dark:hover:border-teal-800 transition-all shadow-squircle-card hover:shadow-squircle-card-hover">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Sekolah</span>
-                  <div className="p-2 rounded-lg bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Sekolah</span>
+                  <div className="p-2 rounded-2xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-900/40">
                     <Building2 className="h-5 w-5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.schools.total}</div>
-                  <div className="flex items-center gap-2 mt-2 text-xs">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{stats.schools.total}</div>
+                  <div className="flex items-center gap-2 mt-2 text-xs font-semibold">
+                    <span className="text-teal-700 dark:text-teal-400">
                       ● {stats.schools.active} Aktif
                     </span>
                     {stats.schools.inactive > 0 && (
@@ -822,18 +822,18 @@ export function AdminConsoleClient({
             </Card>
 
             {/* Total Guru */}
-            <Card className="bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs">
+            <Card className="bg-white dark:bg-slate-900 rounded-3xl border-slate-200/80 dark:border-slate-800 hover:border-teal-200 dark:hover:border-teal-800 transition-all shadow-squircle-card hover:shadow-squircle-card-hover">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Guru & Staf</span>
-                  <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Guru & Staf</span>
+                  <div className="p-2 rounded-2xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-900/40">
                     <Users className="h-5 w-5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.teachers.total}</div>
-                  <div className="flex items-center gap-2 mt-2 text-xs">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{stats.teachers.total}</div>
+                  <div className="flex items-center gap-2 mt-2 text-xs font-semibold">
+                    <span className="text-teal-700 dark:text-teal-400">
                       ● {stats.teachers.active} Aktif
                     </span>
                     {stats.teachers.banned > 0 && (
@@ -850,27 +850,27 @@ export function AdminConsoleClient({
             </Card>
 
             {/* Total Siswa */}
-            <Card className="bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs">
+            <Card className="bg-white dark:bg-slate-900 rounded-3xl border-slate-200/80 dark:border-slate-800 hover:border-teal-200 dark:hover:border-teal-800 transition-all shadow-squircle-card hover:shadow-squircle-card-hover">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Siswa</span>
-                  <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Total Siswa</span>
+                  <div className="p-2 rounded-2xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-900/40">
                     <GraduationCap className="h-5 w-5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.students.total}</div>
-                  <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{stats.students.total}</div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2 text-xs font-semibold">
+                    <span className="text-teal-700 dark:text-teal-400">
                       ● {stats.students.active} Aktif
                     </span>
                     {stats.students.pending > 0 && (
-                      <span className="text-amber-500 dark:text-amber-400 font-medium">
+                      <span className="text-amber-600 dark:text-amber-400">
                         ● {stats.students.pending} Pending
                       </span>
                     )}
                     {stats.students.rejected > 0 && (
-                      <span className="text-red-500 dark:text-red-400 font-medium">
+                      <span className="text-red-500 dark:text-red-400">
                         ● {stats.students.rejected} Ditolak
                       </span>
                     )}
@@ -880,17 +880,17 @@ export function AdminConsoleClient({
             </Card>
 
             {/* Total Rombel */}
-            <Card className="bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs">
+            <Card className="bg-white dark:bg-slate-900 rounded-3xl border-slate-200/80 dark:border-slate-800 hover:border-teal-200 dark:hover:border-teal-800 transition-all shadow-squircle-card hover:shadow-squircle-card-hover">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Rombongan Belajar</span>
-                  <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Rombongan Belajar</span>
+                  <div className="p-2 rounded-2xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-900/40">
                     <Layers className="h-5 w-5" />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white">{stats.classes.total}</div>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{stats.classes.total}</div>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
                     <span>{stats.classes.totalEnrollments} Siswa Terdaftar di Kelas</span>
                   </div>
                 </div>
@@ -900,20 +900,20 @@ export function AdminConsoleClient({
 
           {/* Quick AI & Activity Insights banner */}
           {aiStats && (
-            <Card className="bg-gradient-to-r from-teal-900/40 via-indigo-950/40 to-slate-900 border border-teal-500/30 dark:border-teal-500/20 shadow-md">
-              <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-teal-500/20 text-teal-400 rounded-xl border border-teal-500/30">
-                    <Sparkles className="h-6 w-6 text-teal-300" />
+            <Card className="rounded-3xl bg-gradient-to-r from-[#0F766E] via-[#115E59] to-[#042F2E] text-white border border-teal-600/40 shadow-md">
+              <CardContent className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 bg-white/10 text-teal-200 rounded-2xl border border-white/20 backdrop-blur-md">
+                    <Sparkles className="h-6 w-6 text-teal-200" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                       Pemantauan AI & Token Studio KLASSA
-                      <Badge variant="outline" className="bg-teal-500/10 text-teal-300 border-teal-500/30 text-[10px]">
+                      <Badge variant="outline" className="bg-teal-400/20 text-teal-200 border-teal-300/40 text-[10px] font-bold">
                         Live Monitored
                       </Badge>
                     </h3>
-                    <p className="text-xs text-slate-300 mt-0.5">
+                    <p className="text-xs text-teal-100/90 mt-0.5 font-medium leading-relaxed">
                       Telah diproses <strong>{aiStats.summary.totalEstimatedTokens.toLocaleString("id-ID")} token</strong> (~Rp {aiStats.summary.estimatedCostIdr.toLocaleString("id-ID")}) dari <strong>{aiStats.summary.totalDrafts} dokumen AI</strong> yang dibuat oleh <strong>{aiStats.summary.activeAiTeachers} guru aktif</strong>.
                     </p>
                   </div>
@@ -921,7 +921,7 @@ export function AdminConsoleClient({
                 <Button
                   size="sm"
                   onClick={() => setActiveTab("ai-usage")}
-                  className="bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-4 shrink-0"
+                  className="bg-white hover:bg-teal-50 text-teal-900 font-extrabold text-xs px-4 py-2.5 rounded-2xl shrink-0 shadow-sm transition-all"
                 >
                   Buka AI Studio Cockpit <ChevronRight className="h-3.5 w-3.5 ml-1" />
                 </Button>

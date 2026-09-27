@@ -48,10 +48,20 @@ export default async function SiswaPage() {
       .filter((cs) => cs.student.status === "ACTIVE")
       .map((cs) => {
         uniqueStudentIds.add(cs.student.id);
+        const hasPin = cs.student.accessPinHash !== null;
+        let accountStatus: "ACTIVE" | "PENDING" | "UNREGISTERED" = "UNREGISTERED";
+        if (cs.student.accountStatus === "ACTIVE") {
+          accountStatus = "ACTIVE";
+        } else if (cs.student.accountStatus === "PENDING" && hasPin) {
+          accountStatus = "PENDING";
+        }
+
         return {
           id: cs.student.id,
           fullName: cs.student.fullName,
           nis: cs.student.nis,
+          accountStatus,
+          hasPin,
         };
       });
 

@@ -117,13 +117,31 @@ export default async function SiswaDetailPage({
               <div className="text-sm font-medium text-muted-foreground">Nama Lengkap</div>
               <div className="text-lg font-semibold">{student.fullName}</div>
             </div>
-            <div>
-              <div className="text-sm font-medium text-muted-foreground">NIS</div>
-              <div className="text-lg">{student.nis || "-"}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">NIS</div>
+                <div className="text-lg">{student.nis || "-"}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-muted-foreground">Status Rombel</div>
+                <div className="text-lg">{student.status === "ACTIVE" ? "Aktif" : "Diarsipkan"}</div>
+              </div>
             </div>
             <div>
-              <div className="text-sm font-medium text-muted-foreground">Status</div>
-              <div className="text-lg">{student.status === "ACTIVE" ? "Aktif" : "Diarsipkan"}</div>
+              <div className="text-sm font-medium text-muted-foreground mb-1">Status Akun Portal Siswa</div>
+              {student.accountStatus === "ACTIVE" ? (
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                  ✓ Akun Aktif (PIN Terdaftar)
+                </Badge>
+              ) : student.accountStatus === "PENDING" && student.accessPinHash ? (
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+                  ⏳ Menunggu Persetujuan Guru
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-slate-500 bg-slate-50">
+                  Belum Registrasi Mandiri
+                </Badge>
+              )}
             </div>
           </CardContent>
         </Card>

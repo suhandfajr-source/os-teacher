@@ -30,6 +30,8 @@ import {
   ArrowRightLeft,
   KeyRound,
   ListChecks,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 
 interface ClassOption {
@@ -212,6 +214,18 @@ export function PersetujuanClient({ initialPending, escalatedThresholdHours, cla
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold truncate">{p.fullName}</span>
                     {p.nis && <Badge variant="outline">NIS {p.nis}</Badge>}
+                    {p.birthDate && (
+                      <Badge variant="outline" className="text-teal-700 border-teal-200 bg-teal-50/50">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        Lahir: {p.birthDate}
+                      </Badge>
+                    )}
+                    {p.birthDateConflict && (
+                      <Badge className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Konflik Tgl Lahir: {p.conflictBirthDates || p.birthDate}
+                      </Badge>
+                    )}
                     <Badge variant="secondary">
                       <Users className="h-3 w-3 mr-1" />
                       {p.className}

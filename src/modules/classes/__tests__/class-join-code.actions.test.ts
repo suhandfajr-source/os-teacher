@@ -17,8 +17,8 @@ vi.mock("@/lib/authorization", () => ({
 
 import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership } from "@/lib/authorization";
+import { generateRandomJoinCode } from "../class-join-code.utils";
 import {
-  generateRandomJoinCode,
   generateClassJoinCode,
   rotateClassJoinCode,
   lockClassJoinCode,

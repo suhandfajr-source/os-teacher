@@ -331,6 +331,11 @@ model Student {
   accountRequestedAt DateTime? // Story 5 F2 — waktu pengajuan akun (sumber tunggal eskalasi)
   approvedBy         User?     @relation("StudentApprover", fields: [approvedById], references: [id])
 
+  // Tanggal lahir & deteksi anomali pendaftaran
+  birthDate          String?   // Tanggal lahir (DD/MM/YYYY atau YYYY-MM-DD)
+  birthDateConflict  Boolean   @default(false)
+  conflictBirthDates String?   // Riwayat tanggal lahir bentrok jika ada multiple submission
+
   classMemberships      ClassStudent[]
   attendanceRecords     AttendanceRecord[]
   assessmentResults     AssessmentResult[]
