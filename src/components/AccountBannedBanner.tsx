@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldAlert, PhoneCall, LogOut, Info, AlertTriangle } from "lucide-react";
+import { ShieldAlert, PhoneCall, LogOut, AlertTriangle } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,8 @@ export function AccountBannedBanner({ banReason }: AccountBannedBannerProps) {
       router.push("/login");
       router.refresh();
     } catch {
-      window.location.href = "/login";
+      router.push("/login");
+      router.refresh();
     } finally {
       setIsLoggingOut(false);
     }

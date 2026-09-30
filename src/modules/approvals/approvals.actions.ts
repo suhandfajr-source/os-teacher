@@ -266,6 +266,12 @@ export async function getPendingStudentsForSchoolAction() {
   };
 }
 
+function assertNotBanned(authContext: { isBanned?: boolean }) {
+  if (authContext.isBanned) {
+    throw new Error("Akses ditolak: Akun Anda telah dinonaktifkan oleh administrator.");
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Approve / Reject (L1/L2 — guru sekolah; conditional update F5)
 // ---------------------------------------------------------------------------
@@ -275,7 +281,9 @@ export async function getPendingStudentsForSchoolAction() {
  * L2 bila bukan — tangga CAP-4). Approve L2 memicu notifikasi ringkasan (B2/F4).
  */
 export async function approveStudentAction(studentId: string) {
-  const { session, profile, activeSchoolId } = await verifyActiveSchoolMembership();
+  const auth = await verifyActiveSchoolMembership();
+  assertNotBanned(auth);
+  const { session, profile, activeSchoolId } = auth;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -304,6 +312,8 @@ export async function approveStudentAction(studentId: string) {
           approvedById: session.user.id,
           approvedAt: new Date(),
           accountRequestedAt: null, // F2
+          birthDateConflict: false,
+          conflictBirthDates: null,
         },
       });
       if (updated.count !== 1) return null;
@@ -355,7 +365,9 @@ export async function approveStudentAction(studentId: string) {
 
 /** Reject satu siswa PENDING dengan alasan (tersimpan di metadata AuditLog). */
 export async function rejectStudentAction(studentId: string, reason: string) {
-  const { session, activeSchoolId } = await verifyActiveSchoolMembership();
+  const auth = await verifyActiveSchoolMembership();
+  assertNotBanned(auth);
+  const { session, activeSchoolId } = auth;
 
   if (!reason || !reason.trim()) {
     return { success: false, message: "Alasan penolakan wajib diisi." };
@@ -406,7 +418,9 @@ export async function rejectStudentAction(studentId: string, reason: string) {
  * + dilaporkan, `AuditLog` per-baris sukses, satu notifikasi ringkasan.
  */
 export async function batchApproveStudentsAction(studentIds: string[]) {
-  const { session, profile, activeSchoolId } = await verifyActiveSchoolMembership();
+  const auth = await verifyActiveSchoolMembership();
+  assertNotBanned(auth);
+  const { session, profile, activeSchoolId } = auth;
 
   // G-8: cap 100 baris divalidasi server-side — lebih dari itu tolak generik + audit.
   if (!Array.isArray(studentIds) || studentIds.length === 0 || studentIds.length > BATCH_APPROVE_MAX) {
@@ -467,6 +481,8 @@ export async function batchApproveStudentsAction(studentIds: string[]) {
             approvedById: session.user.id,
             approvedAt: new Date(),
             accountRequestedAt: null,
+            birthDateConflict: false,
+            conflictBirthDates: null,
           },
         });
 

@@ -102,6 +102,10 @@ export function AssignmentRosterGradingView({
 
   const handleScoreChange = (studentId: string, val: string) => {
     const cleanVal = val.replace(/[^0-9]/g, "");
+    if (cleanVal !== "" && Number(cleanVal) > 100) {
+      toast.error("Skor maksimal adalah 100");
+      return;
+    }
     setScores((prev) => ({
       ...prev,
       [studentId]: {
@@ -152,6 +156,18 @@ export function AssignmentRosterGradingView({
   };
 
   const handleSaveAll = async () => {
+    // Validate scores first
+    for (const st of roster) {
+      const item = scores[st.id];
+      if (item?.score?.trim()) {
+        const num = Number(item.score);
+        if (isNaN(num) || num < 0 || num > 100) {
+          toast.error(`Skor untuk ${st.fullName} harus antara 0 - 100`);
+          return;
+        }
+      }
+    }
+
     try {
       setSavingAll(true);
       const payload = roster.map((st) => {

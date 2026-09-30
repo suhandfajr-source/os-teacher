@@ -10,6 +10,12 @@ import {
   type TeacherQueueItem,
 } from "@/modules/assignments/submission.service";
 
+function assertNotBanned(authContext: { isBanned?: boolean }) {
+  if (authContext.isBanned) {
+    throw new Error("Akses ditolak: Akun Anda telah dinonaktifkan oleh administrator.");
+  }
+}
+
 export async function createAssignment(data: {
   teachingContextId: string;
   teachingSessionId?: string;
@@ -17,7 +23,9 @@ export async function createAssignment(data: {
   description?: string;
   dueDate?: Date;
 }) {
-  const { context } = await verifyTeachingContextAccess(data.teachingContextId);
+  const auth = await verifyTeachingContextAccess(data.teachingContextId);
+  assertNotBanned(auth);
+  const { context } = auth;
 
   if (data.teachingSessionId) {
     const session = await prisma.teachingSession.findUnique({
@@ -111,7 +119,9 @@ export async function reviewSubmissionAction(data: {
   score?: number | null;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { profile, context } = await verifyTeachingContextAccess(data.teachingContextId);
+    const auth = await verifyTeachingContextAccess(data.teachingContextId);
+    assertNotBanned(auth);
+    const { profile, context } = auth;
 
     const validation = validateReviewInput({ feedback: data.feedback, score: data.score });
     if (!validation.ok) {
@@ -164,7 +174,8 @@ export async function saveSessionAssignmentAction(data: {
   description?: string;
   dueDate?: Date | null;
 }) {
-  await verifyTeachingContextAccess(data.teachingContextId);
+  const auth = await verifyTeachingContextAccess(data.teachingContextId);
+  assertNotBanned(auth);
 
   const existing = await prisma.assignment.findFirst({
     where: {
@@ -214,7 +225,8 @@ export async function convertAssignmentToAssessmentAction(data: {
   assessmentTypeId: string;
   passingScore?: number | null;
 }) {
-  await verifyTeachingContextAccess(data.teachingContextId);
+  const auth = await verifyTeachingContextAccess(data.teachingContextId);
+  assertNotBanned(auth);
 
   const assignment = await prisma.assignment.findUnique({
     where: { id: data.assignmentId },
@@ -234,30 +246,49 @@ export async function convertAssignmentToAssessmentAction(data: {
     throw new Error("Belum ada skor siswa yang dinilai pada tugas ini.");
   }
 
+  const targetTitle = data.title.trim() || assignment.title;
+
   const assessment = await prisma.$transaction(async (tx) => {
-    const createdAssessment = await tx.assessment.create({
-      data: {
+    const existingAssessment = await tx.assessment.findFirst({
+      where: {
         teachingContextId: data.teachingContextId,
-        assessmentTypeId: data.assessmentTypeId,
-        title: data.title.trim() || assignment.title,
-        assessmentDate: new Date(),
-        maxScore: new Prisma.Decimal(100),
-        minimumPassingScore: new Prisma.Decimal(data.passingScore ?? 75),
-        status: "COMPLETED",
+        title: targetTitle,
       },
     });
+
+    const createdOrUpdated = existingAssessment
+      ? await tx.assessment.update({
+          where: { id: existingAssessment.id },
+          data: {
+            assessmentTypeId: data.assessmentTypeId,
+            minimumPassingScore: new Prisma.Decimal(data.passingScore ?? 75),
+            status: "COMPLETED",
+          },
+        })
+      : await tx.assessment.create({
+          data: {
+            teachingContextId: data.teachingContextId,
+            assessmentTypeId: data.assessmentTypeId,
+            title: targetTitle,
+            assessmentDate: new Date(),
+            maxScore: new Prisma.Decimal(100),
+            minimumPassingScore: new Prisma.Decimal(data.passingScore ?? 75),
+            status: "COMPLETED",
+            teachingSessionId: assignment.teachingSessionId ?? null,
+          },
+        });
 
     for (const sub of assignment.submissions) {
       const scoreVal = sub.score !== null ? new Prisma.Decimal(sub.score) : null;
       await tx.assessmentResult.upsert({
         where: {
           assessmentId_studentId: {
-            assessmentId: createdAssessment.id,
+            assessmentId: createdOrUpdated.id,
             studentId: sub.studentId,
           },
         },
         create: {
-          assessmentId: createdAssessment.id,
+          assessmentId: createdOrUpdated.id,
           studentId: sub.studentId,
           rawScore: scoreVal,
           finalScore: scoreVal,
@@ -271,7 +302,7 @@ export async function convertAssignmentToAssessmentAction(data: {
       });
     }
 
-    return createdAssessment;
+    return createdOrUpdated;
   });
 
   revalidatePath(`/kelas/${data.teachingContextId}/penilaian`);
@@ -296,7 +327,9 @@ export async function saveDirectAssignmentScoreAction(data: {
   feedback?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { profile, context } = await verifyTeachingContextAccess(data.teachingContextId);
+    const auth = await verifyTeachingContextAccess(data.teachingContextId);
+    assertNotBanned(auth);
+    const { profile, context } = auth;
 
     if (data.score !== null && (data.score < 0 || data.score > 100)) {
       return { success: false, error: "Skor harus berupa angka 0 - 100." };
@@ -311,6 +344,19 @@ export async function saveDirectAssignmentScoreAction(data: {
       return { success: false, error: "Tugas tidak ditemukan." };
     }
 
+    const existingSubmission = await prisma.assignmentSubmission.findUnique({
+      where: {
+        assignmentId_studentId: {
+          assignmentId: data.assignmentId,
+          studentId: data.studentId,
+        },
+      },
+    });
+
+    if (data.score === null && !data.feedback?.trim() && !existingSubmission) {
+      return { success: true };
+    }
+
     await prisma.assignmentSubmission.upsert({
       where: {
         assignmentId_studentId: {
@@ -323,17 +369,18 @@ export async function saveDirectAssignmentScoreAction(data: {
         studentId: data.studentId,
         score: data.score,
         feedback: data.feedback?.trim() || "Penilaian langsung oleh guru",
-        status: "REVIEWED",
+        status: data.score !== null ? "REVIEWED" : "SUBMITTED",
         submittedAt: new Date(),
-        reviewedAt: new Date(),
-        reviewedByProfileId: profile.id,
+        reviewedAt: data.score !== null ? new Date() : null,
+        reviewedByProfileId: data.score !== null ? profile.id : null,
       },
       update: {
         score: data.score,
         feedback: data.feedback?.trim() || undefined,
-        status: "REVIEWED",
-        reviewedAt: new Date(),
-        reviewedByProfileId: profile.id,
+        status: data.score !== null ? "REVIEWED" : existingSubmission?.status ?? "SUBMITTED",
+        reviewedAt: data.score !== null ? new Date() : existingSubmission?.reviewedAt ?? null,
+        reviewedByProfileId:
+          data.score !== null ? profile.id : existingSubmission?.reviewedByProfileId ?? null,
       },
     });
 
@@ -363,7 +410,21 @@ export async function batchSaveDirectAssignmentScoresAction(data: {
   }>;
 }): Promise<{ success: boolean; updatedCount: number; error?: string }> {
   try {
-    const { profile, context } = await verifyTeachingContextAccess(data.teachingContextId);
+    const auth = await verifyTeachingContextAccess(data.teachingContextId);
+    assertNotBanned(auth);
+    const { profile, context } = auth;
+
+    // Strict validation upfront
+    const invalidItems = data.items.filter(
+      (item) => item.score !== null && (item.score < 0 || item.score > 100)
+    );
+    if (invalidItems.length > 0) {
+      return {
+        success: false,
+        updatedCount: 0,
+        error: "Skor harus berupa angka antara 0 hingga 100.",
+      };
+    }
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: data.assignmentId },
@@ -374,12 +435,38 @@ export async function batchSaveDirectAssignmentScoresAction(data: {
       return { success: false, updatedCount: 0, error: "Tugas tidak ditemukan." };
     }
 
+    const existingSubmissions = await prisma.assignmentSubmission.findMany({
+      where: {
+        assignmentId: data.assignmentId,
+        studentId: { in: data.items.map((i) => i.studentId) },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        status: true,
+        reviewedAt: true,
+        reviewedByProfileId: true,
+      },
+    });
+    const existingSubMap = new Map(existingSubmissions.map((s) => [s.studentId, s]));
+
+    const itemsToSave = data.items.filter((item) => {
+      const hasScore = item.score !== null;
+      const hasExisting = existingSubMap.has(item.studentId);
+      const hasFeedback = Boolean(item.feedback?.trim());
+      return hasScore || (hasExisting && hasFeedback);
+    });
+
+    if (itemsToSave.length === 0) {
+      return { success: true, updatedCount: 0 };
+    }
+
     let updatedCount = 0;
     await prisma.$transaction(
-      data.items.map((item) => {
-        const score =
-          item.score !== null && item.score >= 0 && item.score <= 100 ? item.score : null;
+      itemsToSave.map((item) => {
+        const score = item.score;
         if (score !== null) updatedCount++;
+        const existing = existingSubMap.get(item.studentId);
 
         return prisma.assignmentSubmission.upsert({
           where: {
@@ -393,17 +480,18 @@ export async function batchSaveDirectAssignmentScoresAction(data: {
             studentId: item.studentId,
             score,
             feedback: item.feedback?.trim() || "Penilaian langsung oleh guru",
-            status: "REVIEWED",
+            status: score !== null ? "REVIEWED" : "SUBMITTED",
             submittedAt: new Date(),
-            reviewedAt: new Date(),
-            reviewedByProfileId: profile.id,
+            reviewedAt: score !== null ? new Date() : null,
+            reviewedByProfileId: score !== null ? profile.id : null,
           },
           update: {
             score,
             feedback: item.feedback?.trim() || undefined,
-            status: "REVIEWED",
-            reviewedAt: new Date(),
-            reviewedByProfileId: profile.id,
+            status: score !== null ? "REVIEWED" : existing?.status ?? "SUBMITTED",
+            reviewedAt: score !== null ? new Date() : existing?.reviewedAt ?? null,
+            reviewedByProfileId:
+              score !== null ? profile.id : existing?.reviewedByProfileId ?? null,
           },
         });
       })

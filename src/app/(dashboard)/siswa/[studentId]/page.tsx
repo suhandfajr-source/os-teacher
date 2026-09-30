@@ -9,6 +9,7 @@ import { getStudentAssessmentHistory } from "@/modules/assessment/assessment.act
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { EditStudentDialog } from "./EditStudentDialog";
+import { ResetStudentPinDialog } from "./ResetStudentPinDialog";
 
 export default async function SiswaDetailPage({
   params,
@@ -104,13 +105,20 @@ export default async function SiswaDetailPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle>Data Pribadi</CardTitle>
-            <EditStudentDialog
-              student={{
-                id: student.id,
-                fullName: student.fullName,
-                nis: student.nis,
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <ResetStudentPinDialog
+                studentId={student.id}
+                studentName={student.fullName}
+                nis={student.nis}
+              />
+              <EditStudentDialog
+                student={{
+                  id: student.id,
+                  fullName: student.fullName,
+                  nis: student.nis,
+                }}
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-2">
             <div>

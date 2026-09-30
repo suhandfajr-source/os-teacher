@@ -26,6 +26,9 @@ export async function verifyActiveSchoolMembership(): Promise<ActiveSchoolMember
   const profile = await prisma.teacherProfile.findUnique({
     where: { userId: session.user.id },
     include: {
+      user: {
+        select: { banned: true, banReason: true },
+      },
       memberships: {
         where: {
           status: "ACTIVE",
@@ -56,14 +59,8 @@ export async function verifyActiveSchoolMembership(): Promise<ActiveSchoolMember
     throw new Error("Not an active member of the school workspace");
   }
 
-  // Check user ban status
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { banned: true, banReason: true },
-  });
-
-  const isBanned = !!user?.banned;
-  const banReason = user?.banReason ?? null;
+  const isBanned = Boolean((profile as unknown as { user?: { banned?: boolean | null } }).user?.banned);
+  const banReason = (profile as unknown as { user?: { banReason?: string | null } }).user?.banReason ?? null;
 
   return {
     session,
@@ -81,8 +78,22 @@ export function assertNotBanned(authContext: { isBanned?: boolean }) {
   }
 }
 
-export async function verifyTeachingContextAccess(teachingContextId: string) {
-  const { profile, activeSchoolId, activeSchool, session } = await verifyActiveSchoolMembership();
+export type TeachingContextAccessContext = {
+  session: Awaited<ReturnType<typeof requireAuthSession>>;
+  profile: ActiveSchoolMembershipContext["profile"];
+  activeSchoolId: string;
+  activeSchool: ActiveSchoolMembershipContext["activeSchool"];
+  context: NonNullable<Awaited<ReturnType<typeof prisma.teachingContext.findUnique<{
+    where: { id: string };
+    include: { class: true; subject: true; academicPeriod: true };
+  }>>>>;
+  isBanned?: boolean;
+  banReason?: string | null;
+};
+
+export async function verifyTeachingContextAccess(teachingContextId: string): Promise<TeachingContextAccessContext> {
+  const { profile, activeSchoolId, activeSchool, session, isBanned, banReason } =
+    await verifyActiveSchoolMembership();
 
   const context = await prisma.teachingContext.findUnique({
     where: { id: teachingContextId },
@@ -105,7 +116,7 @@ export async function verifyTeachingContextAccess(teachingContextId: string) {
     throw new Error("Forbidden: This context belongs to a different school workspace");
   }
 
-  return { profile, activeSchoolId, activeSchool, session, context };
+  return { profile, activeSchoolId, activeSchool, session, context, isBanned, banReason };
 }
 
 export async function verifyClassRosterAccess(classId: string) {

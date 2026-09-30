@@ -36,13 +36,21 @@ import {
   calculateStudentRunningPerformance,
 } from "./assessment.service";
 
+function assertNotBanned(authContext: { isBanned?: boolean }) {
+  if (authContext.isBanned) {
+    throw new Error("Akses ditolak: Akun Anda telah dinonaktifkan oleh administrator.");
+  }
+}
+
 // ============================================================================
 // 1. ASSESSMENT TYPE ACTIONS
 // ============================================================================
 
 export async function createAssessmentType(input: CreateAssessmentTypeInput) {
   const validated = createAssessmentTypeSchema.parse(input);
-  const { context } = await verifyTeachingContextAccess(validated.teachingContextId);
+  const auth = await verifyTeachingContextAccess(validated.teachingContextId);
+  assertNotBanned(auth);
+  const { context } = auth;
 
   const normalized = normalizeName(validated.name);
 
@@ -91,7 +99,9 @@ export async function createAssessmentType(input: CreateAssessmentTypeInput) {
 
 export async function renameAssessmentType(input: RenameAssessmentTypeInput) {
   const validated = renameAssessmentTypeSchema.parse(input);
-  const { assessmentType } = await verifyAssessmentTypeAccess(validated.id);
+  const auth = await verifyAssessmentTypeAccess(validated.id);
+  assertNotBanned(auth);
+  const { assessmentType } = auth;
 
   const normalized = normalizeName(validated.name);
 
@@ -127,7 +137,9 @@ export async function updateAssessmentType(input: {
   name: string;
   category?: "ASSIGNMENT" | "FORMATIVE" | "SUMMATIVE" | "MIDTERM" | "FINAL_TERM" | "SCHOOL_EXAM" | "PRACTICE" | "PROJECT" | "OTHER";
 }) {
-  const { assessmentType } = await verifyAssessmentTypeAccess(input.id);
+  const auth = await verifyAssessmentTypeAccess(input.id);
+  assertNotBanned(auth);
+  const { assessmentType } = auth;
   const normalized = normalizeName(input.name);
 
   // Check collision with other types
@@ -160,7 +172,9 @@ export async function updateAssessmentType(input: {
 }
 
 export async function archiveAssessmentType(assessmentTypeId: string) {
-  const { assessmentType } = await verifyAssessmentTypeAccess(assessmentTypeId);
+  const auth = await verifyAssessmentTypeAccess(assessmentTypeId);
+  assertNotBanned(auth);
+  const { assessmentType } = auth;
 
   const updated = await prisma.assessmentType.update({
     where: { id: assessmentType.id },
@@ -174,7 +188,9 @@ export async function archiveAssessmentType(assessmentTypeId: string) {
 }
 
 export async function deleteAssessmentType(assessmentTypeId: string) {
-  const { assessmentType } = await verifyAssessmentTypeAccess(assessmentTypeId);
+  const auth = await verifyAssessmentTypeAccess(assessmentTypeId);
+  assertNotBanned(auth);
+  const { assessmentType } = auth;
 
   // Check if any assessment is using this assessment type
   const assessmentCount = await prisma.assessment.count({
@@ -512,7 +528,9 @@ export async function copyGradePolicy(input: CopyGradePolicyInput) {
 
 export async function createAssessment(input: CreateAssessmentInput) {
   const validated = createAssessmentSchema.parse(input);
-  const { context } = await verifyTeachingContextAccess(validated.teachingContextId);
+  const auth = await verifyTeachingContextAccess(validated.teachingContextId);
+  assertNotBanned(auth);
+  const { context } = auth;
 
   // Validate AssessmentType ownership
   const type = await prisma.assessmentType.findUnique({

@@ -32,7 +32,7 @@ interface StudentItem {
   id: string;
   fullName: string;
   nis: string | null;
-  accountStatus: "ACTIVE" | "PENDING" | "UNREGISTERED";
+  accountStatus: "ACTIVE" | "PENDING" | "REJECTED" | "UNREGISTERED";
   hasPin: boolean;
 }
 
@@ -397,6 +397,15 @@ export function SiswaListClient({ classGroups, totalStudents, pendingStudents = 
                             >
                               <Hourglass className="h-3 w-3 text-amber-600 dark:text-amber-400" />
                               Menunggu Approval
+                            </Badge>
+                          )}
+                          {s.accountStatus === "REJECTED" && (
+                            <Badge
+                              variant="outline"
+                              className="bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800 text-[11px] font-medium gap-1 py-0 px-2"
+                            >
+                              <ShieldAlert className="h-3 w-3 text-rose-600 dark:text-rose-400" />
+                              Ditolak Guru
                             </Badge>
                           )}
                           {s.accountStatus === "UNREGISTERED" && (

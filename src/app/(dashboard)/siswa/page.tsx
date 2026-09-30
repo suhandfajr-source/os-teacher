@@ -49,11 +49,13 @@ export default async function SiswaPage() {
       .map((cs) => {
         uniqueStudentIds.add(cs.student.id);
         const hasPin = cs.student.accessPinHash !== null;
-        let accountStatus: "ACTIVE" | "PENDING" | "UNREGISTERED" = "UNREGISTERED";
+        let accountStatus: "ACTIVE" | "PENDING" | "REJECTED" | "UNREGISTERED" = "UNREGISTERED";
         if (cs.student.accountStatus === "ACTIVE") {
           accountStatus = "ACTIVE";
         } else if (cs.student.accountStatus === "PENDING" && hasPin) {
           accountStatus = "PENDING";
+        } else if (cs.student.accountStatus === "REJECTED") {
+          accountStatus = "REJECTED";
         }
 
         return {

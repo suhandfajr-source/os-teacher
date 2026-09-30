@@ -137,9 +137,23 @@ export type JoinCodeContext = {
   }>;
 };
 
+export type SafeStudent = Prisma.StudentGetPayload<{ select: typeof SAFE_STUDENT_SELECT }>;
+
 export type RegisterStudentResult =
-  | { success: true; status: "ACTIVE"; student: any; message: string; redirect?: string }
-  | { success: true; status: "PENDING"; reason: "MISMATCH_NAME" | "NEW_STUDENT" | "MATCHED_ROSTER"; student: any; message: string }
+  | {
+      success: true;
+      status: "ACTIVE";
+      student: SafeStudent | { id: string; fullName: string; nis: string | null };
+      message: string;
+      redirect?: string;
+    }
+  | {
+      success: true;
+      status: "PENDING";
+      reason: "MISMATCH_NAME" | "NEW_STUDENT" | "MATCHED_ROSTER";
+      student: SafeStudent | { id: string; fullName: string; nis: string | null };
+      message: string;
+    }
   | { success: false; message: string };
 
 /**
@@ -594,7 +608,7 @@ export async function registerStudent(data: {
         message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
       };
     }
-    // Jika tanggal lahir berbeda -> beri tanda konflik tanggal lahir untuk verifikasi guru
+    // Jika tanggal lahir berbeda -> beri tanda konflik tanggal lahir untuk verifikasi guru dan simpan PIN baru
     if (cleanBirthDate && existingStudent.birthDate && cleanBirthDate !== existingStudent.birthDate) {
       const conflictNote = `${existingStudent.birthDate} vs ${cleanBirthDate}`;
       const updated = await prisma.student.update({
@@ -602,6 +616,8 @@ export async function registerStudent(data: {
         data: {
           birthDateConflict: true,
           conflictBirthDates: conflictNote,
+          accessPinHash: pinHash,
+          pinUpdatedAt: now,
           accountRequestedAt: now,
         },
         select: SAFE_STUDENT_SELECT,
@@ -609,7 +625,7 @@ export async function registerStudent(data: {
       return {
         success: true,
         status: "PENDING",
-        reason: "MISMATCH_NAME",
+        reason: "MATCHED_ROSTER",
         student: updated,
         message:
           "Pendaftaran tercatat. Terdapat perbedaan data tanggal lahir dengan pendaftaran sebelumnya, guru pengampu akan memverifikasi saat persetujuan.",
@@ -619,13 +635,13 @@ export async function registerStudent(data: {
     if (cleanBirthDate && !existingStudent.birthDate) {
       const updatedStudent = await prisma.student.update({
         where: { id: existingStudent.id },
-        data: { birthDate: cleanBirthDate, accessPinHash: pinHash },
+        data: { birthDate: cleanBirthDate, accessPinHash: pinHash, pinUpdatedAt: now },
         select: SAFE_STUDENT_SELECT,
       });
       return {
         success: true,
         status: "PENDING",
-        reason: "MISMATCH_NAME",
+        reason: "MATCHED_ROSTER",
         student: updatedStudent,
         message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
       };
