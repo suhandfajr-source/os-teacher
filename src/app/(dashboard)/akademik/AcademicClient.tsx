@@ -37,8 +37,8 @@ import {
   LearningObjectiveData,
   AcademicPlanItemData,
 } from "@/modules/academic/academic.types";
-import { InteractiveProsemGrid } from "@/components/academic/InteractiveProsemGrid";
-import { PlanGenerationWizardModal } from "@/components/academic/PlanGenerationWizardModal";
+import { InteractiveProsemGrid } from "@/modules/academic/components/InteractiveProsemGrid";
+import { PlanGenerationWizardModal } from "@/modules/academic/components/PlanGenerationWizardModal";
 import { toast } from "sonner";
 
 interface ContextOption {
