@@ -1,6 +1,6 @@
 # Blueprint Folderisasi & Dokumentasi
 
-> **Status: DRAFT — menunggu persetujuan sebelum eksekusi.**
+> **Status: SELESAI — diimplementasikan penuh. Verifikasi akhir: tsc 0 error, 297+ test lulus, production build sukses.**
 > Dibuat oleh Winston (System Architect). Tidak ada satu file pun yang diubah saat blueprint ini dibuat.
 
 ---
@@ -210,3 +210,4 @@ npx vitest run          # unit test
 - [x] Tahap B4 ✅ quiz (40 test hijau)
 - [x] Tahap B5 ✅ schedule (15 test hijau; catat utang lint lama ScheduleConfigDialog)
 - [x] Tahap B6 ✅ student → student-portal, ai-studio → ai (121 test hijau)
+- [x] Gerbang penutup: npm run build penuh ✅ (semua route ter-render)
