@@ -206,5 +206,6 @@ npx vitest run          # unit test
 - [ ] Tahap A5: bersih root (verifikasi duplikat → konfirmasi user → hapus)
 - [x] Tahap B1 ✅ templates (pilot, 86 test hijau)
 - [x] Tahap B2 ✅ academic (35 test hijau; catat utang lint lama ProsemGrid)
-- [ ] Tahap B3–B5: merge komponen per modul + verifikasi + README per modul
+- [x] Tahap B3 ✅ assignments (modul belum punya test — typecheck jadi penjaga)
+- [ ] Tahap B4–B5: merge komponen per modul + verifikasi + README per modul
 - [ ] Tahap B6: (jika disetujui) student & ai-studio

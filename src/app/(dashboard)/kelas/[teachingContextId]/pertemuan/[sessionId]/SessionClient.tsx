@@ -6,7 +6,7 @@ import Link from "next/link";
 import { editTeachingSession, completeTeachingSession } from "@/modules/teaching/teaching.actions";
 import { saveAttendance } from "@/modules/attendance/attendance.actions";
 import { saveSessionAssignmentAction } from "@/modules/assignments/assignment.actions";
-import { SaveAsAssessmentDialog } from "@/components/assignments/SaveAsAssessmentDialog";
+import { SaveAsAssessmentDialog } from "@/modules/assignments/components/SaveAsAssessmentDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";

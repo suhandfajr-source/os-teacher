@@ -3,7 +3,7 @@ import { ArrowLeft, ClipboardCheck } from "lucide-react";
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { getSubmissionQueueAction } from "@/modules/assignments/assignment.actions";
-import { SaveAsAssessmentDialog } from "@/components/assignments/SaveAsAssessmentDialog";
+import { SaveAsAssessmentDialog } from "@/modules/assignments/components/SaveAsAssessmentDialog";
 import {
   AssignmentRosterGradingView,
   type StudentRosterItem,
