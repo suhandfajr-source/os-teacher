@@ -204,5 +204,6 @@ npx vitest run          # unit test
 - [ ] Tahap A3: pindah reports (5 file) + presentations (12 file) + hapus products/ kosong
 - [ ] Tahap A4: tulis `docs/README.md` (peta)
 - [ ] Tahap A5: bersih root (verifikasi duplikat → konfirmasi user → hapus)
-- [ ] Tahap B1–B5: merge komponen per modul + verifikasi + README per modul
+- [x] Tahap B1 ✅ templates (pilot, 86 test hijau)
+- [ ] Tahap B2–B5: merge komponen per modul + verifikasi + README per modul
 - [ ] Tahap B6: (jika disetujui) student & ai-studio
