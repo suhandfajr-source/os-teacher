@@ -149,7 +149,7 @@ describe("Story 4 Deep Real-Database Integration & Security Audit", () => {
         data: {
           teachingContextId: tc.id,
           dayOfWeek: todayDay,
-          startTime: "07:00",
+          startTime: "00:00", // rentang penuh agar uji isLive deterministik di jam berapa pun
           endTime: "23:59", // LIVE range for today's test
           room: "Lab Sains 1",
         },

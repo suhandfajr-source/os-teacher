@@ -14,15 +14,14 @@ import {
   HelpCircle,
   Lightbulb,
   Target,
-  FileSpreadsheet,
   Layers,
-  Maximize2,
-  Minimize2,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { exportToPowerPoint } from "@/lib/export/ppt-exporter";
+import { cleanInlineMarkdown } from "@/lib/export/ppt/ppt-parser";
+import { MarkdownReader } from "./MarkdownReader";
 import { toast } from "sonner";
 
 export interface PublishedMaterialItem {
@@ -32,6 +31,23 @@ export interface PublishedMaterialItem {
   publishedAt: string;
   subjectName: string | null;
   teacherName: string | null;
+}
+
+/**
+ * Deteksi konten slide-based (R3):
+ * - Delimiter `---` harus benar-benar berdiri sendiri di satu baris penuh
+ *   (separator tabel GFM `| --- |` TIDAK ikut terdeteksi), DAN
+ * - menghasilkan lebih dari satu bagian, ATAU
+ * - konten memakai tag peran internal [Role: …] dari generator presentasi.
+ */
+const SLIDE_DELIMITER_LINE_RE = /\n\s*-{3,}\s*\n/;
+
+function isSlideBasedContent(content: string): boolean {
+  if (content.includes("[Role:")) return true;
+  const padded = `\n${content.trim()}\n`;
+  if (!SLIDE_DELIMITER_LINE_RE.test(padded)) return false;
+  const sections = padded.split(/\n\s*-{3,}\s*\n/).map((s) => s.trim()).filter(Boolean);
+  return sections.length > 1;
 }
 
 interface SlideItem {
@@ -83,7 +99,43 @@ function parseSlidesFromContent(content: string, mainTitle: string, subjectName:
     const paragraphs: string[] = [];
     const bullets: Array<{ label?: string; text: string }> = [];
 
+    // (R2) Akumulator baris tabel GFM → dikonversi jadi bullet/kartu terstruktur.
+    // Baris separator | --- | tidak ikut dirender.
+    let tableRows: string[][] = [];
+    const flushTable = () => {
+      if (tableRows.length === 0) return;
+      const [header, ...dataRows] = tableRows;
+      const hasHeader = header.some((c) => c.length > 0);
+      for (const row of dataRows) {
+        const label = cleanInlineMarkdown(row[0] ?? "");
+        const rest = row.slice(1).map((c) => cleanInlineMarkdown(c)).filter(Boolean);
+        const text =
+          hasHeader && rest.length > 0
+            ? rest
+                .map((cell, ci) => {
+                  const colName = cleanInlineMarkdown(header[ci + 1] ?? "");
+                  return colName ? `${colName}: ${cell}` : cell;
+                })
+                .join(" • ")
+            : rest.join(" • ");
+        bullets.push({ label: label || undefined, text });
+      }
+      tableRows = [];
+    };
+
     for (const line of lines) {
+      // (R2) Baris tabel GFM: kumpulkan; baris separator | --- | dilewati
+      if (line.startsWith("|")) {
+        const cells = line
+          .split("|")
+          .slice(1, line.endsWith("|") ? -1 : undefined)
+          .map((c) => c.trim());
+        if (cells.length > 0 && cells.every((c) => c.length > 0 && /^:?-{2,}:?$/.test(c))) continue;
+        tableRows.push(cells);
+        continue;
+      }
+      flushTable();
+
       // Role tag extraction: [Role: Hook] or [Tujuan]
       const roleMatch = line.match(/^\[(?:Role:\s*)?([^\]]+)\]/i);
       if (roleMatch) {
@@ -94,7 +146,7 @@ function parseSlidesFromContent(content: string, mainTitle: string, subjectName:
       // Heading 1 or 2
       if (line.startsWith("# ") || line.startsWith("## ") || line.startsWith("### ")) {
         if (!slideTitle) {
-          slideTitle = line.replace(/^#+\s*/, "").replace(/\*\*/g, "").trim();
+          slideTitle = cleanInlineMarkdown(line.replace(/^#+\s*/, ""));
           // Remove "Slide 1:", etc.
           slideTitle = slideTitle.replace(/^(slide|bagian|bab)\s*\d+[\s:.-]*/i, "").trim();
           continue;
@@ -108,23 +160,24 @@ function parseSlidesFromContent(content: string, mainTitle: string, subjectName:
         const labelMatch = rawBullet.match(/^\*\*([^*]+)\*\*[:\s-]*(.*)/);
         if (labelMatch) {
           bullets.push({
-            label: labelMatch[1].trim(),
-            text: labelMatch[2].trim(),
+            label: cleanInlineMarkdown(labelMatch[1]),
+            text: cleanInlineMarkdown(labelMatch[2]),
           });
         } else {
           bullets.push({
-            text: rawBullet.replace(/\*\*/g, "").trim(),
+            text: cleanInlineMarkdown(rawBullet),
           });
         }
         continue;
       }
 
       // Normal paragraph (remove markdown symbols for clean display)
-      const cleanLine = line.replace(/\*\*(.*?)\*\*/g, "$1").replace(/_(.*?)_/g, "$1");
+      const cleanLine = cleanInlineMarkdown(line);
       if (cleanLine && !cleanLine.startsWith("[Role:")) {
         paragraphs.push(cleanLine);
       }
     }
+    flushTable();
 
     if (!slideTitle) {
       slideTitle = `Bagian ${slides.length + 1}`;
@@ -192,13 +245,6 @@ export function StudentMateriList({
     return viewModeMap[materialId] || "slide";
   };
 
-  const toggleViewMode = (materialId: string) => {
-    setViewModeMap((prev) => ({
-      ...prev,
-      [materialId]: prev[materialId] === "reading" ? "slide" : "reading",
-    }));
-  };
-
   const handleDownloadPptx = async (m: PublishedMaterialItem) => {
     setIsDownloadingMap((prev) => ({ ...prev, [m.id]: true }));
     try {
@@ -221,7 +267,7 @@ export function StudentMateriList({
     <div className="space-y-4">
       {materials.map((m) => {
         const isOpen = openMaterialId === m.id;
-        const isSlideBased = m.content.includes("---") || m.content.includes("[Role:");
+        const isSlideBased = isSlideBasedContent(m.content);
         const slides = isSlideBased ? parseSlidesFromContent(m.content, m.title, m.subjectName, m.teacherName) : [];
         const activeSlideIdx = getActiveSlideIndex(m.id);
         const currentSlide = slides[activeSlideIdx] || slides[0];
@@ -498,58 +544,8 @@ export function StudentMateriList({
 
                 {/* READING / ARTICLE VIEW MODE (Clean formatted Markdown) */}
                 {(!isSlideBased || viewMode === "reading") && (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 max-h-[60vh] overflow-y-auto space-y-4">
-                    <article className="prose prose-slate prose-sm max-w-none text-[13px] leading-relaxed text-slate-700">
-                      {m.content
-                        .split("\n")
-                        .map((line, lIdx) => {
-                          const trimmed = line.trim();
-                          if (!trimmed) return <div key={lIdx} className="h-2" />;
-
-                          if (trimmed.startsWith("# ")) {
-                            return (
-                              <h1 key={lIdx} className="text-lg font-black text-slate-900 mt-4 mb-2 pb-1 border-b">
-                                {trimmed.replace(/^#\s*/, "")}
-                              </h1>
-                            );
-                          }
-                          if (trimmed.startsWith("## ")) {
-                            return (
-                              <h2 key={lIdx} className="text-base font-bold text-slate-900 mt-4 mb-1.5 flex items-center gap-1.5 text-teal-800">
-                                <span className="w-1.5 h-4 bg-teal-600 rounded-full inline-block" />
-                                {trimmed.replace(/^##\s*/, "")}
-                              </h2>
-                            );
-                          }
-                          if (trimmed.startsWith("### ")) {
-                            return (
-                              <h3 key={lIdx} className="text-sm font-bold text-slate-800 mt-3 mb-1">
-                                {trimmed.replace(/^###\s*/, "")}
-                              </h3>
-                            );
-                          }
-                          if (trimmed === "---") {
-                            return <hr key={lIdx} className="my-4 border-slate-200" />;
-                          }
-                          if (trimmed.startsWith("[Role:")) {
-                            return null; // Strip internal AI role tag for clean reader view
-                          }
-                          if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
-                            const bulletText = trimmed.replace(/^[*•-]\s*/, "");
-                            return (
-                              <div key={lIdx} className="flex items-start gap-2 ml-2 my-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-teal-600 mt-2 shrink-0" />
-                                <div>{bulletText}</div>
-                              </div>
-                            );
-                          }
-                          return (
-                            <p key={lIdx} className="my-1 text-slate-700">
-                              {trimmed}
-                            </p>
-                          );
-                        })}
-                    </article>
+                  <div className="max-h-[60vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5">
+                    <MarkdownReader content={m.content} />
                   </div>
                 )}
               </div>
