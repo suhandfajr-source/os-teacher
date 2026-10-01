@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ChangePinModal } from "@/components/student/ChangePinModal";
+import { ChangePinModal } from "@/modules/student-portal/components/ChangePinModal";
 import { 
   getStudentDashboardDataAction, 
   type StudentDashboardData 

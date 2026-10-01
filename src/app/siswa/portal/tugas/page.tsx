@@ -2,7 +2,7 @@ import React from "react";
 import { verifyStudentSession } from "@/modules/student-auth/student-session";
 import { prisma } from "@/lib/auth";
 import { ClipboardList, Clock, BookOpen, AlertCircle } from "lucide-react";
-import { SubmitAssignmentForm } from "@/components/student/SubmitAssignmentForm";
+import { SubmitAssignmentForm } from "@/modules/student-portal/components/SubmitAssignmentForm";
 import { isSubmissionLate, type StudentSubmissionView } from "@/modules/assignments/submission.service";
 
 export default async function StudentAssignmentsPage() {

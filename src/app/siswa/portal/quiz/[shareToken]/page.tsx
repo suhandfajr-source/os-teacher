@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { startQuizAttemptFromSessionAction } from "@/modules/quiz/quiz.actions";
-import { QuizRunnerClient } from "@/components/student/QuizRunnerClient";
+import { QuizRunnerClient } from "@/modules/student-portal/components/QuizRunnerClient";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

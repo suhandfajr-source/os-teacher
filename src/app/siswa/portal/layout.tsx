@@ -2,9 +2,9 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { verifyStudentSession } from "@/modules/student-auth/student-session";
 import { prisma } from "@/lib/auth";
-import { StudentHeader } from "@/components/student/StudentHeader";
-import { StudentBottomNav } from "@/components/student/StudentBottomNav";
-import { StudentInactivityGuard } from "@/components/student/StudentInactivityGuard";
+import { StudentHeader } from "@/modules/student-portal/components/StudentHeader";
+import { StudentBottomNav } from "@/modules/student-portal/components/StudentBottomNav";
+import { StudentInactivityGuard } from "@/modules/student-portal/components/StudentInactivityGuard";
 
 export default async function StudentPortalLayout({
   children,

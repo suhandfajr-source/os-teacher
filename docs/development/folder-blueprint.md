@@ -209,4 +209,4 @@ npx vitest run          # unit test
 - [x] Tahap B3 ✅ assignments (modul belum punya test — typecheck jadi penjaga)
 - [x] Tahap B4 ✅ quiz (40 test hijau)
 - [x] Tahap B5 ✅ schedule (15 test hijau; catat utang lint lama ScheduleConfigDialog)
-- [ ] Tahap B6: (jika disetujui) student & ai-studio
+- [x] Tahap B6 ✅ student → student-portal, ai-studio → ai (121 test hijau)

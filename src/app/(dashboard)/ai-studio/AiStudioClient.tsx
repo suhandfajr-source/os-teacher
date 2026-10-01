@@ -64,12 +64,12 @@ import { TemplateManagerDialog } from "@/modules/templates/components/TemplateMa
 import { DocumentTemplateItem } from "@/modules/templates/template.types";
 import { listDocumentTemplatesAction } from "@/modules/templates/template.actions";
 import { DocumentPreviewModal, PreviewFormat } from "@/modules/templates/components/DocumentPreviewModal";
-import { LessonPlanFlow } from "@/components/ai-studio/forms/LessonPlanFlow";
-import { AssessmentQuizFlow } from "@/components/ai-studio/forms/AssessmentQuizFlow";
-import { LkpdFlow } from "@/components/ai-studio/forms/LkpdFlow";
-import { PresentationFlow } from "@/components/ai-studio/forms/PresentationFlow";
-import { LearningMaterialFlow } from "@/components/ai-studio/forms/LearningMaterialFlow";
-import { RubricFlow } from "@/components/ai-studio/forms/RubricFlow";
+import { LessonPlanFlow } from "@/modules/ai/components/forms/LessonPlanFlow";
+import { AssessmentQuizFlow } from "@/modules/ai/components/forms/AssessmentQuizFlow";
+import { LkpdFlow } from "@/modules/ai/components/forms/LkpdFlow";
+import { PresentationFlow } from "@/modules/ai/components/forms/PresentationFlow";
+import { LearningMaterialFlow } from "@/modules/ai/components/forms/LearningMaterialFlow";
+import { RubricFlow } from "@/modules/ai/components/forms/RubricFlow";
 
 interface TeachingContextOption {
   id: string;
