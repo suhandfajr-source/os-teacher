@@ -25,7 +25,17 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import dynamic from "next/dynamic";
+
+// Editor WYSIWYG markdown — dimuat malas (bundle ProseMirror cukup besar) & tanpa SSR
+const MarkdownWysiwyg = dynamic(() => import("@/components/editor/MarkdownWysiwyg"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[480px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-400">
+      Memuat editor…
+    </div>
+  ),
+});
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -47,12 +57,10 @@ import {
   Sliders,
   History,
   Lock,
-  FileSpreadsheet,
   Presentation,
   ArrowRight,
   LayoutTemplate,
   HelpCircle,
-  GraduationCap,
   Globe,
   GlobeLock,
 } from "lucide-react";
@@ -132,7 +140,6 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
   const [previewFormatInitial, setPreviewFormatInitial] = useState<PreviewFormat>("docx");
   const [selectedPreviewTemplateId, setSelectedPreviewTemplateId] = useState<string | null>(null);
-  const [editorViewMode, setEditorViewMode] = useState<"EDIT" | "PREVIEW">("EDIT");
 
   // Refinement state
   const [refinementInstruction, setRefinementInstruction] = useState<string>("");
@@ -960,34 +967,8 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                           </span>
                         </CardTitle>
                         <CardDescription className="text-xs mt-0.5">
-                          Ubah teks secara manual di bawah ini sebelum menyimpan atau membagikannya kepada siswa.
+                          Ubah teks secara manual di bawah ini — format (tebal, judul, tabel) diterapkan langsung tanpa simbol. Gunakan tombol “Pratinjau Dokumen” di atas untuk melihat tampilan akhir sebelum diunduh.
                         </CardDescription>
-                      </div>
-
-                      {/* View Mode Toggle */}
-                      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border">
-                        <button
-                          type="button"
-                          onClick={() => setEditorViewMode("EDIT")}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                            editorViewMode === "EDIT"
-                              ? "bg-white text-indigo-700 shadow-sm"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          ✏️ Mode Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditorViewMode("PREVIEW")}
-                          className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                            editorViewMode === "PREVIEW"
-                              ? "bg-white text-indigo-700 shadow-sm"
-                              : "text-slate-600 hover:text-slate-900"
-                          }`}
-                        >
-                          👁️ Pratinjau Teks
-                        </button>
                       </div>
                     </div>
                   </CardHeader>
@@ -1008,193 +989,25 @@ export function AiStudioClient({ contexts, initialDrafts }: AiStudioClientProps)
                       />
                     </div>
 
-                    {editorViewMode === "EDIT" ? (
                       <div className="space-y-1.5">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Isi Konten (Format Markdown)
-                        </label>
-                        <Textarea
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            Isi Konten — edit langsung dengan format
+                          </label>
+                          <span className="hidden text-[11px] text-muted-foreground md:inline">
+                            Format otomatis (tebal, judul, tabel) — tanpa perlu menulis simbol
+                          </span>
+                        </div>
+                        <MarkdownWysiwyg
                           value={draftContent}
-                          disabled={draftStatus === "ARCHIVED"}
-                          onChange={(e) => {
-                            setDraftContent(e.target.value);
+                          readOnly={draftStatus === "ARCHIVED"}
+                          placeholderText="Isi konten pembelajaran…"
+                          onChange={(markdown) => {
+                            setDraftContent(markdown);
                             setIsSavedInDb(false);
                           }}
-                          placeholder="Isi konten pembelajaran..."
-                          rows={16}
-                          className="font-mono text-sm leading-relaxed"
                         />
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Pratinjau Tampilan Rapi
-                          </label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setPreviewFormatInitial("docx");
-                              setIsPreviewModalOpen(true);
-                            }}
-                            className="h-6 px-2 text-[11px] text-indigo-600 hover:bg-indigo-50 font-semibold"
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Buka Modal Pratinjau Lengkap & Unduh
-                          </Button>
-                        </div>
-                        <div className="p-6 border rounded-xl bg-slate-50/50 max-h-[460px] overflow-y-auto space-y-2 text-sm text-slate-800 leading-relaxed font-sans">
-                          {(() => {
-                            const lines = draftContent.split("\n");
-                            const elements: React.ReactNode[] = [];
-                            let tableRows: string[][] = [];
-                            let inTable = false;
-
-                            const renderInline = (text: string) => {
-                              const clean = text.trim();
-                              if (!clean) return null;
-                              const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|\*[^*]+\*|___[^_]+___|__[^_]+__|_[^_]+_|`[^`]+`)/g;
-                              const parts = clean.split(regex);
-                              return parts.map((part, i) => {
-                                if (!part) return null;
-                                if (part.startsWith("***") && part.endsWith("***") && part.length > 6) {
-                                  return <strong key={i} className="font-bold italic">{part.slice(3, -3)}</strong>;
-                                }
-                                if ((part.startsWith("**") && part.endsWith("**") && part.length > 4) || (part.startsWith("__") && part.endsWith("__") && part.length > 4)) {
-                                  return <strong key={i} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
-                                }
-                                if ((part.startsWith("*") && part.endsWith("*") && part.length > 2) || (part.startsWith("_") && part.endsWith("_") && part.length > 2)) {
-                                  return <em key={i} className="italic text-slate-800">{part.slice(1, -1)}</em>;
-                                }
-                                if (part.startsWith("`") && part.endsWith("`") && part.length > 2) {
-                                  return <code key={i} className="bg-slate-100 px-1 py-0.5 rounded text-xs font-mono">{part.slice(1, -1)}</code>;
-                                }
-                                return <span key={i}>{part}</span>;
-                              });
-                            };
-
-                            const flushTable = (k: number) => {
-                              if (tableRows.length === 0) return;
-                              const [headers, ...dataRows] = tableRows;
-                              elements.push(
-                                <div key={`tbl-${k}`} className="overflow-x-auto my-3 rounded-lg border border-slate-200 shadow-sm">
-                                  <table className="w-full text-left text-xs border-collapse">
-                                    <thead>
-                                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-800 font-semibold">
-                                        {headers.map((h, hi) => (
-                                          <th key={hi} className="px-3 py-2 border-r border-slate-200 last:border-r-0">
-                                            {renderInline(h)}
-                                          </th>
-                                        ))}
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                      {dataRows.map((row, ri) => (
-                                        <tr key={ri} className={ri % 2 === 1 ? "bg-slate-50/50" : ""}>
-                                          {row.map((cell, ci) => (
-                                            <td key={ci} className="px-3 py-2 border-r border-slate-100 last:border-r-0 align-top text-slate-700">
-                                              {cell.split(/<br\s*\/?>/gi).map((cLine, cli) => (
-                                                <div key={cli} className={cli > 0 ? "mt-0.5" : ""}>
-                                                  {renderInline(cLine)}
-                                                </div>
-                                              ))}
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              );
-                              tableRows = [];
-                              inTable = false;
-                            };
-
-                            lines.forEach((line, li) => {
-                              const trimmed = line.trim();
-
-                              if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
-                                if (trimmed.replace(/[|\-\s:]/g, "").length === 0) return;
-                                const cells = trimmed.split("|").slice(1, -1).map((c) => c.trim());
-                                tableRows.push(cells);
-                                inTable = true;
-                                return;
-                              } else if (inTable) {
-                                flushTable(li);
-                              }
-
-                              if (!trimmed || trimmed === "---" || trimmed === "***") {
-                                elements.push(<div key={li} className="h-2" />);
-                                return;
-                              }
-
-                              if (trimmed.startsWith("# ")) {
-                                elements.push(
-                                  <h1 key={li} className="text-lg font-bold text-slate-900 border-b pb-1 mt-3 mb-1">
-                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
-                                  </h1>
-                                );
-                                return;
-                              }
-                              if (trimmed.startsWith("## ")) {
-                                elements.push(
-                                  <h2 key={li} className="text-sm font-bold text-indigo-900 border-l-2 border-indigo-600 pl-2 mt-3 mb-1">
-                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
-                                  </h2>
-                                );
-                                return;
-                              }
-                              if (trimmed.startsWith("### ")) {
-                                elements.push(
-                                  <h3 key={li} className="text-xs font-bold text-slate-800 mt-2.5 mb-1">
-                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
-                                  </h3>
-                                );
-                                return;
-                              }
-                              if (/^#{4,}\s+/.test(trimmed)) {
-                                elements.push(
-                                  <h4 key={li} className="text-xs font-semibold text-slate-700 uppercase tracking-wide mt-2 mb-0.5">
-                                    {renderInline(trimmed.replace(/^#+\s*/, ""))}
-                                  </h4>
-                                );
-                                return;
-                              }
-                              if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-                                elements.push(
-                                  <li key={li} className="ml-4 list-disc text-xs text-slate-700 my-0.5">
-                                    {renderInline(trimmed.replace(/^[-*]\s*/, ""))}
-                                  </li>
-                                );
-                                return;
-                              }
-                              if (/^\d+\.\s/.test(trimmed)) {
-                                const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/);
-                                elements.push(
-                                  <li key={li} className="ml-4 list-decimal text-xs text-slate-700 my-0.5">
-                                    {numMatch ? renderInline(numMatch[2]) : renderInline(trimmed)}
-                                  </li>
-                                );
-                                return;
-                              }
-                              elements.push(
-                                <p key={li} className="text-xs text-slate-700 my-1">
-                                  {renderInline(trimmed)}
-                                </p>
-                              );
-                            });
-
-                            if (inTable) {
-                              flushTable(lines.length);
-                            }
-
-                            return elements;
-                          })()}
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
 
