@@ -18,10 +18,19 @@
 
 - **`development/stages/`** — urutan build `DEV_STAGE_00` → `DEV_STAGE_11` (+ revisi & addendum)
 - **`development/guides/`** — panduan kerja (hemat token, dll.)
-- **`development/folder-blueprint.md`** — blueprint reorganisasi docs & folderisasi `src/` (masih berjalan: Tahap B menunggu)
+- **`development/folder-blueprint.md`** — blueprint reorganisasi docs & folderisasi `src/` ✅ sudah diimplementasikan penuh
 - **`presentations/samples/`** — contoh deck PPTX & slide (material fitur PPT generator)
 - **`product/PRODUCT_KNOWLEDGE_V2.*`** — versi mutakhir; V1 ada di `reports/` sebagai arsip
 - Root repo: `MASTER_CONTEXT.md` (konteks utama project) & `README_START_HERE.md`
+
+## Kalau Ada Masalah / Bug — Mulai dari Sini
+
+**Aturan untuk AI & manusia:** identifikasi dulu fitur yang bermasalah, lalu buka README modulnya.
+
+1. Baca `src/modules/<fitur>/README.md` — ada 7 modul yang punya README:
+   `templates` · `academic` · `assignments` · `quiz` · `schedule` · `student-portal` · `ai`
+2. README itu berisi: struktur folder, titik masuk logika, halaman pemakai, dan **Gotcha** (termasuk 2 utang lint lama yang sudah diketahui)
+3. Kalau masalahnya bukan kode tapi konsep produk/arsitektur → kembali ke tabel "Ke Mana Mencari" di atas
 
 ## Status Dokumen
 
