@@ -2,7 +2,7 @@ import { prisma } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { getTodayScheduleStreamAction } from "@/modules/schedule/schedule.actions";
-import { TodayScheduleStream } from "@/components/schedule/TodayScheduleStream";
+import { TodayScheduleStream } from "@/modules/schedule/components/TodayScheduleStream";
 import HariIniClient from "./HariIniClient";
 
 export default async function HariIniPage() {

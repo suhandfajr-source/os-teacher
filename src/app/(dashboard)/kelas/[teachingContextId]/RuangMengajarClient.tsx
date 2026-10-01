@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import RosterManager, { RosterItem } from "./RosterManager";
-import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
+import { ScheduleConfigDialog } from "@/modules/schedule/components/ScheduleConfigDialog";
 import {
   BookOpen,
   Calendar,

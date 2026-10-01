@@ -208,5 +208,5 @@ npx vitest run          # unit test
 - [x] Tahap B2 ✅ academic (35 test hijau; catat utang lint lama ProsemGrid)
 - [x] Tahap B3 ✅ assignments (modul belum punya test — typecheck jadi penjaga)
 - [x] Tahap B4 ✅ quiz (40 test hijau)
-- [ ] Tahap B5: schedule (5 pemakai — terbesar)
+- [x] Tahap B5 ✅ schedule (15 test hijau; catat utang lint lama ScheduleConfigDialog)
 - [ ] Tahap B6: (jika disetujui) student & ai-studio

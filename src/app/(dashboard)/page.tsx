@@ -8,7 +8,7 @@ import { BookOpen, Users, Calendar, Sparkles, ArrowRight, Settings } from 'lucid
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { cn } from "@/lib/utils";
 import { getTodayScheduleStreamAction } from "@/modules/schedule/schedule.actions";
-import { TodayScheduleStream } from "@/components/schedule/TodayScheduleStream";
+import { TodayScheduleStream } from "@/modules/schedule/components/TodayScheduleStream";
 
 export default async function DashboardPage() {
   let authContext = null;

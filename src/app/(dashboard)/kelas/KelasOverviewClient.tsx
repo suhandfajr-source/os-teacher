@@ -30,7 +30,7 @@ import {
   KeyRound,
   Copy,
 } from "lucide-react";
-import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
+import { ScheduleConfigDialog } from "@/modules/schedule/components/ScheduleConfigDialog";
 
 interface ContextItem {
   id: string;

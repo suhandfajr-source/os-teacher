@@ -19,7 +19,7 @@ import { requestRevokeTeacherMembership, cancelRevokeTeacherMembershipRequest } 
 import { switchActiveSchool } from "@/modules/teachers/teachers.actions";
 import { toast } from "sonner";
 import { Plus, GraduationCap, Users, School as SchoolIcon, ShieldAlert, ArrowLeftRight, Clock, AlertTriangle } from "lucide-react";
-import { ScheduleConfigDialog } from "@/components/schedule/ScheduleConfigDialog";
+import { ScheduleConfigDialog } from "@/modules/schedule/components/ScheduleConfigDialog";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   TeacherProfile,
