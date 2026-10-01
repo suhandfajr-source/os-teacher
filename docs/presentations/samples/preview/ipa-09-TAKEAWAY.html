@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Slide Preview</title></head>
+<body style="margin:0;"><div xmlns="http://www.w3.org/1999/xhtml" class="root">
+    <style>
+    .root {
+      width: 1280px; height: 720px;
+      position: relative; overflow: hidden;
+      font-family: "Segoe UI", "Poppins", Arial, sans-serif;
+      color: #ffffff;
+      background:
+        radial-gradient(900px 500px at 85% -10%, #10b981 0%, transparent 55%),
+        radial-gradient(700px 600px at -10% 110%, #065f46 0%, transparent 60%),
+        linear-gradient(135deg, #022c22 0%, #065f46 100%);
+      display: flex; flex-direction: column;
+      padding: 48px 64px;
+      box-sizing: border-box;
+    }
+    .root * { box-sizing: border-box; margin: 0; padding: 0; }
+    .blob { position: absolute; border-radius: 50%; pointer-events: none; }
+    .blob-a {
+      width: 420px; height: 420px; top: -160px; right: -120px;
+      background: radial-gradient(circle at 50% 50%, #10b98166 0%, #10b98122 45%, transparent 70%);
+    }
+    .blob-b {
+      width: 460px; height: 460px; bottom: -200px; left: -140px;
+      background: radial-gradient(circle at 50% 50%, #10b98144 0%, #10b98118 45%, transparent 70%);
+    }
+    .deco-layer { position: absolute; inset: 0; pointer-events: none; }
+
+    .topbar { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 3; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(52, 211, 153, 0.16); color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.16);
+      padding: 7px 18px; border-radius: 999px;
+      font-size: 14px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .pageinfo { font-size: 14px; color: #34d399; font-weight: 600; opacity: 0.9; }
+
+    .footer {
+      margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+      font-size: 14px; color: rgba(255,255,255,0.55); position: relative; z-index: 3;
+      border-top: 1px solid rgba(255,255,255,0.12); padding-top: 16px;
+    }
+    .footer b { color: rgba(255,255,255,0.82); font-weight: 700; }
+
+    .kicker {
+      font-size: 17px; font-weight: 700; color: #34d399;
+      letter-spacing: 0.5px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .kicker::before { content: ""; width: 34px; height: 4px; border-radius: 4px; background: #34d399; }
+    .content-area { position: relative; z-index: 3; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    /* Visual side panel (only rendered when the slide has a visual prompt) */
+    .visual-panel {
+      width: 34%; flex-shrink: 0; border-radius: 22px; overflow: hidden;
+      background: linear-gradient(160deg, rgba(52, 211, 153, 0.16) 0%, rgba(255,255,255,0.05) 100%);
+      border: 1.5px solid rgba(255,255,255,0.18);
+      display: flex; flex-direction: column;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.24);
+    }
+    .visual-panel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .visual-fallback { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px 20px; text-align: center; }
+    .visual-icon {
+      width: 64px; height: 64px; border-radius: 20px; font-size: 32px;
+      background: rgba(255,255,255,0.10); border: 1.5px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .visual-label { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #34d399; }
+    .visual-desc { font-size: 13.5px; line-height: 1.5; color: rgba(255,255,255,0.78); }
+
+    .hl { color: #34d399; }
+  
+      .content-area { gap: 24px; }
+      .page-title { font-size: 42px; font-weight: 800; line-height: 1.15; }
+      .take-list { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+      .take-row {
+        background: rgba(255,255,255,0.97); border-radius: 18px; padding: 18px 24px;
+        display: flex; align-items: center; gap: 16px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.22); border-left: 6px solid #34d399;
+      }
+      .take-star { font-size: 24px; flex-shrink: 0; }
+      .take-text { color: #052e21; font-size: 19px; font-weight: 600; line-height: 1.45; flex: 1; }
+      .take-num { font-size: 15px; font-weight: 800; color: #10b981; opacity: 0.55; }
+    </style>
+    
+        <div class="deco-layer">
+          <div class="blob" style="border: 1.5px solid rgba(255,255,255,0.10); background: transparent; width: 170px; height: 170px; top: 140px; right: 100px;"></div>
+          <div class="blob" style="width: 90px; height: 90px; bottom: 150px; right: 280px; background: radial-gradient(circle at 35% 35%, #10b98188, transparent 75%);"></div>
+        </div>
+    
+    <div class="topbar">
+      <span class="badge">🔬 Rangkuman</span>
+      <span class="pageinfo">Slide 9 / 9</span>
+    </div>
+    <div class="content-area">
+      <div>
+        <div class="kicker">⭐ Rangkuman Inti</div>
+        <h1 class="page-title">Rangkuman Inti</h1>
+      </div>
+      <div class="take-list">
+      <div class="take-row">
+        <div class="take-star">⭐</div>
+        <div class="take-text">Darah terdiri atas plasma, eritrosit, leukosit, dan trombosit</div>
+        <div class="take-num">1</div>
+      </div>
+      <div class="take-row">
+        <div class="take-star">⭐</div>
+        <div class="take-text">Peredaran besar mengalirkan darah ke seluruh tubuh, kecil ke paru-paru</div>
+        <div class="take-num">2</div>
+      </div>
+      <div class="take-row">
+        <div class="take-star">⭐</div>
+        <div class="take-text">Gaya hidup sehat menjaga jantung bekerja optimal</div>
+        <div class="take-num">3</div>
+      </div></div>
+    </div>
+    <div class="footer"><span>🏫 <b>SMP Negeri 1 Contoh</b> <span style='opacity:.5'>·</span> <b>Kelas VIII-B</b></span><span>👨‍🏫 <b>Bapak Guru</b> <span style='opacity:.5'>·</span> <b>IPA</b></span></div></div></body>
+</html>

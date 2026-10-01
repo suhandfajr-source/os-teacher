@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Sample Slide Adaptive</title>
+<style>
+  :root {
+    --font-head: 'Segoe UI', 'Poppins', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1280px; height: 720px; overflow: hidden; font-family: var(--font-head); }
+
+  /* ============ THEMES ============ */
+  .theme-ipa {
+    --bg1: #022c22; --bg2: #065f46; --bg3: #10b981;
+    --accent: #34d399; --accent-soft: rgba(52, 211, 153, .16);
+    --card: rgba(255,255,255,.97); --ink: #052e21; --ink2: #3d6b5c;
+    --badge-bg: rgba(52,211,153,.2); --badge-ink: #a7f3d0;
+  }
+  .theme-mtk {
+    --bg1: #1e1b4b; --bg2: #3730a3; --bg3: #6366f1;
+    --accent: #a5b4fc; --accent-soft: rgba(165, 180, 252, .16);
+    --card: rgba(255,255,255,.97); --ink: #1e1b4b; --ink2: #4b4b83;
+    --badge-bg: rgba(165,180,252,.2); --badge-ink: #c7d2fe;
+  }
+  .theme-bindo {
+    --bg1: #431407; --bg2: #9a3412; --bg3: #f97316;
+    --accent: #fdba74; --accent-soft: rgba(253, 186, 116, .16);
+    --card: rgba(255,255,255,.97); --ink: #431407; --ink2: #8a5a44;
+    --badge-bg: rgba(253,186,116,.2); --badge-ink: #fed7aa;
+  }
+
+  .slide {
+    width: 1280px; height: 720px; position: relative;
+    background:
+      radial-gradient(900px 500px at 85% -10%, var(--bg3) 0%, transparent 55%),
+      radial-gradient(700px 600px at -10% 110%, var(--bg2) 0%, transparent 60%),
+      linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
+    color: #fff; padding: 48px 64px; display: flex; flex-direction: column;
+  }
+
+  /* dekorasi tema */
+  .deco { position: absolute; opacity: .5; pointer-events: none; }
+  .deco-blob { width: 340px; height: 340px; border-radius: 50%; filter: blur(60px); background: var(--bg3); opacity: .35; }
+  .blob1 { top: -120px; right: -60px; }
+  .blob2 { bottom: -140px; left: -80px; opacity: .25; }
+
+  /* header */
+  .topbar { display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--badge-bg); color: var(--badge-ink);
+    border: 1px solid var(--accent-soft);
+    padding: 7px 18px; border-radius: 999px;
+    font-size: 14px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .pageinfo { font-size: 14px; color: var(--accent); font-weight: 600; opacity: .9; }
+
+  /* judul */
+  .titleblock { margin-top: 34px; z-index: 2; }
+  .kicker { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: .5px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px;}
+  .kicker::before { content: ""; width: 34px; height: 4px; border-radius: 4px; background: var(--accent); display: inline-block; }
+  h1 { font-size: 52px; line-height: 1.12; font-weight: 800; letter-spacing: -.5px; }
+  h1 .hl { color: var(--accent); }
+  .subtitle { margin-top: 12px; font-size: 19px; color: rgba(255,255,255,.75); max-width: 760px; line-height: 1.5; }
+
+  /* cards */
+  .cards { display: flex; gap: 24px; margin-top: 44px; z-index: 2; flex: 1; }
+  .card {
+    flex: 1; background: var(--card); border-radius: 22px; padding: 28px 26px;
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 18px 40px rgba(0,0,0,.28);
+    border-top: 6px solid var(--bg3);
+  }
+  .icon {
+    width: 58px; height: 58px; border-radius: 16px; font-size: 30px;
+    background: var(--accent-soft); display: flex; align-items: center; justify-content: center;
+  }
+  .card h3 { color: var(--ink); font-size: 22px; font-weight: 800; line-height: 1.25; }
+  .card p { color: var(--ink2); font-size: 15.5px; line-height: 1.55; }
+  .card .num { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--bg3); background: var(--accent-soft); width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+  /* footer */
+  .footer {
+    margin-top: 26px; display: flex; justify-content: space-between; align-items: center;
+    font-size: 14px; color: rgba(255,255,255,.55); z-index: 2;
+    border-top: 1px solid rgba(255,255,255,.12); padding-top: 16px;
+  }
+  .footer b { color: rgba(255,255,255,.8); }
+
+  /* dekorasi geometris MTK */
+  .geo { position: absolute; border: 2px solid rgba(255,255,255,.14); }
+  .geo.circle { border-radius: 50%; width: 120px; height: 120px; top: 130px; right: 90px; }
+  .geo.tri { width: 0; height: 0; border: none; border-left: 45px solid transparent; border-right: 45px solid transparent; border-bottom: 80px solid rgba(255,255,255,.12); bottom: 110px; right: 210px; transform: rotate(18deg); }
+  .geo.square { width: 70px; height: 70px; top: 200px; right: 300px; transform: rotate(24deg); }
+  .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px); background-size: 44px 44px; }
+</style>
+</head>
+<body class="theme-mtk">
+  <div class="slide">
+    <div class="grid-bg" id="gridbg"></div>
+    <div class="deco deco-blob blob1"></div>
+    <div class="deco deco-blob blob2"></div>
+    <div id="geoWrap"></div>
+
+    <div class="topbar">
+      <span class="badge" id="badge">📘 Matematika · Materi Inti</span>
+      <span class="pageinfo">Slide 4 / 8</span>
+    </div>
+
+    <div class="titleblock">
+      <div class="kicker" id="kicker">Konsep Kunci Hari Ini</div>
+      <h1 id="title">Bilangan Bulat: <span class="hl">Tiga Pilar</span> yang Wajib Dikuasai</h1>
+      <div class="subtitle" id="subtitle">Sebelum berlatih soal, pastikan kamu memahami tiga fondasi berikut — semuanya akan terus dipakai sampai materi aljabar.</div>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="icon" id="ic1">➕</div>
+          <span class="num">1</span>
+        </div>
+        <h3 id="c1t">Positif, Negatif & Nol</h3>
+        <p id="c1p">Bilangan bulat mencakup nilai di kiri dan kanan nol. Tanda (±) menentukan arah dan makna nilai.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="icon" id="ic2">📏</div>
+          <span class="num">2</span>
+        </div>
+        <h3 id="c2t">Garis Bilangan</h3>
+        <p id="c2p">Alat visual paling ampuh: makin ke kanan makin besar. Semua perbandingan menjadi mudah dibaca.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:flex-start;">
+          <div class="icon" id="ic3">🧮</div>
+          <span class="num">3</span>
+        </div>
+        <h3 id="c3t">Operasi Hitung</h3>
+        <p id="c3p">Penjumlahan, pengurangan, dan aturan tanda perkalian/pembagian — kunci pengerjaan soal cerita.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>🏫 <b id="school">SMP Negeri 1 Contoh</b> · Kelas <b id="kelas">VII-A</b></span>
+      <span>👨‍🏫 <b id="guru">Bapak Guru</b> · <b id="mapel2">Matematika</b></span>
+    </div>
+  </div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const theme = params.get("theme") || "mtk";
+  document.body.className = "theme-" + theme;
+  document.getElementById("gridbg").style.display = theme === "mtk" ? "block" : "none";
+
+  const DATA = {
+    ipa: {
+      badge: "🔬 IPA · Materi Inti", kicker: "Proses Penting dalam Tumbuhan",
+      title: 'Fotosintesis: <span class="hl">Dapur Hijau</span> Sang Tumbuhan',
+      subtitle: "Bagaimana tumbuhan mengubah cahaya matahari menjadi makanan? Pahami tiga bahan utama resep ajaib ini.",
+      school: "SMP Negeri 1 Contoh", kelas: "VII-A", guru: "Ibu Guru", mapel2: "IPA",
+      ic: ["☀️", "🍃", "💧"],
+      cards: [
+        ["Cahaya Matahari", "Sumber energi utama. Tanpa cahaya, resep makanan tumbuhan tidak akan pernah dimasak."],
+        ["Klorofil (Daun Hijau)", "Si 'juru masak' di dalam daun yang menangkap energi cahaya dan mengubahnya jadi gula."],
+        ["Air & Karbon Dioksida", "Bahan mentah dari akar dan udara yang diolah menjadi glukosa dan oksigen."],
+      ],
+    },
+    mtk: {
+      badge: "📘 Matematika · Materi Inti", kicker: "Konsep Kunci Hari Ini",
+      title: 'Bilangan Bulat: <span class="hl">Tiga Pilar</span> yang Wajib Dikuasai',
+      subtitle: "Sebelum berlatih soal, pastikan kamu memahami tiga fondasi berikut — semuanya terus dipakai sampai aljabar.",
+      school: "SMP Negeri 1 Contoh", kelas: "VII-A", guru: "Bapak Guru", mapel2: "Matematika",
+      ic: ["➕", "📏", "🧮"],
+      cards: [
+        ["Positif, Negatif & Nol", "Bilangan bulat mencakup nilai di kiri dan kanan nol. Tanda (±) menentukan arah dan makna."],
+        ["Garis Bilangan", "Alat visual paling ampuh: makin ke kanan makin besar. Perbandingan jadi mudah dibaca."],
+        ["Operasi Hitung", "Aturan tanda penjumlahan hingga perkalian — kunci pengerjaan soal cerita."],
+      ],
+    },
+    bindo: {
+      badge: "📖 B. Indonesia · Materi Inti", kicker: "Menyelami Teks Cerita",
+      title: 'Teks Anekdot: <span class="hl">Tiga Kunci</span> Humor yang Cerdas',
+      subtitle: "Anekdot bukan sekadar lelucon — ada kritik sosial yang tersembunyi di balik tawanya. Kenali unsur pembentuknya.",
+      school: "SMP Negeri 1 Contoh", kelas: "X-2", guru: "Ibu Guru", mapel2: "Bahasa Indonesia",
+      ic: ["😄", "🧩", "💡"],
+      cards: [
+        ["Lelucon (Humor)", "Pemicu tawa yang membuat cerita ringan, mengalir, dan menyenangkan untuk diikuti."],
+        ["Struktur Cerita", "Abstraksi → orientasi → krisis → reaksi → koda. Kerangka yang menopang alur cerita."],
+        ["Kritik Halus", "Pesan dan sindiran sosial yang terselubung — jiwa sejati dari sebuah anekdot."],
+      ],
+    },
+  }[theme];
+
+  document.getElementById("badge").textContent = DATA.badge;
+  document.getElementById("kicker").textContent = DATA.kicker;
+  document.getElementById("title").innerHTML = DATA.title;
+  document.getElementById("subtitle").textContent = DATA.subtitle;
+  document.getElementById("school").textContent = DATA.school;
+  document.getElementById("kelas").textContent = DATA.kelas;
+  document.getElementById("guru").textContent = DATA.guru;
+  document.getElementById("mapel2").textContent = DATA.mapel2;
+  document.getElementById("ic1").textContent = DATA.ic[0];
+  document.getElementById("ic2").textContent = DATA.ic[1];
+  document.getElementById("ic3").textContent = DATA.ic[2];
+  document.getElementById("c1t").textContent = DATA.cards[0][0];
+  document.getElementById("c1p").textContent = DATA.cards[0][1];
+  document.getElementById("c2t").textContent = DATA.cards[1][0];
+  document.getElementById("c2p").textContent = DATA.cards[1][1];
+  document.getElementById("c3t").textContent = DATA.cards[2][0];
+  document.getElementById("c3p").textContent = DATA.cards[2][1];
+
+  // dekorasi geometri khusus MTK
+  if (theme === "mtk") {
+    document.getElementById("geoWrap").innerHTML =
+      '<div class="geo circle"></div><div class="geo tri"></div><div class="geo square"></div>';
+  }
+  // dekorasi daun untuk IPA (bola hijau lembut)
+  if (theme === "ipa") {
+    document.getElementById("geoWrap").innerHTML =
+      '<div class="geo circle" style="border-color:rgba(255,255,255,.1); top:150px; right:100px; width:150px; height:150px;"></div>';
+  }
+</script>
+</body>
+</html>

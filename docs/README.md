@@ -19,6 +19,7 @@
 - **`development/stages/`** — urutan build `DEV_STAGE_00` → `DEV_STAGE_11` (+ revisi & addendum)
 - **`development/guides/`** — panduan kerja (hemat token, dll.)
 - **`development/folder-blueprint.md`** — blueprint reorganisasi docs & folderisasi `src/` (masih berjalan: Tahap B menunggu)
+- **`presentations/samples/`** — contoh deck PPTX & slide (material fitur PPT generator)
 - **`product/PRODUCT_KNOWLEDGE_V2.*`** — versi mutakhir; V1 ada di `reports/` sebagai arsip
 - Root repo: `MASTER_CONTEXT.md` (konteks utama project) & `README_START_HERE.md`
 
