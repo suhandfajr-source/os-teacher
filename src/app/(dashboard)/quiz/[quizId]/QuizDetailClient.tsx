@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import {
   QuestionListEditor,
   EditableQuestion,
-} from "@/components/quiz/QuestionListEditor";
+} from "@/modules/quiz/components/QuestionListEditor";
 import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw, Download, CircleAlert } from "lucide-react";
 import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
 import { exportQuizRecapToExcel } from "@/lib/export/quiz-recap-exporter";

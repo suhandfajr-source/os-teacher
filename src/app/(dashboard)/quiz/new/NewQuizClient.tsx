@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import {
   QuestionListEditor,
   EditableQuestion as SharedEditableQuestion,
-} from "@/components/quiz/QuestionListEditor";
+} from "@/modules/quiz/components/QuestionListEditor";
 import { createQuizAction } from "@/modules/quiz/quiz.actions";
 import {
   convertDocumentToQuizAction,
