@@ -85,7 +85,8 @@ describe("Stage 09 Import Engine — Real PostgreSQL-Backed Concurrency & Atomic
       });
       teachingContextId = context.id;
       dbAvailable = true;
-    } catch {
+    } catch (err) {
+      if (process.env.DATABASE_URL) throw err; // VG-Other (fail-loud): DB dikonfigurasi tapi tak terjangkau — vakum-pass dilarang
       dbAvailable = false;
     }
   });

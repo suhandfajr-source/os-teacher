@@ -120,6 +120,7 @@ describe("Story 2 Deep Integration & Adversarial Audit (Real Database Testing)",
       dbAvailable = true;
     } catch (err) {
       console.warn("Real database not accessible for integration test, skipping:", err);
+      if (process.env.DATABASE_URL) throw err; // VG-Other (fail-loud): DB dikonfigurasi tapi tak terjangkau — vakum-pass dilarang
       dbAvailable = false;
     }
   });

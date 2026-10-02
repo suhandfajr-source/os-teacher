@@ -129,8 +129,6 @@ export interface PendingStudentView {
   fullName: string;
   nis: string | null;
   birthDate?: string | null;
-  birthDateConflict?: boolean;
-  conflictBirthDates?: string | null;
   classId: string;
   className: string;
   academicPeriodId: string;
@@ -148,8 +146,6 @@ function toPendingView(
       fullName: string;
       nis: string | null;
       birthDate?: string | null;
-      birthDateConflict?: boolean;
-      conflictBirthDates?: string | null;
       accountRequestedAt: Date | null;
     };
     class: { id: string; name: string };
@@ -163,8 +159,6 @@ function toPendingView(
     fullName: row.student.fullName,
     nis: row.student.nis,
     birthDate: row.student.birthDate ?? null,
-    birthDateConflict: row.student.birthDateConflict ?? false,
-    conflictBirthDates: row.student.conflictBirthDates ?? null,
     classId: row.class.id,
     className: row.class.name,
     academicPeriodId: row.academicPeriod.id,
@@ -183,8 +177,6 @@ const PENDING_INCLUDE = {
       fullName: true,
       nis: true,
       birthDate: true,
-      birthDateConflict: true,
-      conflictBirthDates: true,
       accountRequestedAt: true,
       status: true,
       accountStatus: true,
@@ -312,8 +304,6 @@ export async function approveStudentAction(studentId: string) {
           approvedById: session.user.id,
           approvedAt: new Date(),
           accountRequestedAt: null, // F2
-          birthDateConflict: false,
-          conflictBirthDates: null,
         },
       });
       if (updated.count !== 1) return null;
@@ -481,8 +471,6 @@ export async function batchApproveStudentsAction(studentIds: string[]) {
             approvedById: session.user.id,
             approvedAt: new Date(),
             accountRequestedAt: null,
-            birthDateConflict: false,
-            conflictBirthDates: null,
           },
         });
 
@@ -770,9 +758,79 @@ export async function resetStudentPinAction(studentId: string, newPin: string) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Notifikasi — badge feed header dashboard (OQ-3)
-// ---------------------------------------------------------------------------
+/**
+ * Cabut akses portal siswa (#4 code review 2026-09-27, disetujui user 2026-10-02):
+ * HANYA pengampu rombel siswa — kuasa identik resetStudentPinAction (B2).
+ * Efek: accountStatus → REJECTED (terminal state machine existing; badge UI
+ * "Ditolak Guru (Akses Ditutup)" sudah ada) + rotasi pinUpdatedAt menghanguskan
+ * sesi aktif (F3) + hygiene lockout. Data akademik (nilai/tugas/presensi) utuh.
+ * Jalur pulih: siswa daftar ulang dengan PIN lama (G-1) → PENDING → guru setujui.
+ */
+export async function revokeStudentAccessAction(studentId: string) {
+  const { session, profile, activeSchoolId } = await verifyActiveSchoolMembership();
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const student = await tx.student.findFirst({
+        where: { id: studentId, schoolId: activeSchoolId },
+        select: { id: true, accountStatus: true, accessPinHash: true },
+      });
+      if (!student) return { ok: false as const };
+
+      // B2: kuasa = pengampu rombel siswa (periode row terkait).
+      const enrollment = await getStudentEnrollment(studentId, null, tx);
+      let authorized = false;
+      if (enrollment) {
+        authorized = await isPengampuRombel(profile.id, enrollment.classId, enrollment.academicPeriodId);
+      }
+      if (!authorized) return { ok: false as const };
+
+      // Tanpa PIN = belum punya akses portal; REJECTED = akses sudah tertutup.
+      if (!student.accessPinHash) return { ok: false as const, noAccess: true as const };
+      if (student.accountStatus === "REJECTED") return { ok: false as const, already: true as const };
+
+      const now = new Date();
+      const updated = await tx.student.updateMany({
+        where: { id: studentId, accountStatus: { not: "REJECTED" } },
+        data: {
+          accountStatus: "REJECTED",
+          pinUpdatedAt: now, // F3 — sesi aktif siswa hangus seketika
+          failedAttempts: 0,
+          lockedUntil: null,
+          accountRequestedAt: null,
+        },
+      });
+      if (updated.count !== 1) return { ok: false as const };
+
+      await writeAudit(tx, {
+        actorType: "USER",
+        actorId: session.user.id,
+        action: "STUDENT_ACCESS_REVOKED",
+        targetType: "STUDENT",
+        targetId: studentId,
+        metadata: {
+          previousStatus: student.accountStatus,
+          classId: enrollment?.classId ?? null,
+        },
+      });
+
+      return { ok: true as const };
+    });
+
+    if (!result.ok) {
+      if ("noAccess" in result && result.noAccess) {
+        return { success: false, message: "Siswa ini belum melakukan registrasi mandiri (tidak ada akses untuk dicabut)." };
+      }
+      if ("already" in result && result.already) {
+        return { success: false, message: "Akses siswa ini sudah dalam keadaan dicabut." };
+      }
+      return { success: false, message: GENERIC_ACTION_ERROR };
+    }
+    return { success: true };
+  } catch {
+    return { success: false, message: GENERIC_ACTION_ERROR };
+  }
+}
 
 export async function getMyNotificationsAction() {
   const { session } = await verifyActiveSchoolMembership();

@@ -118,3 +118,68 @@ describe("Story 8 — isSubmissionLate (computed)", () => {
     expect(isSubmissionLate(new Date("2030-01-01T00:00:00Z"), undefined)).toBe(false);
   });
 });
+describe("Story 1 — validateSubmissionInput dengan kanal file", () => {
+  const fileA = {
+    storageKey: "submissions/tmp/0e5e1e96-9bd6-4a8e-a108-4b0e7dd41111.jpg",
+    name: "jawaban.jpg",
+    mimeType: "image/jpeg",
+    sizeBytes: 2048,
+  };
+
+  it("HAPPY: file saja → ok (tanpa teks/link)", () => {
+    const res = validateSubmissionInput({ files: [fileA] });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.textContent).toBeNull();
+      expect(res.linkUrl).toBeNull();
+      expect(res.files).toHaveLength(1);
+      expect(res.files?.[0].name).toBe("jawaban.jpg");
+    }
+  });
+
+  it("files undefined + kosong semua → error menyebut file", () => {
+    const res = validateSubmissionInput({});
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("file");
+  });
+
+  it("files: [] + kosong semua → error (set kosong bukan jawaban)", () => {
+    expect(validateSubmissionInput({ files: [] }).ok).toBe(false);
+  });
+
+  it("file terblokir di daftar → error blocklist", () => {
+    const res = validateSubmissionInput({
+      files: [{ ...fileA, name: "makro.docm", mimeType: "application/msword" }],
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("docm");
+  });
+
+  it("lebih dari 5 file → error jumlah", () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      ...fileA,
+      name: `f${i}.jpg`,
+    }));
+    const res = validateSubmissionInput({ files: many });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("5 file");
+  });
+
+  it("file kebesaran (>25MB) → error ukuran", () => {
+    const res = validateSubmissionInput({
+      files: [{ ...fileA, sizeBytes: 26 * 1024 * 1024 }],
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("25 MB");
+  });
+
+  it("teks + file bersamaan → ok keduanya", () => {
+    const res = validateSubmissionInput({ textContent: "lihat foto", files: [fileA] });
+    expect(res.ok).toBe(true);
+  });
+
+  it("perilaku lama tetap: files undefined tidak divalidasi list", () => {
+    // Regresi Story 8 — input tanpa files tidak boleh rusak
+    expect(validateSubmissionInput({ textContent: "x" }).ok).toBe(true);
+  });
+});

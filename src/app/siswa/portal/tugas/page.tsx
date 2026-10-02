@@ -3,7 +3,7 @@ import { verifyStudentSession } from "@/modules/student-auth/student-session";
 import { prisma } from "@/lib/auth";
 import { ClipboardList, Clock, BookOpen, AlertCircle } from "lucide-react";
 import { SubmitAssignmentForm } from "@/modules/student-portal/components/SubmitAssignmentForm";
-import { isSubmissionLate, type StudentSubmissionView } from "@/modules/assignments/submission.service";
+import { isSubmissionLate, isPreviewable, type StudentSubmissionView } from "@/modules/assignments/submission.service";
 
 export default async function StudentAssignmentsPage() {
   const session = await verifyStudentSession();
@@ -48,6 +48,7 @@ export default async function StudentAssignmentsPage() {
         },
         submissions: {
           where: { studentId: session.studentId },
+          include: { files: true },
         },
       },
       orderBy: [
@@ -120,6 +121,14 @@ export default async function StudentAssignmentsPage() {
                         status: item.submissions[0].status,
                         textContent: item.submissions[0].textContent,
                         linkUrl: item.submissions[0].linkUrl,
+                        files: item.submissions[0].files.map(
+                          (f: { id: string; originalName: string; mimeType: string; sizeBytes: number }) => ({
+                          id: f.id,
+                          originalName: f.originalName,
+                          mimeType: f.mimeType,
+                          sizeBytes: f.sizeBytes,
+                          isPreviewable: isPreviewable(f.mimeType),
+                        })),
                         feedback: item.submissions[0].feedback,
                         score: item.submissions[0].score,
                         submittedAt: item.submissions[0].submittedAt.toISOString(),

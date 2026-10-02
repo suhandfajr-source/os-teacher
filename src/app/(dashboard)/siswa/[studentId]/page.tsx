@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { EditStudentDialog } from "./EditStudentDialog";
 import { ResetStudentPinDialog } from "./ResetStudentPinDialog";
+import { RevokeStudentAccessDialog } from "./RevokeStudentAccessDialog";
 
 export default async function SiswaDetailPage({
   params,
@@ -118,6 +119,14 @@ export default async function SiswaDetailPage({
                   nis: student.nis,
                 }}
               />
+              {(student.accountStatus === "ACTIVE" ||
+                (student.accountStatus === "PENDING" && student.accessPinHash)) && (
+                <RevokeStudentAccessDialog
+                  studentId={student.id}
+                  studentName={student.fullName}
+                  nis={student.nis}
+                />
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pt-2">

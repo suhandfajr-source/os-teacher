@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import {
   validateReviewInput,
   isSubmissionLate,
+  isPreviewable,
   type TeacherQueueItem,
 } from "@/modules/assignments/submission.service";
 
@@ -82,7 +83,10 @@ export async function getSubmissionQueueAction(
 
   const rows = await prisma.assignmentSubmission.findMany({
     where: { assignmentId },
-    include: { student: { select: { fullName: true, nis: true } } },
+    include: {
+      student: { select: { fullName: true, nis: true } },
+      files: true,
+    },
     orderBy: [
       // "desc" pada enum mengandalkan urutan leksikografis: SUBMITTED > REVIEWED,
       // sehingga antrean menunggu-koreksi selalu di atas. Jika enum bertambah
@@ -100,6 +104,13 @@ export async function getSubmissionQueueAction(
     status: r.status,
     textContent: r.textContent,
     linkUrl: r.linkUrl,
+    files: r.files.map((f) => ({
+      id: f.id,
+      originalName: f.originalName,
+      mimeType: f.mimeType,
+      sizeBytes: f.sizeBytes,
+      isPreviewable: isPreviewable(f.mimeType),
+    })),
     feedback: r.feedback,
     score: r.score,
     submittedAt: r.submittedAt.toISOString(),

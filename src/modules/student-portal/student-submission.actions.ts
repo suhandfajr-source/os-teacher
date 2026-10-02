@@ -6,17 +6,49 @@ import { revalidatePath } from "next/cache";
 import {
   validateSubmissionInput,
   isSubmissionLate,
+  isPreviewable,
   type StudentSubmissionView,
+  type SubmissionFileInput,
 } from "@/modules/assignments/submission.service";
+import {
+  headObjectSize,
+  deleteObjects,
+  isClaimableSubmissionKey,
+  isStorageConfigured,
+} from "@/modules/storage/storage.service";
+
+function toFileView(f: {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+}): StudentSubmissionView["files"][number] {
+  return {
+    id: f.id,
+    originalName: f.originalName,
+    mimeType: f.mimeType,
+    sizeBytes: f.sizeBytes,
+    isPreviewable: isPreviewable(f.mimeType),
+  };
+}
 
 /**
  * Story 8 — action submit tugas dari portal siswa (teks/tautan).
- * Identitas selalu dari sesi siswa; tugas wajib ACTIVE & berada di rombel
- * periode aktif siswa. Resubmit hanya selama status SUBMITTED.
+ * Story 1 — + kanal file: upload presign terpisah, di sini file DIKLAIM:
+ * re-validasi server, HEAD-check ukuran objek, lalu replace atomik row +
+ * hapus objek lama (K7). Identitas selalu dari sesi siswa; tugas wajib
+ * ACTIVE & berada di rombel periode aktif siswa. Resubmit hanya selama
+ * status SUBMITTED.
  */
 export async function submitAssignmentAction(
   assignmentId: string,
-  input: { textContent?: string; linkUrl?: string }
+  input: {
+    textContent?: string;
+    linkUrl?: string;
+    files?: SubmissionFileInput[];
+    /** Id file existing yang dipertahankan saat replace (siswa edit jawaban). */
+    keepFileIds?: string[];
+  }
 ): Promise<{ success: boolean; error?: string; submission?: StudentSubmissionView }> {
   try {
     const session = await verifyStudentSession();
@@ -79,6 +111,47 @@ export async function submitAssignmentAction(
     }
 
     const now = new Date();
+
+    // Story 1 — klaim file SEBELUM tulis DB: key harus keluaran presign kita
+    // (prefix tmp), objek benar-benar ada, ukurannya jujur, dan tak duplikat (E5).
+    let fileRows: Array<{
+      storageKey: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+    }> = [];
+    if (validation.files) {
+      if (validation.files.length > 0 && !isStorageConfigured()) {
+        return { success: false, error: "Penyimpanan file belum dikonfigurasi." };
+      }
+      const seenKeys = new Set<string>();
+      for (const f of validation.files) {
+        if (seenKeys.has(f.storageKey)) {
+          return { success: false, error: "Terdapat duplikasi file dalam lampiran." };
+        }
+        seenKeys.add(f.storageKey);
+        if (!isClaimableSubmissionKey(f.storageKey)) {
+          return { success: false, error: `File "${f.name}" belum terunggah dengan benar.` };
+        }
+        const actualSize = await headObjectSize(f.storageKey);
+        if (actualSize == null) {
+          return {
+            success: false,
+            error: `File "${f.name}" belum selesai terunggah — coba lagi.`,
+          };
+        }
+        if (actualSize !== f.sizeBytes || actualSize > 25 * 1024 * 1024) {
+          return { success: false, error: `Ukuran file "${f.name}" tidak sesuai.` };
+        }
+        fileRows.push({
+          storageKey: f.storageKey,
+          originalName: f.name,
+          mimeType: f.mimeType,
+          sizeBytes: f.sizeBytes,
+        });
+      }
+    }
+
     // Guard race: update hanya bila masih SUBMITTED — review guru yang mendarat
     // di antara cek dan tulis tidak boleh tertimpa jadi SUBMITTED lagi.
     const updated = await prisma.assignmentSubmission.updateMany({
@@ -125,6 +198,48 @@ export async function submitAssignmentAction(
       return { success: false, error: "Gagal menyimpan jawaban. Coba lagi." };
     }
 
+    // Story 1 — replace set file bila dikirim (undefined = pertahankan semua).
+    // keepFileIds: id file lama yang tetap dipakai; sisanya dihapus (K7).
+    // Delete SELEKTIF + insert hanya file baru → id file lama stabil (E13),
+    // link yang sedang dibuka guru/siswa tidak berubah jadi 404.
+    // Objek dihapus SETELAH commit — kegagalan hapus hanya orphan (di-log),
+    // bukan kegagalan submit.
+    let currentFiles = await prisma.submissionFile.findMany({
+      where: { submissionId: saved.id },
+    });
+    if (validation.files !== undefined) {
+      const keepIds = new Set(input.keepFileIds ?? []);
+      // Hanya id milik submission ini yang sah dipertahankan — id asing no-op.
+      const keptRows = currentFiles.filter((f) => keepIds.has(f.id));
+      const removedRows = currentFiles.filter((f) => !keepIds.has(f.id));
+
+      // Guard jumlah GABUNGAN (BH1): maks 5 file per submission — server-side.
+      if (keptRows.length + fileRows.length > 5) {
+        return {
+          success: false,
+          error: `Maksimal 5 file per pengumpulan (dipertahankan ${keptRows.length} + baru ${fileRows.length}).`,
+        };
+      }
+
+      await prisma.$transaction([
+        prisma.submissionFile.deleteMany({
+          where: { submissionId: saved.id, id: { notIn: keptRows.map((f) => f.id) } },
+        }),
+        prisma.submissionFile.createMany({
+          data: fileRows.map((f) => ({ ...f, submissionId: saved.id })),
+        }),
+      ]);
+      currentFiles = await prisma.submissionFile.findMany({
+        where: { submissionId: saved.id },
+      });
+      const removedKeys = removedRows.map((f) => f.storageKey);
+      if (removedKeys.length > 0) {
+        deleteObjects(removedKeys).catch((e) =>
+          console.error("[submitAssignmentAction] gagal hapus objek lama:", e)
+        );
+      }
+    }
+
     revalidatePath("/siswa/portal/tugas");
 
     return {
@@ -135,6 +250,7 @@ export async function submitAssignmentAction(
         status: saved.status,
         textContent: saved.textContent,
         linkUrl: saved.linkUrl,
+        files: currentFiles.map(toFileView),
         feedback: saved.feedback,
         score: saved.score,
         submittedAt: saved.submittedAt.toISOString(),
@@ -165,6 +281,7 @@ export async function getStudentSubmissionStatusAction(
       where: {
         assignmentId_studentId: { assignmentId, studentId: session.studentId },
       },
+      include: { files: true },
     });
 
     if (!submission) {
@@ -184,6 +301,7 @@ export async function getStudentSubmissionStatusAction(
         status: submission.status,
         textContent: submission.textContent,
         linkUrl: submission.linkUrl,
+        files: submission.files.map(toFileView),
         feedback: submission.feedback,
         score: submission.score,
         submittedAt: submission.submittedAt.toISOString(),

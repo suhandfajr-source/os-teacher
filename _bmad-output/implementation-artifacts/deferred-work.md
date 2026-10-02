@@ -43,38 +43,38 @@
 # Review 1c pass 1 — defer entries (2026-09-20)
 
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/1c-allowlist-seeder-superadmin.md`
-  summary: Putuskan field `engines` di package.json (mis. `node >= 20.12` — syarat `--env-file-if-exists` script seed) — kebijakan manifest seluruh app, bukan keputusan seeder sendirian; sementara ini terdokumentasi di `.env.example` + header CLI.
-  evidence: VG-other5 review 1c; tanpa engines, Node 18–20.11 mati "bad option" tanpa penjelasan.
+  summary: [SETTLED 2026-10-02] Field `engines` dipasang: `"node": ">=20.12"` di package.json (syarat `--env-file-if-exists` script seed).
+  evidence: Patch 2026-10-02; Node 18–20.11 kini terblokir jelas oleh npm sebelum script jalan.
 
 # Review Story 5 pass 1 — defer entries (2026-09-23)
 
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
-  summary: BH-6 — Eksplorasi AuditLog per-aktor dari konsol admin (link berfilter konsol→viewer) belum ada; admin harus menyalin cuid manual.
-  evidence: Viewer sudah berfilter aktor/aksi/target (dipakai index N4), tetapi tidak ada tautan navigasi dari baris konsol user/sekolah ke `/admin/audit?actorId=...`; peningkatan UX di luar kontrak viewer.
+  summary: [SETTLED 2026-10-02] BH-6 — Tombol "Audit" di baris guru tab Guru konsol admin → `/admin/audit?actorId={userId}` (tab baru); viewer sudah berfilter aktor sejak awal.
+  evidence: Patch AdminConsoleClient 2026-10-02; deep-link filter actorId terverifikasi.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
-  summary: BH-12 — Polish NotificationBell: mark-read saat dropdown ditutup (bukan dibuka), polling ringan, dan render `payload.link` sebagai navigasi.
-  evidence: Fungsionalitas inti (aggregate per aksi + badge unread via index G-10) terpenuhi dan teruji; tiga poin ini polish UX tanpa kontrak frozen.
+  summary: [SETTLED 2026-10-02] BH-12 — NotificationBell: mark-read saat dropdown DITUTUP (klik luar/tombol Tutup/item link), polling ringan 60s (skip saat tab hidden), payload.link dirender sebagai navigasi.
+  evidence: Rewrite NotificationBell.tsx 2026-10-02; fungsionalitas inti (badge unread) tak berubah.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
-  summary: BH-16 — FK `notification.schoolId` belum ber-index; butuh migrasi aditif tambahan.
-  evidence: Tidak ada consumer yang mem-query notification per-sekolah saat ini (semua baca per-user via index `[userId, readAt]`); bundle-kan indeks dengan migrasi berikutnya yang menyentuh notifikasi.
+  summary: [SETTLED 2026-10-02] BH-16 — FK `notification.schoolId` kini ber-index via migrasi `20261002151829_notification_school_idx` (Neon up-to-date, verify:migrations exit 0).
+  evidence: Migrasi aditif diterapkan 2026-10-02.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
-  summary: VG-Other-2 — Flag `dbAvailable` pada int test tidak me-skip body `it` (kegagalan DB = loud assertion failures, bukan clean skip).
-  evidence: Pola `beforeAll` try/catch + flag hanya dikonsultasi di sebagian tempat; hygiene test-harness lintas file; kegagalan bersifat loud sehingga tidak menyembunyikan regresi.
+  summary: [SETTLED 2026-10-02 — test-infra lintas-suite] Fail-loud anti vakum-pass: 10 suite int kini `throw` di beforeAll saat `DATABASE_URL` ter-set tetapi DB tak terjangkau; soft-skip hanya saat env tak dikonfigurasi.
+  evidence: Patch catch-block 10 file int test 2026-10-02; full suite 812/812 dengan DB aktif.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/5-panel-persetujuan-guru-superadmin.md`
-  summary: Story-4 test "fetches today's live schedule" flaky time-of-day — jendela LIVE di-seed 07:00–23:59 WIB, gagal bila suite dijalankan di luar jendela itu.
-  evidence: DIBUKTIKAN bukan regresi Story 5 — `git stash` → run pada baseline bersih `efdff6b` → gagal di asersi `isLive` yang sama → `git stash pop`. Perbaikan: seed jadwal relatif terhadap waktu berjalan (bukan jam tetap) atau mock `vi.setSystemTime`.
+  summary: [SETTLED — terverifikasi 2026-10-02] Story-4 test "fetches today's live schedule" flaky time-of-day — seed kini `00:00–23:59` ("rentang penuh agar uji isLive deterministik di jam berapa pun"), deterministik di semua jam.
+  evidence: `story-4-full-audit.int.test.ts` baris 152-153; hijau pada full suite 2026-10-02.
 
 # Review Story 6 pass 1 — defer entries (2026-09-23)
 
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
-  summary: BH-9 — Formula eskalasi lockout (5→15m/6→1j/10→24j) terduplikasi antara `loginStudent` dan cabang klaim ulang, dan increment `failedAttempts` pada keduanya non-kondisional (read-modify-write bisa lost-update di bawa konkurensi).
-  evidence: Pola pre-existing `loginStudent` (baseline Story 3, sudah di-review); ekstraksi helper bersama = refactor lintas modul yang menyentuh jalur login produksi — bukan perbaikan terkecil untuk Story 6; komentar kode sudah mem-pin "identik loginStudent (B3/F6)" sebagai penanda drift.
+  summary: [SETTLED 2026-10-02] BH-9 — Formula eskalasi lockout kini sumber tunggal `lockoutAfter()` + `recordPinFailure()` (increment atomic `{ increment: 1 }` — anti lost-update); dipakai loginStudent (ACTIVE/PENDING/REJECTED) & cabang klaim ulang. PENDING/REJECTED kini ikut tereskalasi lockout-nya (menutup celah brute-force PIN tanpa batas pada akun non-ACTIVE).
+  evidence: Patch 2026-10-02; unit assertion di-update ke increment atomik; full suite 812/812.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
-  summary: VG-Other — Seluruh suite real-db (9 file, kini termasuk story-6) lulus "vakum" saat DB tak terjangkau (`dbAvailable=false` + early-return) sehingga bukti DoD bisa menguap senyap; cabang klaim ulang juga belum punya coverage unit (fixture unit test tak memodelkan periode/audit).
-  evidence: Konvensi mapan lintas 9 suite (preseden defer VG-Other-2 Story 5 — loud-failure harness); perbaikan = hygiene test-harness lintas file (mis. fail test saat dbAvailable false di CI), bukan bagian diff Story 6.
+  summary: [SETTLED 2026-10-02 — test-infra fail-loud] Seluruh suite real-db kini gagal keras saat `DATABASE_URL` ter-set tapi tak terjangkau (vakum-pass dilarang); cabang klaim ulang ter-cover int test story-5 (reset PIN + revoke).
+  evidence: Patch catch-block lintas 10 suite 2026-10-02.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/6-pengerasan-rollover-ta-dokumentasi.md`
-  summary: BH-5-l Lookup — `lookupJoinCode` masih `teachingContexts take:1` tanpa orderBy: class multi-periode bisa menampilkan tahun ajaran/semester lama pada kartu konteks join (display saja; jalur klaim registerStudent sudah deterministik pasca-patch).
-  evidence: Pre-existing sejak Story 3 (di luar diff Story 6 untuk fungsi ini); dampak kosmetik pada tampilan, tidak memengaruhi keputusan klaim; perbaikan mengikuti pola resolusi `find(ACTIVE) ?? [0]` yang sama.
+  summary: [SETTLED 2026-10-02] BH-5-l Lookup — `lookupJoinCode` kini resolusi deterministik `find(ACTIVE) ?? [0]` tanpa `take:1` (mirror pola registerStudent Story 6 BH-5/EC-3); kartu konteks join tidak lagi menampilkan TA lama.
+  evidence: Patch 2026-10-02; unit+int lookupJoinCode hijau pada full suite 811/811.
 - source_spec: `_bmad-output/specs/spec-student-portal-auth/stories/7-student-progress-gelombong-2.md`
   summary: Suite int real-DB (story 4-7) lolos diam-diam (test PASS tanpa eksekusi) saat DATABASE_URL tak terjangkau.
   evidence: `if (!dbAvailable) return;` di setiap `it` + catch beforeAll yang hanya console.warn — konvensi lintas 4 suite; perlu keputusan test-infra lintas-suite (skipIf env gate / fail-loud).
@@ -84,7 +84,19 @@
 
 ## Deferred from: code review (2026-09-27)
 
-- **[high] Cabang PENDING registerStudent (baris 684) tidak pernah terjangkau** — guard F1 (student-auth.actions.ts:536-543) menelan semua siswa PENDING ber-PIN, dan tidak ada flow yang menghasilkan PENDING + accountRequestedAt + tanpa PIN; seluruh fitur deteksi konflik tanggal lahir (birthDateConflict/conflictBirthDates) tidak pernah dieksekusi. Perlu redesign jalur re-registrasi PENDING (relaksasi F1 dengan bukti kepemilikan) — security-sensitive.
+- **[high] Cabang PENDING registerStudent (baris 684) tidak pernah terjangkau** — [SETTLED 2026-10-02, keputusan user opsi A] Kode mati dihapus end-to-end: cabang re-registrasi PENDING, seluruh fitur birthDateConflict/conflictBirthDates (actions, approvals, UI badge), 2 kolom DB di-drop via migrasi `20261002150546_drop_student_birth_date_conflict` (Neon up-to-date, verify:migrations exit 0).
+  ~~guard F1 (student-auth.actions.ts:536-543) menelan semua siswa PENDING ber-PIN~~ (arsip: redesign jalur re-registrasi PENDING ditolak user — siswa PENDING cukup tunggu persetujuan/hubungi guru; pesan statis F1 dipertahankan sesuai keputusan terkunci #4 anti-enumerasi).
 - **[high] Kebocoran PII roster di lookupJoinCode** — nama lengkap + NIS seluruh siswa kelas dikirim tanpa autentikasi/rate-limit ke siapa pun yang memegang kode 6 karakter; NIS dibutuhkan client untuk gate NIS-matching, jadi fix butuh keputusan desain (validasi server-side vs kirim NIS).
-- **[medium] Roster kosong/kontrak client-server** — UI mewajibkan pilih roster (roster kosong = tak ada yang bisa daftar) sementara server masih mengizinkan jalur NEW_STUDENT tanpa cek keanggotaan roster (raw action bisa bypass gate UI). Butuh keputusan: enforce roster server-side atau sediakan jalur input manual.
-- **[medium] Guru belum punya aksi edit/hapus akses siswa** — narasi user menuntut lihat/edit/hapus; ter implementasi: lihat + approve/reject; reset PIN pre-existing (story 5); tidak ada revoke/hapus akses untuk guru. Perlu desain fitur baru (resetStudentPinAction-style revokeStudentAccessAction).
+  - **[SETTLED 2026-10-02 — keputusan user, risk-accept]** Nama + NIS boleh terlihat pemegang kode gabung; keamanan login dianggap cukup karena ada dua pintu: PIN untuk login dan tanggal lahir untuk verifikasi klaim NIS/nama. Tidak ada perubahan kode.
+- **[medium] Roster kosong/kontrak client-server** — [SETTLED 2026-10-02, keputusan user] Roster gate dipasang server-side di `registerStudent` (mirror gate UI): NIS tak dikenal atau bukan anggota roster rombel → ditolak; jalur klaim ulang Story 6 & re-register REJECTED (G-1) di atas gate tetap utuh. Unit+int test disesuaikan (seeding roster); full suite 811/811.
+- **[medium] Guru belum punya aksi edit/hapus akses siswa** — [SETTLED 2026-10-02, disetujui user] `revokeStudentAccessAction` (approvals.actions): kuasa pengampu rombel (mirror resetStudentPinAction B2), accountStatus → REJECTED + rotasi pinUpdatedAt (F3 — sesi hangus) + hygiene lockout + audit `STUDENT_ACCESS_REVOKED`; data akademik utuh; jalur pulih = daftar ulang PIN lama (G-1) → PENDING → approve. UI: `RevokeStudentAccessDialog` di profil siswa (tampil untuk ACTIVE / PENDING ber-PIN). Edit data (nama/NIS) & reset PIN memang sudah ada (updateStudent/resetStudentPinAction).
+  evidence: Int test story-5 "#4 revokeStudentAccessAction" (non-pengampu ditolak, idempotensi, audit bebas PIN); full suite 812/812.
+- source_spec: none
+  summary: Story 2 — Lampiran guru pada tugas (upload file soal/LKPD oleh guru, tampil di portal siswa)
+  evidence: Diputuskan di sesi forge (_bmad-output/forge/modul-tugas-via-file/): eksekusi berurutan, Story 1 (file jawaban siswa) didahulukan; blueprint lengkap ada di docs/product/assignment-file-blueprint.md bagian 3.6 & rencana eksekusi
+- source_spec: `_bmad-output/implementation-artifacts/spec-assignment-file-submission.md`
+  summary: Utility cleanup objek orphan di prefix submissions/tmp/ (lifecycle R2/MinIO atau job scan usia >24 jam)
+  evidence: Review pass 1 (BH6/BH7/E10): upload yang tak pernah diklaim (batch gagal, tab ditutup, submit dibatalkan) menetap selamanya; Design Notes menoleransi orphan demi submit non-blocking — cleanup jadi tugas terpisah
+- source_spec: `_bmad-output/implementation-artifacts/spec-assignment-file-submission.md`
+  summary: Infra component-test React (jsdom/@testing-library) untuk UI upload SubmitAssignmentForm & tampilan grading
+  evidence: Review pass 1 (VG5): repo belum punya satu pun *.test.tsx maupun dependency DOM-testing; adopsi infra = keputusan project-level, bukan bagian story ini

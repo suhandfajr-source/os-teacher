@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Report — Pengumpulan Tugas via File (KLASSA)</title>
+<style>
+  :root { --teal:#0d9488; --teal-dk:#0f766e; --ink:#0f172a; --mut:#64748b; --bg:#f8fafc; --card:#ffffff; --line:#e2e8f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--ink); line-height:1.6; padding:40px 16px; }
+  .wrap { max-width:760px; margin:0 auto; }
+  header { text-align:center; margin-bottom:28px; }
+  h1 { font-size:1.5rem; letter-spacing:-.02em; }
+  .sub { color:var(--mut); font-size:.9rem; margin-top:4px; }
+  .seal-band { display:flex; justify-content:center; margin:26px 0; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px 24px; margin-bottom:18px; }
+  h2 { font-size:1rem; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  h2 .dot { width:8px; height:8px; border-radius:50%; background:var(--teal); display:inline-block; }
+  ul { list-style:none; }
+  li { padding:7px 0; border-bottom:1px dashed var(--line); font-size:.92rem; display:flex; gap:10px; }
+  li:last-child { border-bottom:none; }
+  li .ic { flex:none; }
+  .lock li { border-bottom-color:#d1fae5; }
+  .rej li { border-bottom-color:#fee2e2; }
+  .weak li { border-bottom-color:#fef3c7; }
+  .rej li, .rej h2 .dot { background:#fee2e2; } .rej h2 .dot { background:#ef4444; }
+  .weak h2 .dot { background:#f59e0b; }
+  .tag { display:inline-block; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px; border-radius:99px; margin-bottom:10px; }
+  .tag.ok { background:#ccfbf1; color:var(--teal-dk); }
+  .tag.no { background:#fee2e2; color:#b91c1c; }
+  .tag.warn { background:#fef3c7; color:#92400e; }
+  footer { text-align:center; color:var(--mut); font-size:.8rem; margin-top:26px; }
+  .cast { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:10px; }
+  .chip { background:var(--card); border:1px solid var(--line); border-radius:99px; padding:6px 14px; font-size:.82rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>⚒️ Forge Report — Pengumpulan Tugas via File</h1>
+    <p class="sub">KLASSA · Modul Tugas · Sesi 2 Okt 2025</p>
+  </header>
+
+  <div class="seal-band">
+    <svg width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Segel HARDENED">
+      <circle cx="75" cy="75" r="70" fill="#0d9488"/>
+      <circle cx="75" cy="75" r="70" fill="none" stroke="#0f766e" stroke-width="4"/>
+      <circle cx="75" cy="75" r="58" fill="none" stroke="#5eead4" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <g fill="#ffffff" font-family="Georgia,serif" text-anchor="middle">
+        <text x="75" y="70" font-size="21" font-weight="bold" letter-spacing="1">HARDENED</text>
+        <text x="75" y="90" font-size="9" letter-spacing="1.4">IDE MATANG · +LAMPIRAN GURU</text>
+      </g>
+      <path d="M60 100 q15 12 30 0" stroke="#5eead4" stroke-width="2" fill="none"/>
+      <circle cx="75" cy="75" r="72" fill="none" stroke="#134e4a" stroke-width="2" opacity=".5"/>
+    </svg>
+  </div>
+
+  <section class="lock">
+    <span class="tag ok">✅ Keputusan Terkunci</span>
+    <h2><span class="dot"></span>Yang diputuskan</h2>
+    <ul>
+      <li><span class="ic">🎯</span><span><b>Scope V1</b> — file untuk jawaban siswa saja; lampiran guru menyusul.</span></li>
+      <li><span class="ic">📦</span><span><b>Semua jenis file diterima</b> kecuali program &amp; makro (.exe, .apk, .bat, .docm, dll) — bukan kurir virus.</span></li>
+      <li><span class="ic">👁️</span><span><b>Pratinjau bertingkat</b> — foto &amp; PDF inline; Word/PPT/video/ZIP jadi tombol unduh dengan nama asli.</span></li>
+      <li><span class="ic">📏</span><span><b>Limit</b> — maks 25 MB per file, maks 5 file per pengumpulan.</span></li>
+      <li><span class="ic">🗄️</span><span><b>Storage S3-compatible</b> — Cloudflare R2 sekarang; MinIO di server sendiri nanti, pindah via env tanpa ubah kode.</span></li>
+      <li><span class="ic">🚀</span><span><b>Upload langsung</b> browser → storage (presigned URL); file tidak lewat server Next.js.</span></li>
+      <li><span class="ic">🔒</span><span><b>Privat</b> — siswa hanya file miliknya; guru hanya rombelnya; unduh via route terautentikasi.</span></li>
+      <li><span class="ic">🗑️</span><span><b>Resubmit</b> sebelum dinilai — file lama dihapus, diganti baru, tanpa arsip.</span></li>
+      <li><span class="ic">🏷️</span><span><b>Penamaan</b> — nama internal acak; nama asli jadi metadata tampilan.</span></li>
+      <li><span class="ic">📎</span><span><b>Lampiran guru</b> (Story 2) — file soal/LKPD di level tugas; limit sama (25 MB, 5 file); bebas diubah kapan saja; seluruh siswa rombel boleh akses.</span></li>
+      <li><span class="ic">🧱</span><span><b>Eksekusi berurutan</b> — Story 1: infra + jawaban siswa → Story 2: lampiran guru; skema DB sekalian.</span></li>
+    </ul>
+  </section>
+
+  <section class="rej">
+    <span class="tag no">❌ Ditolak</span>
+    <h2><span class="dot"></span>Yang dibuang &amp; alasannya</h2>
+    <ul>
+      <li><span class="ic">🚫</span><span><b>Vercel Blob</b> — API proprietary, pindah server = tulis ulang kode, kena biaya tiap foto dibuka.</span></li>
+      <li><span class="ic">🚫</span><span><b>Allowlist ketat (foto+PDF saja)</b> — terlalu kaku; diganti blocklist yang lebih luas namun tetap aman.</span></li>
+      <li><span class="ic">🚫</span><span><b>Limit 10 MB / 3 file</b> — proposal awal; dinaikkan ke 25 MB / 5 file karena jenis file dibebaskan.</span></li>
+      <li><span class="ic">🚫</span><span><b>Simpan file lama saat resubmit</b> — diputuskan hapus, demi storage bersih.</span></li>
+    </ul>
+  </section>
+
+  <section class="weak">
+    <span class="tag warn">⚠️ Masih Hidup</span>
+    <h2><span class="dot"></span>Titik lemah yang lolos scrutiny (bukan penghalang)</h2>
+    <ul>
+      <li><span class="ic">📄</span><span>.docx tak bisa pratinjau inline — guru harus unduh (trade-off disengaja).</span></li>
+      <li><span class="ic">📆</span><span>Retensi file saat rollover tahun ajaran belum diputuskan — cek PLAYBOOK-ROLLOVER-TA saat implementasi.</span></li>
+      <li><span class="ic">🎥</span><span>25 MB bisa sempit untuk video praktikum — knob mudah dinaikkan.</span></li>
+      <li><span class="ic">📱</span><span>HEIC tidak tampil di sebagian browser — perlu penanganan saat implementasi pratinjau.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="tag ok">🎭 Pemeran</span>
+    <div class="cast">
+      <span class="chip">📋 John — PM (installed)</span>
+      <span class="chip">🎒 Sinta — Siswa Kelas 8 (generated)</span>
+      <span class="chip">⚒️ Forge Facilitator</span>
+    </div>
+  </section>
+
+  <footer>
+    Hasil lengkap: <b>forged-idea.md</b> · Log keputusan: <b>.memlog.md</b><br>
+    {_bmad-output}/forge/modul-tugas-via-file/ — BMad Method v6.13
+  </footer>
+
+</div>
+</body>
+</html>

@@ -242,6 +242,7 @@ describe("Story 6 Rollover TA — Real Database Integration (CAP-8)", { timeout:
       dbAvailable = true;
     } catch (err) {
       console.error("[story-6] DB unavailable — suite di-skip:", err);
+      if (process.env.DATABASE_URL) throw err; // VG-Other (fail-loud): DB dikonfigurasi tapi tak terjangkau — vakum-pass dilarang
       dbAvailable = false;
     }
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Building2,
@@ -1869,6 +1870,17 @@ export function AdminConsoleClient({
                                 <Eye className="h-3 w-3 mr-1" />
                                 Detail
                               </Button>
+
+                              {/* BH-6 (defer Story 5): eksplorasi AuditLog per-aktor langsung dari baris guru */}
+                              <Link
+                                href={`/admin/audit?actorId=${t.id}`}
+                                target="_blank"
+                                rel="noopener"
+                                className="inline-flex items-center h-7 px-2 text-[11px] rounded-md border bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-100 transition-colors"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Audit
+                              </Link>
 
                               <Button
                                 size="sm"

@@ -18,6 +18,7 @@ import {
   batchApproveStudentsAction,
   moveStudentClassAction,
   resetStudentPinAction,
+  revokeStudentAccessAction,
 } from "../approvals.actions";
 import {
   forceApproveStudentAction,
@@ -247,6 +248,7 @@ describe("Story 5 Deep Real-Database Integration & Security Audit (Neon PostgreS
       dbAvailable = true;
     } catch (err) {
       console.warn("[story-5 int test] DB unavailable, skipping:", err);
+      if (process.env.DATABASE_URL) throw err; // VG-Other (fail-loud): DB dikonfigurasi tapi tak terjangkau — vakum-pass dilarang
       dbAvailable = false;
     }
   });
@@ -274,6 +276,21 @@ describe("Story 5 Deep Real-Database Integration & Security Audit (Neon PostgreS
   // F1 + G-1 + G-2 — Jalur daftar ulang REJECTED
   // =========================================================================
   it("F1/G-1: register mismatch → PENDING dengan accountRequestedAt; guard (d) meloloskan pindah rombel REJECTED via UPDATE classId", async () => {
+    // Roster gate (2026-10-02): NIS baru tak bisa self-register — seed siswa + roster
+    // 7-A dulu (mirror alur guru menambahkan siswa ke roster), lalu daftar nama beda → (b).
+    const seedS5 = await prisma.student.create({
+      data: {
+        schoolId,
+        fullName: "Nama Asli S5",
+        nis: `S5A${`${ts}`.slice(-6)}`,
+        accessPinHash: null,
+        accountStatus: "PENDING",
+      },
+    });
+    await prisma.classStudent.create({
+      data: { studentId: seedS5.id, classId: classAId, academicPeriodId: activePeriodId },
+    });
+
     // (b) mismatch → PENDING L1 + accountRequestedAt terisi (F2)
     const reg1 = await registerStudent({
       joinCode: joinCodeA,
@@ -629,6 +646,58 @@ describe("Story 5 Deep Real-Database Integration & Security Audit (Neon PostgreS
     // metadata bebas PIN/hash (N4)
     const meta = JSON.stringify(log!.metadata);
     expect(meta).not.toContain("5678");
+  });
+
+  // #4 (code review 2026-09-27, disetujui user 2026-10-02): guru cabut akses portal siswa.
+  it("#4 revokeStudentAccessAction: pengampu cabut akses -> REJECTED + sesi hangus + audit; non-pengampu & idempotensi ditolak", async () => {
+    const { hashPin } = await import("@/lib/student-pin");
+    const s = await prisma.student.create({
+      data: {
+        schoolId,
+        fullName: "Cabut Akses",
+        nis: `RV${`${ts}`.slice(-7)}`,
+        accountStatus: "ACTIVE",
+        accessPinHash: await hashPin("1234"),
+        failedAttempts: 2,
+        accountRequestedAt: null,
+      },
+    });
+    await prisma.classStudent.create({ data: { studentId: s.id, classId: classAId, academicPeriodId: activePeriodId } });
+    const before = await prisma.student.findUnique({ where: { id: s.id } });
+
+    // Non-pengampu (Guru B) -> ditolak server-side
+    setActor(actorB);
+    const denied = await revokeStudentAccessAction(s.id);
+    expect(denied.success).toBe(false);
+
+    // Pengampu (Guru A) -> sukses; sesi hangus via rotasi pinUpdatedAt (F3)
+    setActor(actorA);
+    const ok = await revokeStudentAccessAction(s.id);
+    expect(ok.success).toBe(true);
+    const after = await prisma.student.findUnique({ where: { id: s.id } });
+    expect(after!.accountStatus).toBe("REJECTED");
+    expect(after!.failedAttempts).toBe(0);
+    expect(after!.lockedUntil).toBeNull();
+    expect(after!.pinUpdatedAt!.getTime()).toBeGreaterThanOrEqual(before!.pinUpdatedAt?.getTime() ?? 0);
+    // PIN dipertahankan — jalur pulih G-1 (daftar ulang dengan PIN lama) tetap terbuka
+    expect(await verifyPin("1234", after!.accessPinHash!)).toBe(true);
+    const log = await prisma.auditLog.findFirst({ where: { action: "STUDENT_ACCESS_REVOKED", targetId: s.id } });
+    expect(log).not.toBeNull();
+    expect(JSON.stringify(log!.metadata)).not.toContain("1234"); // metadata bebas PIN (N4)
+
+    // Idempotensi: cabut ulang akun REJECTED -> ditolak eksplisit
+    const again = await revokeStudentAccessAction(s.id);
+    expect(again.success).toBe(false);
+    expect(again.message).toContain("sudah dalam keadaan dicabut");
+
+    // Siswa tanpa PIN (belum registrasi) -> ditolak eksplisit, bukan error
+    const noPin = await prisma.student.create({
+      data: { schoolId, fullName: "Belum Daftar", nis: `NP${`${ts}`.slice(-7)}`, accountStatus: "PENDING" },
+    });
+    await prisma.classStudent.create({ data: { studentId: noPin.id, classId: classAId, academicPeriodId: activePeriodId } });
+    const noAccess = await revokeStudentAccessAction(noPin.id);
+    expect(noAccess.success).toBe(false);
+    expect(noAccess.message).toContain("belum melakukan registrasi");
   });
 
   // =========================================================================

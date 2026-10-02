@@ -1,17 +1,35 @@
 /**
  * Story 8 (Gelombang 3) — service validasi & shaping submission tugas.
  * Murni tanpa DB: unit-testable, dipakai oleh action siswa & guru.
+ *
+ * Story 1 (file) — ditambah kanal file: minimal salah satu teks/link/file.
  */
+
+import {
+  validateFileList,
+  isPreviewable,
+  type FileMetaInput,
+} from "@/modules/storage/file-validation";
 
 export interface SubmissionInput {
   textContent?: string | null;
   linkUrl?: string | null;
+  files?: SubmissionFileInput[];
+  /** Id file existing yang dipertahankan saat resubmit (jangan dihapus). */
+  keepFileIds?: string[];
+}
+
+/** Metadata file yang diklaim siswa — sudah terunggah ke storage via presign. */
+export interface SubmissionFileInput extends FileMetaInput {
+  storageKey: string;
 }
 
 export interface ReviewInput {
   feedback?: string | null;
   score?: number | null;
 }
+
+export { isPreviewable };
 
 /** URL wajib absolut http(s) — menolak javascript:, data:, dsb. */
 export function isValidHttpUrl(raw: string): boolean {
@@ -24,19 +42,44 @@ export function isValidHttpUrl(raw: string): boolean {
 }
 
 export type SubmissionValidation =
-  | { ok: true; textContent: string | null; linkUrl: string | null }
+  | {
+      ok: true;
+      textContent: string | null;
+      linkUrl: string | null;
+      /** undefined = file tidak disentuh (pertahankan yang ada); array = ganti total */
+      files: SubmissionFileInput[] | undefined;
+    }
   | { ok: false; error: string };
 
 /**
- * Validasi input submit siswa: minimal salah satu dari teks/tautan terisi,
+ * Validasi input submit siswa: minimal salah satu dari teks/tautan/file terisi,
  * link wajib URL http(s) valid. Trim dilakukan di sini agar single source.
+ * `files` bersifat opsional: undefined = jangan ubah file existing; array (termasuk
+ * kosong) = ganti seluruh set file submission dengan array tersebut.
  */
 export function validateSubmissionInput(input: SubmissionInput): SubmissionValidation {
   const textContent = (input.textContent ?? "").trim();
   const linkUrl = (input.linkUrl ?? "").trim();
 
-  if (!textContent && !linkUrl) {
-    return { ok: false, error: "Isi jawaban teks atau tautan terlebih dahulu." };
+  let files: SubmissionFileInput[] | undefined;
+  if (input.files !== undefined && input.files !== null) {
+    const listValidation = validateFileList(input.files);
+    if (!listValidation.ok) {
+      return { ok: false, error: listValidation.error };
+    }
+    files = input.files.map((f, i) => ({
+      ...f,
+      name: listValidation.files[i].name,
+      mimeType: listValidation.files[i].mimeType,
+      sizeBytes: listValidation.files[i].sizeBytes,
+    }));
+  }
+
+  // File lama yang dipertahankan tetap dihitung sebagai kanal jawaban (E2):
+  // siswa yang hanya menghapus/mengatur ulang file lama tidak boleh terkunci.
+  const keepsFiles = (input.keepFileIds ?? []).length > 0;
+  if (!textContent && !linkUrl && (!files || files.length === 0) && !keepsFiles) {
+    return { ok: false, error: "Isi jawaban teks, tautan, atau lampirkan file terlebih dahulu." };
   }
 
   if (linkUrl && !isValidHttpUrl(linkUrl)) {
@@ -51,7 +94,7 @@ export function validateSubmissionInput(input: SubmissionInput): SubmissionValid
     return { ok: false, error: "Jawaban teks terlalu panjang (maks. 10.000 karakter)." };
   }
 
-  return { ok: true, textContent: textContent || null, linkUrl: linkUrl || null };
+  return { ok: true, textContent: textContent || null, linkUrl: linkUrl || null, files };
 }
 
 export type ReviewValidation =
@@ -89,6 +132,15 @@ export function isSubmissionLate(submittedAt: Date, dueDate?: Date | null): bool
   return submittedAt.getTime() > dueDate.getTime();
 }
 
+/** Bentuk tampilan file submission untuk siswa & guru. */
+export interface SubmissionFileView {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  isPreviewable: boolean;
+}
+
 /** Bentuk tampilan status submission untuk siswa (halaman Tugas & Mode Keluarga). */
 export interface StudentSubmissionView {
   id: string;
@@ -96,6 +148,7 @@ export interface StudentSubmissionView {
   status: "SUBMITTED" | "REVIEWED";
   textContent: string | null;
   linkUrl: string | null;
+  files: SubmissionFileView[];
   feedback: string | null;
   score: number | null;
   submittedAt: string; // ISO
@@ -111,6 +164,7 @@ export interface TeacherQueueItem {
   status: "SUBMITTED" | "REVIEWED";
   textContent: string | null;
   linkUrl: string | null;
+  files: SubmissionFileView[];
   feedback: string | null;
   score: number | null;
   submittedAt: string; // ISO

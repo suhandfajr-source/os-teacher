@@ -1,0 +1,150 @@
+[
+  {
+    "location": "src/modules/student-portal/student-submission.actions.ts:200-225",
+    "trigger_condition": "Siswa resubmit dengan keepFileIds dan files baru hingga total melebihi MAX_FILES (5)",
+    "guard_snippet": "if (keptRows.length + fileRows.length > 5) return { success: false, error: \"Maksimal 5 file per pengumpulan.\" };",
+    "potential_consequence": "Batas 5 file jebol di server, siswa bisa simpan hingga 10 file per submission"
+  },
+  {
+    "location": "src/modules/assignments/submission.service.ts:75-77",
+    "trigger_condition": "Siswa resubmit pertahankan file lama tanpa upload baru dan tanpa teks/link (files: [])",
+    "guard_snippet": "if (!textContent && !linkUrl && (!files || files.length === 0) && (!input.keepFileIds || input.keepFileIds.length === 0))",
+    "potential_consequence": "Siswa gagal simpan perubahan file lama jika tidak mengisi teks jawaban"
+  },
+  {
+    "location": "src/app/api/assignments/files/[fileId]/route.ts:25-27",
+    "trigger_condition": "Permintaan GET ?disposition=inline untuk file non-previewable (seperti SVG atau HTML)",
+    "guard_snippet": "const disposition = request.nextUrl.searchParams.get(\"disposition\") === \"inline\" && isPreviewable(file.mimeType) ? \"inline\" : \"attachment\";",
+    "potential_consequence": "Bypass proteksi XSS K2: script berbahaya dalam SVG/HTML dieksekusi di browser pengguna"
+  },
+  {
+    "location": "src/app/api/assignments/files/[fileId]/route.ts:42-48",
+    "trigger_condition": "Guru memiliki cookie studentSession lama di browser yang bukan pemilik file yang diakses",
+    "guard_snippet": "if (studentSession && studentSession.studentId === file.submission.studentId) { /* ok */ } else { /* cek teacherSession */ }",
+    "potential_consequence": "Guru pemilik rombel mendapat 404 false-positive saat memeriksa file siswa"
+  },
+  {
+    "location": "src/modules/student-portal/student-submission.actions.ts:215-225",
+    "trigger_condition": "Array files membawa storageKey duplikat yang melanggar constraint @unique di tabel submission_file",
+    "guard_snippet": "const uniqueKeys = new Set(); for (const f of validation.files) { if (uniqueKeys.has(f.storageKey)) return { success: false, error: \"Duplikasi file.\" }; uniqueKeys.add(f.storageKey); }",
+    "potential_consequence": "Prisma melempar error P2002 tak tertangani dan pengumpulan tugas crash 500"
+  },
+  {
+    "location": "src/app/api/assignments/files/upload-url/route.ts:75-105",
+    "trigger_condition": "Siswa meminta presigned upload URL untuk tugas yang status submission-nya sudah REVIEWED",
+    "guard_snippet": "const existing = await prisma.assignmentSubmission.findUnique({ where: { assignmentId_studentId: { assignmentId, studentId: session.studentId } } }); if (existing?.status === \"REVIEWED\") return NextResponse.json({ error: \"Tugas sudah dinilai.\" }, { status: 400 });",
+    "potential_consequence": "Siswa bisa mengunggah file ke storage meskipun status tugas sudah terkunci permanen"
+  },
+  {
+    "location": "src/modules/student-portal/components/SubmitAssignmentForm.tsx:76-88",
+    "trigger_condition": "Siswa menambahkan file baru ke dalam form dialog pengumpulan tugas",
+    "guard_snippet": "setFiles((prev) => [...prev, ...newPendingFiles]);",
+    "potential_consequence": "Mutasi in-place array state React (files.push) melanggar immutability dan memicu render glitch"
+  },
+  {
+    "location": "src/modules/student-portal/components/SubmitAssignmentForm.tsx:95",
+    "trigger_condition": "Browser mobile mengirimkan file.type kosong (\"\") untuk foto atau dokumen",
+    "guard_snippet": "mimeType: f.type || getMimeFromExtension(f.name) || \"application/octet-stream\",",
+    "potential_consequence": "Foto tugas jatuh ke octet-stream sehingga tidak bisa dipratinjau inline oleh guru"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/[assignmentId]/AssignmentRosterGradingView.tsx:470-475",
+    "trigger_condition": "Siswa mengunggah foto Apple iPhone berformat image/heic yang lolos ke tag <img>",
+    "guard_snippet": "const isBrowserRenderable = [\"image/jpeg\", \"image/png\", \"image/webp\", \"image/gif\"].includes(f.mimeType);",
+    "potential_consequence": "Guru melihat ikon gambar rusak karena browser Chrome/Edge/Firefox tidak mendukung render HEIC"
+  },
+  {
+    "location": "src/modules/student-portal/components/SubmitAssignmentForm.tsx:120-135",
+    "trigger_condition": "Siswa upload beberapa file dan salah satu file gagal karena gangguan koneksi sesaat",
+    "guard_snippet": "/* Simpan penanda uploaded per item agar tidak re-upload file yang sudah sukses */",
+    "potential_consequence": "File yang sudah terunggah diunggah ulang dari nol saat klik coba lagi"
+  },
+  {
+    "location": "src/modules/student-portal/components/SubmitAssignmentForm.tsx:50-58",
+    "trigger_condition": "Koneksi jaringan terputus diam-diam (silent TCP drop) saat proses upload XHR ke S3",
+    "guard_snippet": "xhr.timeout = 60000; xhr.ontimeout = () => reject(new Error(\"Unggahan melebihi batas waktu (timeout)\"));",
+    "potential_consequence": "Tombol form tergantung selamanya dalam status pending tanpa umpan balik ke siswa"
+  },
+  {
+    "location": "src/modules/storage/storage.service.ts:60-65",
+    "trigger_condition": "File memiliki ekstensi valid lebih dari 20 karakter (misal .applicationmanifest)",
+    "guard_snippet": "new RegExp(`^${SUBMISSION_TMP_PREFIX}/[0-9a-f-]{36}(\\\\.[a-z0-9]{1,64})?$`).test(storageKey)",
+    "potential_consequence": "File berhasil diunggah ke storage namun ditolak saat klaim submit dengan error belum terunggah"
+  },
+  {
+    "location": "src/modules/student-portal/student-submission.actions.ts:210-225",
+    "trigger_condition": "Siswa resubmit dan mempertahankan file lama (seluruh row dihapus lalu di-insert ulang)",
+    "guard_snippet": "/* Hanya deleteMany file yang tidak ada di keepFileIds, jangan re-create keptRows */",
+    "potential_consequence": "ID file berganti baru sehingga link unduh/pratinjau yang sedang dibuka guru menjadi 404"
+  },
+  {
+    "location": "src/modules/storage/file-validation.ts:39-44",
+    "trigger_condition": "Nama file tanpa ekstensi dan tidak mengandung karakter spasi (misal nama jawaban)",
+    "guard_snippet": "if (!name || name === \".\") return { ok: false, error: \"Nama file tidak valid.\" };",
+    "potential_consequence": "Kondisi terluar dievaluasi sia-sia tanpa efek, menyamarkan logika validasi yang dimaksud"
+  },
+  {
+    "location": "src/modules/student-portal/student-submission.actions.ts:130-136",
+    "trigger_condition": "Server storage S3/R2 mengalami gangguan internal (HTTP 500) saat verifikasi HEAD",
+    "guard_snippet": "/* Bedakan error 404 NoSuchKey dengan kesalahan infrastruktur S3 5xx */",
+    "potential_consequence": "Masalah koneksi storage dituduhkan ke siswa sebagai file belum selesai terunggah"
+  },
+  {
+    "location": "src/app/api/assignments/files/upload-url/route.ts:20-30",
+    "trigger_condition": "Aplikasi berjalan di balik reverse proxy dengan header x-forwarded-host berbeda dari host",
+    "guard_snippet": "const host = request.headers.get(\"x-forwarded-host\") || request.headers.get(\"host\");",
+    "potential_consequence": "Semua request upload presigned POST ditolak 403 Forbidden pada lingkungan production proxy"
+  },
+  {
+    "location": "src/modules/student-portal/components/SubmitAssignmentForm.tsx:110-140",
+    "trigger_condition": "Siswa memilih file lalu klik tombol X (tutup modal) tanpa submit, kemudian buka lagi",
+    "guard_snippet": "function handleClose() { setOpen(false); setFiles(getSavedFiles(current)); }",
+    "potential_consequence": "File yang dibatalkan tertinggal di state form dan ikut terkirim di pengumpulan berikutnya"
+  },
+  {
+    "location": "src/modules/storage/storage.service.ts:40-48",
+    "trigger_condition": "Verifikasi submit memeriksa hingga 5 file secara berurutan dalam satu request",
+    "guard_snippet": "let cachedClient: S3Client | null = null; function getClient() { return cachedClient ??= new S3Client(...); }",
+    "potential_consequence": "Instansiasi S3Client baru berulang kali memboroskan memori dan koneksi TCP"
+  },
+  {
+    "location": "src/modules/student-portal/student-submission.actions.ts:140-145",
+    "kind": "claim",
+    "confidence": "high",
+    "trigger_condition": "objek berada di prefix final (bukan tmp)",
+    "guard_snippet": "fileRows.push({ storageKey: f.storageKey /* disimpan langsung dengan prefix submissions/tmp/* */ })",
+    "potential_consequence": "Objek tetap berada di prefix tmp selamanya, berisiko terhapus otomatis oleh lifecycle/cleanup rule"
+  },
+  {
+    "location": "src/app/api/assignments/files/[fileId]/route.ts:60-65",
+    "kind": "claim",
+    "confidence": "high",
+    "trigger_condition": "File hilang di storage ... Pratinjau/unduh menampilkan error ramah",
+    "guard_snippet": "/* Route langsung 302 ke presigned URL tanpa cek keberadaan objek */ return NextResponse.redirect(url, 302);",
+    "potential_consequence": "Pengguna diarahkan langsung ke error mentah XML NoSuchKey dari Cloudflare R2 / S3"
+  },
+  {
+    "location": "src/modules/storage/file-validation.ts:60-68",
+    "kind": "claim",
+    "confidence": "high",
+    "trigger_condition": "Disanitasi: strip path, buang karakter kontrol, potong 200 karakter",
+    "guard_snippet": "const maxStem = Math.max(1, 200 - ext.length - 1); name = `${name.slice(0, maxStem)}.${ext}`.slice(0, 200);",
+    "potential_consequence": "Ekstensi panjang (>198 karakter) menghasilkan nama 450+ karakter yang melanggar batas 200 karakter"
+  },
+  {
+    "location": "src/app/api/assignments/files/[fileId]/route.ts:48-62",
+    "kind": "claim",
+    "confidence": "medium",
+    "trigger_condition": "akses: siswa pemilik ATAU guru pemilik konteks (verifyTeachingContextAccess, tangkap throw -> 404)",
+    "guard_snippet": "/* Menggunakan query manual teacherProfile + teachingContext alih-alih helper verifyTeachingContextAccess */",
+    "potential_consequence": "Pengecekan akses guru terduplikasi secara manual dan tidak mewarisi kebijakan otorisasi terpusat"
+  },
+  {
+    "location": "src/modules/assignments/submission.service.ts:75-77",
+    "kind": "deletion",
+    "confidence": "high",
+    "trigger_condition": "Kontrak sebelumnya memvalidasi input secara independen per kanal tanpa menghalangi resubmit file yang ada",
+    "guard_snippet": "Perluas antarmuka SubmissionInput dengan field keepFileIds agar submit hanya file lama tetap valid",
+    "potential_consequence": "Siswa tidak dapat melakukan resubmit pengumpulan tugas yang hanya berisi file lampiran sebelumnya"
+  }
+]

@@ -7,6 +7,7 @@ import {
   Save,
   CheckCircle2,
   Clock,
+  Download,
   FileText,
   MessageSquare,
   AlertCircle,
@@ -27,6 +28,7 @@ import {
   batchSaveDirectAssignmentScoresAction,
 } from "@/modules/assignments/assignment.actions";
 import type { TeacherQueueItem } from "@/modules/assignments/submission.service";
+import { isBrowserRenderableImage } from "@/modules/storage/file-validation";
 
 export interface StudentRosterItem {
   id: string; // studentId
@@ -448,7 +450,7 @@ export function AssignmentRosterGradingView({
                     </div>
                   </div>
 
-                  {(s.textContent || s.linkUrl) && (
+                  {(s.textContent || s.linkUrl || s.files.length > 0) && (
                     <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
                       {s.textContent && (
                         <p className="text-sm whitespace-pre-wrap leading-relaxed">
@@ -464,6 +466,53 @@ export function AssignmentRosterGradingView({
                         >
                           🔗 {s.linkUrl}
                         </a>
+                      )}
+                      {s.files.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {s.files.map((f) =>
+                            f.isPreviewable ? (
+                              <a
+                                key={f.id}
+                                href={`/api/assignments/files/${f.id}?disposition=inline`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group relative"
+                                title={`Lihat ${f.originalName}`}
+                              >
+                                {isBrowserRenderableImage(f.mimeType) ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    src={`/api/assignments/files/${f.id}?disposition=inline`}
+                                    alt={f.originalName}
+                                    className="h-20 w-20 rounded-lg border border-slate-200 bg-white object-cover group-hover:ring-2 group-hover:ring-teal-400"
+                                  />
+                                ) : (
+                                  /* HEIC dsb: previewable tapi tak dirender <img> di
+                                     Chrome/Firefox/Edge — chip unduh-pratinjau */
+                                  <span className="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100">
+                                    <FileText className="w-3.5 h-3.5" /> {f.originalName}
+                                  </span>
+                                )}
+                              </a>
+                            ) : (
+                              <a
+                                key={f.id}
+                                href={`/api/assignments/files/${f.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-teal-300 hover:text-teal-700"
+                              >
+                                <Download className="w-3.5 h-3.5 text-teal-600" />
+                                {f.originalName}
+                                <span className="text-[10px] font-normal text-muted-foreground">
+                                  {f.sizeBytes >= 1024 * 1024
+                                    ? `${(f.sizeBytes / 1024 / 1024).toFixed(1)} MB`
+                                    : `${Math.max(1, Math.round(f.sizeBytes / 1024))} KB`}
+                                </span>
+                              </a>
+                            )
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

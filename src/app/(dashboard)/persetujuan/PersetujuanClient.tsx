@@ -31,7 +31,6 @@ import {
   KeyRound,
   ListChecks,
   Calendar,
-  AlertTriangle,
 } from "lucide-react";
 
 interface ClassOption {
@@ -232,12 +231,6 @@ export function PersetujuanClient({ initialPending, escalatedThresholdHours, cla
                       <Badge variant="outline" className="text-teal-700 border-teal-200 bg-teal-50/50">
                         <Calendar className="h-3 w-3 mr-1" />
                         Lahir: {formatBirthDateId(p.birthDate)}
-                      </Badge>
-                    )}
-                    {p.birthDateConflict && (
-                      <Badge className="bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Konflik Tgl Lahir: {p.conflictBirthDates ? p.conflictBirthDates.split(" vs ").map(formatBirthDateId).join(" vs ") : formatBirthDateId(p.birthDate || "")}
                       </Badge>
                     )}
                     <Badge variant="secondary">

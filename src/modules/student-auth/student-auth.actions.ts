@@ -23,6 +23,37 @@ const SAFE_STUDENT_SELECT = {
 } as const;
 
 /**
+ * BH-9 (defer Story 6, diterapkan 2026-10-02): sumber tunggal formula eskalasi
+ * lockout (B3/F6): percobaan gagal ke-5 → 15 menit, 6–9 → 1 jam, ≥10 → 24 jam.
+ * Dipakai loginStudent (ACTIVE/PENDING/REJECTED) & cabang klaim ulang registerStudent.
+ */
+export function lockoutAfter(failedAttempts: number, now: Date): Date | null {
+  if (failedAttempts >= 10) return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  if (failedAttempts >= 6) return new Date(now.getTime() + 60 * 60 * 1000);
+  if (failedAttempts === 5) return new Date(now.getTime() + 15 * 60 * 1000);
+  return null;
+}
+
+/**
+ * Catat kegagalan PIN + kunci bila eskalasi tercapai. Increment atomic
+ * `{ increment: 1 }` (bukan read-modify-write) agar konkurensi tidak lost-update;
+ * argumen `failedAttempts` (dari row yang baru dibaca) hanya untuk ambang lockedUntil.
+ */
+async function recordPinFailure(
+  studentId: string,
+  failedAttempts: number,
+  now: Date
+): Promise<{ newFailedAttempts: number; newLockedUntil: Date | null }> {
+  const newFailedAttempts = failedAttempts + 1;
+  const newLockedUntil = lockoutAfter(newFailedAttempts, now);
+  await prisma.student.update({
+    where: { id: studentId },
+    data: { failedAttempts: { increment: 1 }, lockedUntil: newLockedUntil },
+  });
+  return { newFailedAttempts, newLockedUntil };
+}
+
+/**
  * Mencari data kartu konteks rombel berdasarkan kode join 6 karakter.
  */
 export async function lookupJoinCode(code: string) {
@@ -49,7 +80,8 @@ export async function lookupJoinCode(code: string) {
             },
           },
         },
-        take: 1,
+        // Story 6 (BH-5-l): tanpa take:1 — context lintas periode harus deterministik
+        // (prioritas ACTIVE), bukan baris arbitrer DB (mencegah TA lama tampil di kartu join).
       },
       classStudents: {
         where: {
@@ -91,7 +123,11 @@ export async function lookupJoinCode(code: string) {
     return { success: false, message: "Kode rombel telah dikunci oleh guru." };
   }
 
-  const primaryContext = classRecord.teachingContexts[0];
+  // Story 6 (BH-5-l): resolusi deterministik — context periode ACTIVE menang,
+  // fallback context pertama (display-only; jalur klaim registerStudent sudah deterministik).
+  const primaryContext =
+    classRecord.teachingContexts.find((t) => t.academicPeriod?.status === "ACTIVE") ??
+    classRecord.teachingContexts[0];
 
   return {
     success: true,
@@ -307,20 +343,8 @@ export async function registerStudent(data: {
       // PIN lama wajib cocok — satu-satunya bukti kepemilikan di jalur ini.
       const pinValid = await verifyPin(data.pin, existingStudent.accessPinHash);
       if (!pinValid) {
-        // Eskalasi lockout identik loginStudent (B3/F6): 15m → 1j → 24j.
-        const newFailedAttempts = existingStudent.failedAttempts + 1;
-        let newLockedUntil: Date | null = null;
-        if (newFailedAttempts >= 10) {
-          newLockedUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        } else if (newFailedAttempts >= 6) {
-          newLockedUntil = new Date(now.getTime() + 60 * 60 * 1000);
-        } else if (newFailedAttempts === 5) {
-          newLockedUntil = new Date(now.getTime() + 15 * 60 * 1000);
-        }
-        await prisma.student.update({
-          where: { id: existingStudent.id },
-          data: { failedAttempts: newFailedAttempts, lockedUntil: newLockedUntil },
-        });
+        // Eskalasi lockout via helper tunggal BH-9 (identik loginStudent B3/F6).
+        await recordPinFailure(existingStudent.id, existingStudent.failedAttempts, now);
         await auditClaimDenied("PIN_MISMATCH");
         return { success: false, message: genericClaimFailMessage };
       }
@@ -596,56 +620,21 @@ export async function registerStudent(data: {
     };
   }
 
-  // Skenario PENDING: Siswa mendaftar ulang saat pengajuan sebelumnya masih PENDING
-  if (existingStudent && existingStudent.accountStatus === "PENDING" && existingStudent.accountRequestedAt !== null) {
-    // Jika tanggal lahir sama persis -> beri notifikasi akun sudah tercatat & menunggu persetujuan
-    if (cleanBirthDate && existingStudent.birthDate && cleanBirthDate === existingStudent.birthDate) {
-      return {
-        success: true,
-        status: "PENDING",
-        reason: "MISMATCH_NAME",
-        student: existingStudent,
-        message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
-      };
-    }
-    // Jika tanggal lahir berbeda -> beri tanda konflik tanggal lahir untuk verifikasi guru dan simpan PIN baru
-    if (cleanBirthDate && existingStudent.birthDate && cleanBirthDate !== existingStudent.birthDate) {
-      const conflictNote = `${existingStudent.birthDate} vs ${cleanBirthDate}`;
-      const updated = await prisma.student.update({
-        where: { id: existingStudent.id },
-        data: {
-          birthDateConflict: true,
-          conflictBirthDates: conflictNote,
-          accessPinHash: pinHash,
-          pinUpdatedAt: now,
-          accountRequestedAt: now,
-        },
-        select: SAFE_STUDENT_SELECT,
-      });
-      return {
-        success: true,
-        status: "PENDING",
-        reason: "MATCHED_ROSTER",
-        student: updated,
-        message:
-          "Pendaftaran tercatat. Terdapat perbedaan data tanggal lahir dengan pendaftaran sebelumnya, guru pengampu akan memverifikasi saat persetujuan.",
-      };
-    }
-    // Jika data tanggal lahir belum ada sebelumnya, simpan data baru
-    if (cleanBirthDate && !existingStudent.birthDate) {
-      const updatedStudent = await prisma.student.update({
-        where: { id: existingStudent.id },
-        data: { birthDate: cleanBirthDate, accessPinHash: pinHash, pinUpdatedAt: now },
-        select: SAFE_STUDENT_SELECT,
-      });
-      return {
-        success: true,
-        status: "PENDING",
-        reason: "MATCHED_ROSTER",
-        student: updatedStudent,
-        message: "Pendaftaran akun Anda sudah tercatat dan sedang menunggu persetujuan guru pengampu.",
-      };
-    }
+  // Roster gate (review 2026-09-27 [medium], keputusan user 2026-10-02 — mirror gate UI):
+  // pendaftaran self-service hanya untuk anggota roster rombel ini; raw action yang
+  // bypass UI ditolak server-side. Jalur klaim ulang Story 6 & re-register REJECTED
+  // (G-1, bukti PIN lama) di atas sudah return — tidak terdampak gate ini.
+  const ROSTER_GATE_MSG =
+    "NIS belum terdaftar di daftar siswa (roster) rombel ini. Hubungi guru pengampu agar Anda ditambahkan ke roster kelas terlebih dahulu.";
+  if (!existingStudent) {
+    return { success: false, message: ROSTER_GATE_MSG };
+  }
+  const rosterMembership = await prisma.classStudent.findFirst({
+    where: { classId: classRecord.id, studentId: existingStudent.id },
+    select: { id: true },
+  });
+  if (!rosterMembership) {
+    return { success: false, message: ROSTER_GATE_MSG };
   }
 
   // Skenario (a): NIS dan nama cocok dengan data rombel -> PENDING (Memerlukan verifikasi & persetujuan guru)
@@ -661,8 +650,6 @@ export async function registerStudent(data: {
           accessPinHash: pinHash,
           accountStatus: "PENDING",
           birthDate: cleanBirthDate,
-          birthDateConflict: false,
-          conflictBirthDates: null,
           pinUpdatedAt: now,
           failedAttempts: 0,
           lockedUntil: null,
@@ -709,8 +696,6 @@ export async function registerStudent(data: {
           accessPinHash: pinHash,
           accountStatus: "PENDING",
           birthDate: cleanBirthDate,
-          birthDateConflict: false,
-          conflictBirthDates: null,
           pinUpdatedAt: now,
           failedAttempts: 0,
           lockedUntil: null,
@@ -749,43 +734,9 @@ export async function registerStudent(data: {
     };
   }
 
-  // Skenario (c): NIS baru belum terdata di sekolah -> PENDING L1
-  const newStudent = await prisma.$transaction(async (tx) => {
-    const s = await tx.student.create({
-      data: {
-        schoolId: classRecord.schoolId,
-        fullName: cleanFullName,
-        nis: cleanNis,
-        birthDate: cleanBirthDate,
-        birthDateConflict: false,
-        conflictBirthDates: null,
-        accessPinHash: pinHash,
-        accountStatus: "PENDING",
-        pinUpdatedAt: now,
-        failedAttempts: 0,
-        accountRequestedAt: now, // Story 5 F2 — sumber tunggal eskalasi
-      },
-      select: SAFE_STUDENT_SELECT,
-    });
-
-    await tx.classStudent.create({
-      data: {
-        studentId: s.id,
-        classId: classRecord.id,
-        academicPeriodId,
-      },
-    });
-
-    return s;
-  });
-
-  return {
-    success: true,
-    status: "PENDING",
-    reason: "NEW_STUDENT",
-    student: newStudent,
-    message: "Pendaftaran terkirim. Akun siswa baru menunggu persetujuan guru pengampu.",
-  };
+  // Tidak terjangkau: roster gate di atas menjamin existingStudent non-null dan
+  // seluruh kombinasi status/PIN/keanggotaan telah tertangani cabang-cabang di atas.
+  return { success: false, message: ROSTER_GATE_MSG };
 }
 
 export type LoginStudentResult =
@@ -862,11 +813,7 @@ export async function loginStudent(data: {
   if (student.accountStatus === "PENDING") {
     const isPinValid = await verifyPin(data.pin, student.accessPinHash);
     if (!isPinValid) {
-      const newFailed = student.failedAttempts + 1;
-      await prisma.student.update({
-        where: { id: student.id },
-        data: { failedAttempts: newFailed },
-      });
+      await recordPinFailure(student.id, student.failedAttempts, now);
       return { success: false, message: genericErrorMessage };
     }
     return {
@@ -882,11 +829,7 @@ export async function loginStudent(data: {
   if (student.accountStatus === "REJECTED") {
     const isPinValid = await verifyPin(data.pin, student.accessPinHash);
     if (!isPinValid) {
-      const newFailed = student.failedAttempts + 1;
-      await prisma.student.update({
-        where: { id: student.id },
-        data: { failedAttempts: newFailed },
-      });
+      await recordPinFailure(student.id, student.failedAttempts, now);
       return { success: false, message: genericErrorMessage };
     }
     return {
@@ -903,25 +846,11 @@ export async function loginStudent(data: {
   const isPinValid = await verifyPin(data.pin, student.accessPinHash);
 
   if (!isPinValid) {
-    const newFailedAttempts = student.failedAttempts + 1;
-    let newLockedUntil: Date | null = null;
-
-    // F6: Formula Eskalasi Lockout (15m -> 1h -> 24h)
-    if (newFailedAttempts >= 10) {
-      newLockedUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 jam
-    } else if (newFailedAttempts >= 6) {
-      newLockedUntil = new Date(now.getTime() + 60 * 60 * 1000); // 1 jam
-    } else if (newFailedAttempts === 5) {
-      newLockedUntil = new Date(now.getTime() + 15 * 60 * 1000); // 15 menit
-    }
-
-    await prisma.student.update({
-      where: { id: student.id },
-      data: {
-        failedAttempts: newFailedAttempts,
-        lockedUntil: newLockedUntil,
-      },
-    });
+    const { newFailedAttempts, newLockedUntil } = await recordPinFailure(
+      student.id,
+      student.failedAttempts,
+      now
+    );
 
     if (newLockedUntil && newFailedAttempts === 5) {
       return {

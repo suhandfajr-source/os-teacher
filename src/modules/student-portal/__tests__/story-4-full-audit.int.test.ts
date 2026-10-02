@@ -242,6 +242,7 @@ describe("Story 4 Deep Real-Database Integration & Security Audit", () => {
       dbAvailable = true;
     } catch (err) {
       console.warn("Real database not reachable, skipping live DB tests:", err);
+      if (process.env.DATABASE_URL) throw err; // VG-Other (fail-loud): DB dikonfigurasi tapi tak terjangkau — vakum-pass dilarang
       dbAvailable = false;
     }
   });

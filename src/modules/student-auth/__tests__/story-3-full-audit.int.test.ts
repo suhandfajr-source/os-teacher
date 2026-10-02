@@ -35,7 +35,6 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
 
   let studentL0Id: string;
   let studentL1MismatchId: string;
-  let studentL1NewId: string;
 
   beforeAll(async () => {
     try {
@@ -164,9 +163,19 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
       });
       studentL1MismatchId = studentL1.id;
 
+      // Roster gate (2026-10-02): L0 & L1 kini harus anggota roster 7-A
+      // (mirror gate UI — guru menambahkan siswa ke roster sebelum siswa mendaftar).
+      await prisma.classStudent.createMany({
+        data: [
+          { studentId: studentL0.id, classId: classA.id, academicPeriodId: academicPeriod.id },
+          { studentId: studentL1.id, classId: classA.id, academicPeriodId: academicPeriod.id },
+        ],
+      });
+
       dbAvailable = true;
     } catch (err) {
       console.warn("Real database not available for Story 3 integration audit:", err);
+      if (process.env.DATABASE_URL) throw err; // VG-Other (fail-loud): DB dikonfigurasi tapi tak terjangkau — vakum-pass dilarang
       dbAvailable = false;
     }
   });
@@ -358,7 +367,7 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
       expect(dbStudent?.accessPinHash).toBeDefined();
     });
 
-    it("Cabang C (L1 Pending): NIS baru belum terdata -> buat baris Student status PENDING", async () => {
+    it("Roster gate: NIS baru belum terdata -> DITOLAK server-side (mirror gate UI, tanpa buat Student)", async () => {
       if (!dbAvailable) return;
 
       const res = await registerStudent({
@@ -368,19 +377,14 @@ describe("Story 3 Deep Real Database Integration & Security Audit (Neon PostgreS
         pin: "3456",
       });
 
-      expect(res.success).toBe(true);
-      if (res.success) {
-        expect(res.status).toBe("PENDING");
-        expect((res as any).reason).toBe("NEW_STUDENT");
-        studentL1NewId = res.student.id;
-      }
+      expect(res.success).toBe(false);
+      expect(res.message).toContain("roster");
 
-      const dbStudent = await prisma.student.findUnique({
-        where: { id: studentL1NewId },
+      // Tidak ada baris Student baru yang dibuat
+      const dbStudent = await prisma.student.findFirst({
+        where: { schoolId, nis: "NIS003C" },
       });
-      expect(dbStudent).toBeDefined();
-      expect(dbStudent?.nis).toBe("NIS003C");
-      expect(dbStudent?.accountStatus).toBe("PENDING");
+      expect(dbStudent).toBeNull();
     });
 
     it("Cabang D (Tolak Rombel Lain): menolak pendaftaran jika NIS sudah aktif di rombel lain pada TA sama", async () => {
