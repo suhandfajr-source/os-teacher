@@ -22,7 +22,7 @@ Alasan utama: UI guru sudah menyuruh siswa "foto lembar jawaban dan upload ke po
 | K1 | Jenis file | **Semua diterima KECUALI** program & makro: `.exe .msi .bat .cmd .scr .apk .jar .docm .dotm .xlsm .hta` |
 | K2 | Pratinjau | Foto (JPG/PNG/HEIC) & PDF → inline. Lainnya → tombol **Unduh** + nama file asli |
 | K3 | Limit | **25 MB/file, maks 5 file** per pengumpulan siswa / per tugas (lampiran guru) |
-| K4 | Storage | Adapter **S3-compatible**. Sekarang **Cloudflare R2** (bucket dev & prod terpisah); nanti **MinIO** di server sendiri — pindah via env, tanpa ubah kode |
+| K4 | Storage | Adapter **S3-compatible**. Sekarang **Cloudflare R2** (bucket dev & prod terpisah); nanti self-hosted **SeaweedFS** (MinIO terarsip Okt 2025) — pindah via env, tanpa ubah kode |
 | K5 | Alur upload | Browser → **langsung ke storage** via presigned POST (file tidak lewat server Next.js) |
 | K6 | Akses | Privat: siswa hanya file miliknya; guru hanya rombelnya; lampiran guru → seluruh siswa rombel aktif. Unduh via route terautentikasi → link berumur pendek. **Bukan public URL** |
 | K7 | Resubmit siswa | Selama status SUBMITTED: file lama **dihapus** dari storage, diganti baru. Tidak ada arsip versi |
@@ -75,14 +75,14 @@ storage/
   __tests__/
 ```
 
-- Library: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `@aws-sdk/s3-create-presigned-post` (standar S3; kompatibel R2 & MinIO tanpa kode khusus).
+- Library: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `@aws-sdk/s3-create-presigned-post` (standar S3; kompatibel R2 & SeaweedFS tanpa kode khusus).
 - **Presigned POST** (bukan PUT) dipilih karena policy-nya bisa memaksa `content-length-range 1..25MB` → storage yang menolak file kebesaran, bukan cuma validasi client.
 - Semua env opsional saat dev — modul melempar error jelas saat dipakai tanpa konfigurasi (fitur mati anggun, tidak menjatuhkan app lama).
 
 ### 3.3 Env baru
 
 ```
-S3_ENDPOINT=            # R2: https://<account>.r2.cloudflarestorage.com ; MinIO: http://localhost:9000
+S3_ENDPOINT=            # R2: https://<account>.r2.cloudflarestorage.com ; lokal: http://127.0.0.1:8333 (SeaweedFS)
 S3_REGION=auto          # R2 pakai "auto"
 S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=

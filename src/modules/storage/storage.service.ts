@@ -44,7 +44,12 @@ function requireEnv(): { bucket: string; client: S3Client } {
     cachedClient = new S3Client({
       endpoint: process.env.S3_ENDPOINT || undefined,
       region: process.env.S3_REGION || "auto",
-      forcePathStyle: Boolean(process.env.S3_ENDPOINT), // MinIO & R2 path-style
+      forcePathStyle: Boolean(process.env.S3_ENDPOINT), // MinIO & SeaweedFS path-style
+      // Env kustom S3_* — SDK default hanya baca AWS_*, jadi wajib eksplisit
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY_ID as string,
+        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY as string,
+      },
     });
   }
   return { bucket: process.env.S3_BUCKET as string, client: cachedClient };
