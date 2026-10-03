@@ -9,6 +9,8 @@ import {
   presignDownload,
 } from "@/modules/storage/storage.service";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Story 2 — pintu akses LAMPIRAN tugas (K6/K8): row → assignment →
  * teachingContext. Guru pemilik konteks ATAU siswa dengan membership aktif

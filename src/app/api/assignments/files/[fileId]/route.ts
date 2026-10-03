@@ -9,6 +9,8 @@ import {
   presignDownload,
 } from "@/modules/storage/storage.service";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Story 1 — pintu tunggal akses file jawaban (K6): row → submission →
  * assignment → teachingContext. Siswa hanya file miliknya; guru hanya

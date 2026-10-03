@@ -10,6 +10,8 @@ import {
   presignSubmissionUpload,
 } from "@/modules/storage/storage.service";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Story 1 — minta presigned POST untuk upload file jawaban SISWA.
  * Story 2 — + kind=attachment untuk LAMPIRAN GURU (guard: guru pemilik konteks).
