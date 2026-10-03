@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { File as FileIcon, Loader2, Paperclip, Trash2, Upload, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { File as FileIcon, Loader2, Paperclip, Trash2, Upload, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { isBlockedExtension, inferMimeFromExtension, MAX_FILE_BYTES, MAX_FILES } from "@/modules/storage/file-validation";
@@ -65,6 +65,13 @@ export function AssignmentAttachmentsDialog({
   const [kept, setKept] = useState<AssignmentAttachmentView[]>(initialAttachments);
   const [pendingFiles, setPendingFiles] = useState<PendingItem[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setKept(initialAttachments);
+      setPendingFiles([]);
+    }
+  }, [open, initialAttachments]);
 
   const total = kept.length + pendingFiles.length;
 
@@ -181,72 +188,107 @@ export function AssignmentAttachmentsDialog({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" role="dialog">
-          <div className="bg-white rounded-xl border shadow-lg w-full max-w-md max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-xl border shadow-2xl w-full max-w-md flex flex-col max-h-[85vh] overflow-hidden">
+            {/* Header Sticky */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b bg-white shrink-0">
               <div>
-                <h3 className="font-semibold text-sm">Lampiran Tugas</h3>
+                <h3 className="font-semibold text-sm text-slate-900">Kelola Lampiran Tugas</h3>
                 <p className="text-xs text-muted-foreground truncate max-w-[280px]">{assignmentTitle}</p>
               </div>
-              <button onClick={handleClose} aria-label="Tutup" className="text-muted-foreground hover:text-foreground">
+              <button
+                type="button"
+                onClick={handleClose}
+                aria-label="Tutup"
+                className="text-muted-foreground hover:text-foreground rounded-md p-1 hover:bg-slate-100 transition-colors"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 space-y-3">
+            {/* Scrollable Body */}
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
               <p className="text-[11px] text-muted-foreground">
-                Soal, LKPD, atau bahan lain. Bisa diubah kapan saja — walau sudah ada yang mengumpulkan.
+                Soal, LKPD, atau materi pendukung. Dapat ditambah/dihapus kapan saja walau siswa sudah mengumpulkan.
               </p>
 
               {kept.length === 0 && pendingFiles.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4 border rounded-lg border-dashed">
-                  Belum ada lampiran.
-                </p>
+                <div className="text-xs text-muted-foreground text-center py-6 border rounded-lg border-dashed bg-slate-50/50">
+                  <Paperclip className="w-6 h-6 mx-auto mb-1 text-slate-300" />
+                  Belum ada lampiran pada tugas ini.
+                </div>
               )}
 
-              {kept.map((f) => (
-                <div key={f.id} className="flex items-center gap-2 rounded-lg border px-3 py-2">
-                  <FileIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <a
-                    href={`/api/assignments/attachments/${f.id}${f.isPreviewable ? "?disposition=inline" : ""}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 min-w-0 truncate text-xs font-medium hover:underline"
-                    title={f.originalName}
-                  >
-                    {f.originalName}
-                    <span className="text-muted-foreground font-normal"> ({fmtSize(f.sizeBytes)})</span>
-                  </a>
-                  <button
-                    onClick={() => setKept(kept.filter((x) => x.id !== f.id))}
-                    aria-label={`Hapus ${f.originalName}`}
-                    className="text-muted-foreground hover:text-rose-500"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+              {/* Lampiran yang sudah tersimpan */}
+              {kept.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Tersimpan ({kept.length}):
+                  </p>
+                  {kept.map((f) => (
+                    <div key={f.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-2xs">
+                      <FileIcon className="w-4 h-4 text-slate-500 shrink-0" />
+                      <a
+                        href={`/api/assignments/attachments/${f.id}${f.isPreviewable ? "?disposition=inline" : ""}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-0 truncate text-xs font-medium text-slate-700 hover:text-teal-700 hover:underline"
+                        title={f.originalName}
+                      >
+                        {f.originalName}
+                        <span className="text-muted-foreground font-normal"> ({fmtSize(f.sizeBytes)})</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setKept(kept.filter((x) => x.id !== f.id))}
+                        aria-label={`Hapus ${f.originalName}`}
+                        className="text-muted-foreground hover:text-rose-500 rounded p-1 hover:bg-rose-50 transition-colors"
+                        title="Hapus berkas ini"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
 
-              {pendingFiles.map((f) => (
-                <div key={f.localId} className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50/50 px-3 py-2">
-                  <FileIcon className="w-4 h-4 text-teal-600 shrink-0" />
-                  <span className="flex-1 min-w-0 truncate text-xs font-medium">
-                    {f.name} <span className="text-muted-foreground font-normal">({fmtSize(f.size)})</span>
-                  </span>
-                  <button
-                    onClick={() => setPendingFiles(pendingFiles.filter((x) => x.localId !== f.localId))}
-                    aria-label={`Batal ${f.name}`}
-                    className="text-muted-foreground hover:text-rose-500"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+              {/* File baru yang siap diunggah */}
+              {pendingFiles.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-2 text-xs text-amber-900 flex items-start gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      <b>{pendingFiles.length} file baru dipilih.</b> Klik tombol <b>Simpan Lampiran</b> di bawah untuk mengunggah ke tugas ini.
+                    </span>
+                  </div>
+                  {pendingFiles.map((f) => (
+                    <div key={f.localId} className="flex items-center gap-2 rounded-lg border border-teal-300 bg-teal-50/70 px-3 py-2">
+                      <FileIcon className="w-4 h-4 text-teal-700 shrink-0" />
+                      <span className="flex-1 min-w-0 truncate text-xs font-medium text-teal-900">
+                        {f.name} <span className="text-teal-600 font-normal">({fmtSize(f.size)})</span>
+                      </span>
+                      <span className="text-[10px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.5 rounded border border-amber-200 shrink-0">
+                        Menunggu simpan
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingFiles(pendingFiles.filter((x) => x.localId !== f.localId))}
+                        aria-label={`Batal ${f.name}`}
+                        className="text-muted-foreground hover:text-rose-500 rounded p-1 hover:bg-rose-50 transition-colors"
+                        title="Batal pilih"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
 
+              {/* Tombol pilih file */}
               {total < MAX_FILES && (
-                <label className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2.5 text-xs font-semibold text-muted-foreground cursor-pointer hover:border-teal-400 hover:text-teal-700">
-                  <Upload className="w-4 h-4" />
-                  Tambah file (maks {MAX_FILES} × 25 MB)
+                <label className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 px-3 py-3 text-xs font-semibold text-slate-600 cursor-pointer hover:border-teal-500 hover:bg-teal-50/30 hover:text-teal-700 transition-colors">
+                  <Upload className="w-4 h-4 text-slate-500" />
+                  Pilih file untuk ditambahkan (maks {MAX_FILES - total} lagi)
                   <input
                     type="file"
                     multiple
@@ -258,10 +300,31 @@ export function AssignmentAttachmentsDialog({
                   />
                 </label>
               )}
+            </div>
 
-              <Button onClick={handleSave} disabled={busy || !isDirty} className="w-full">
+            {/* Footer Sticky — SELALU TERLIHAT */}
+            <div className="p-3 border-t bg-slate-50 shrink-0 flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={busy}
+                className="w-1/3"
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={busy || !isDirty}
+                className="w-2/3 bg-teal-600 hover:bg-teal-700 text-white"
+              >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {busy ? "Menyimpan…" : "Simpan Lampiran"}
+                {busy
+                  ? "Mengunggah…"
+                  : pendingFiles.length > 0
+                  ? `Simpan (${pendingFiles.length} file baru)`
+                  : "Simpan Perubahan"}
               </Button>
             </div>
           </div>

@@ -187,6 +187,9 @@ export default function TugasClient({ teachingContextId, initialAssignments, ses
 
         {newFiles.length > 0 && (
           <div className="space-y-1.5">
+            <p className="text-[11px] font-semibold text-teal-700 flex items-center gap-1">
+              <span>●</span> {newFiles.length} file dipilih (akan diunggah saat klik Tambah Tugas):
+            </p>
             {newFiles.map((f) => (
               <div key={f.localId} className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50/50 px-2.5 py-1.5">
                 <FileIcon className="w-3.5 h-3.5 text-teal-600 shrink-0" />
@@ -197,6 +200,7 @@ export default function TugasClient({ teachingContextId, initialAssignments, ses
                   </span>
                 </span>
                 <button
+                  type="button"
                   onClick={() => setNewFiles(newFiles.filter((x) => x.localId !== f.localId))}
                   aria-label={`Hapus ${f.name}`}
                   className="text-muted-foreground hover:text-rose-500"
