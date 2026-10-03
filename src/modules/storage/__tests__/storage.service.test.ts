@@ -32,6 +32,7 @@ import {
   buildTmpStorageKey,
   deleteObjects,
   isClaimableSubmissionKey,
+  isClaimableKey,
   isStorageConfigured,
   presignDownload,
   presignSubmissionUpload,
@@ -153,5 +154,21 @@ describe("Story 1 — key builder & claim guard (E12 sinkron)", () => {
     expect(isClaimableSubmissionKey("assignments/tmp/curi.jpg")).toBe(false);
     expect(isClaimableSubmissionKey("submissions/tmp/bukan-uuid.jpg")).toBe(false);
     expect(isClaimableSubmissionKey("")).toBe(false);
+  });
+});
+
+describe("Story 2 — key builder kind=attachment", () => {
+  it("prefix attachments/tmp & claimable untuk kind yang benar saja", () => {
+    const key = buildTmpStorageKey("soal.pdf", "attachment");
+    expect(key).toMatch(/^attachments\/tmp\/[0-9a-f-]{36}\.pdf$/);
+    expect(isClaimableKey(key, "attachment")).toBe(true);
+    // Key attachment TIDAK boleh diklaim sebagai submission (sekat kind)
+    expect(isClaimableKey(key, "submission")).toBe(false);
+    const subKey = buildTmpStorageKey("jawaban.jpg", "submission");
+    expect(isClaimableKey(subKey, "attachment")).toBe(false);
+  });
+
+  it("default kind tetap submission (back-compat Story 1)", () => {
+    expect(buildTmpStorageKey("a.jpg")).toMatch(/^submissions\/tmp\//);
   });
 });

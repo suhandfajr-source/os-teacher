@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
+import { toAssignmentAttachmentView } from "@/modules/assignments/assignment.actions";
 import TugasClient from "./TugasClient";
 
 export default async function TugasPage({ params }: { params: Promise<{ teachingContextId: string }> }) {
@@ -11,6 +12,7 @@ export default async function TugasPage({ params }: { params: Promise<{ teaching
     orderBy: { createdAt: "desc" },
     include: {
       teachingSession: true,
+      attachments: { orderBy: { createdAt: "asc" } },
       _count: {
         select: { submissions: { where: { status: "SUBMITTED" } } },
       },
@@ -35,6 +37,7 @@ export default async function TugasPage({ params }: { params: Promise<{ teaching
         teachingContextId={teachingContextId} 
         initialAssignments={assignments.map((a) => ({
           ...a,
+          attachments: a.attachments.map(toAssignmentAttachmentView),
           pendingSubmissions: a._count.submissions,
         }))} 
         sessions={sessions}

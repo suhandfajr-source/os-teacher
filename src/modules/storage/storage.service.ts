@@ -26,7 +26,6 @@ export class StorageNotConfiguredError extends Error {
   }
 }
 
-const SUBMISSION_TMP_PREFIX = "submissions/tmp";
 
 export function isStorageConfigured(): boolean {
   return Boolean(
@@ -55,22 +54,36 @@ function requireEnv(): { bucket: string; client: S3Client } {
   return { bucket: process.env.S3_BUCKET as string, client: cachedClient };
 }
 
-/** Key sementara untuk upload siswa; dipin sebagai storageKey final saat submit. */
-export function buildTmpStorageKey(originalName: string): string {
-  // Ekstensi di-clamp 20 karakter — sinkron dengan regex isClaimableSubmissionKey
+const TMP_PREFIXES = {
+  submission: "submissions/tmp",
+  attachment: "attachments/tmp",
+} as const;
+
+export type StorageKind = keyof typeof TMP_PREFIXES;
+
+/** Key sementara untuk upload (siswa/guru); dipin sebagai storageKey final saat claim. */
+export function buildTmpStorageKey(
+  originalName: string,
+  kind: StorageKind = "submission"
+): string {
+  // Ekstensi di-clamp 20 karakter — sinkron dengan regex isClaimableKey
   const rawExt = getExtension(originalName).slice(0, 20);
   const ext = rawExt.replace(/[^a-z0-9]/g, "");
   const id = randomUUID();
-  return ext ? `${SUBMISSION_TMP_PREFIX}/${id}.${ext}` : `${SUBMISSION_TMP_PREFIX}/${id}`;
+  const prefix = TMP_PREFIXES[kind];
+  return ext ? `${prefix}/${id}.${ext}` : `${prefix}/${id}`;
 }
 
-/** Hanya key keluaran buildTmpStorageKey yang boleh diklaim submission. */
-export function isClaimableSubmissionKey(storageKey: string): boolean {
+/** Hanya key keluaran buildTmpStorageKey kind tsb yang boleh di-claim. */
+export function isClaimableKey(storageKey: string, kind: StorageKind = "submission"): boolean {
   return (
     typeof storageKey === "string" &&
-    new RegExp(`^${SUBMISSION_TMP_PREFIX}/[0-9a-f-]{36}(\\.[a-z0-9]{1,20})?$`).test(storageKey)
+    new RegExp(`^${TMP_PREFIXES[kind]}/[0-9a-f-]{36}(\\.[a-z0-9]{1,20})?$`).test(storageKey)
   );
 }
+
+/** Back-compat Story 1 — call-site eksplisit tetap jelas maknanya. */
+export const isClaimableSubmissionKey = (k: string) => isClaimableKey(k, "submission");
 
 export interface PresignedUpload {
   storageKey: string;

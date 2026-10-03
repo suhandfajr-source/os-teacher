@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/auth";
 import { verifyStudentSession } from "@/modules/student-auth/student-session";
+import { verifyTeachingContextAccess } from "@/lib/authorization";
 import { validateFileList } from "@/modules/storage/file-validation";
 import {
   StorageNotConfiguredError,
@@ -10,9 +11,9 @@ import {
 } from "@/modules/storage/storage.service";
 
 /**
- * Story 1 — minta presigned POST untuk upload file jawaban.
- * Browser siswa mengunggah LANGSUNG ke storage; byte tidak lewat sini.
- * Guard: sesi siswa valid + tugas ACTIVE milik rombel periode aktif siswa.
+ * Story 1 — minta presigned POST untuk upload file jawaban SISWA.
+ * Story 2 — + kind=attachment untuk LAMPIRAN GURU (guard: guru pemilik konteks).
+ * Browser mengunggah LANGSUNG ke storage; byte tidak lewat sini.
  */
 
 function validateSameOrigin(request: NextRequest): boolean {
@@ -47,22 +48,70 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const session = await verifyStudentSession();
-    if (!session) {
-      return NextResponse.json({ error: "Sesi tidak valid atau telah berakhir." }, { status: 401 });
-    }
-
     const body = await request.json().catch(() => null);
-    const assignmentId = typeof body?.assignmentId === "string" ? body.assignmentId : "";
+    const kind = body?.kind === "attachment" ? "attachment" : "submission";
     const rawFiles = Array.isArray(body?.files) ? body.files : null;
 
-    if (!assignmentId || !rawFiles) {
+    if (!rawFiles) {
       return NextResponse.json({ error: "Permintaan tidak valid." }, { status: 400 });
     }
 
     const validation = validateFileList(rawFiles);
     if (!validation.ok) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    let uploads = [];
+
+    if (kind === "attachment") {
+      // ── Story 2: guru pemilik konteks (prioritas utama — sisa cookie siswa tidak memblokir) ──
+      const teachingContextId =
+        typeof body?.teachingContextId === "string" ? body.teachingContextId : "";
+      if (!teachingContextId) {
+        return NextResponse.json({ error: "Permintaan tidak valid." }, { status: 400 });
+      }
+
+      let authResult;
+      try {
+        authResult = await verifyTeachingContextAccess(teachingContextId);
+      } catch {
+        authResult = null;
+      }
+
+      if (!authResult) {
+        const studentSession = await verifyStudentSession();
+        if (studentSession) {
+          return NextResponse.json(
+            { error: "Hanya guru pemilik kelas yang dapat mengunggah lampiran." },
+            { status: 403 }
+          );
+        }
+        return NextResponse.json({ error: "Kelas tidak tersedia." }, { status: 404 });
+      }
+
+      if (authResult.isBanned) {
+        return NextResponse.json(
+          { error: "Akses ditolak: Akun Anda telah dinonaktifkan." },
+          { status: 403 }
+        );
+      }
+
+      for (const f of validation.files) {
+        const storageKey = buildTmpStorageKey(f.name, "attachment");
+        uploads.push(await presignSubmissionUpload(storageKey, f.mimeType));
+      }
+      return NextResponse.json({ uploads });
+    }
+
+    // ── Story 1: siswa — tugas ACTIVE milik rombel periode aktifnya ──
+    const assignmentId = typeof body?.assignmentId === "string" ? body.assignmentId : "";
+    if (!assignmentId) {
+      return NextResponse.json({ error: "Permintaan tidak valid." }, { status: 400 });
+    }
+
+    const session = await verifyStudentSession();
+    if (!session) {
+      return NextResponse.json({ error: "Sesi tidak valid atau telah berakhir." }, { status: 401 });
     }
 
     const student = await prisma.student.findUnique({
@@ -104,9 +153,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tugas tidak tersedia." }, { status: 404 });
     }
 
-    const uploads = [];
     for (const f of validation.files) {
-      const storageKey = buildTmpStorageKey(f.name);
+      const storageKey = buildTmpStorageKey(f.name, "submission");
       uploads.push(await presignSubmissionUpload(storageKey, f.mimeType));
     }
 

@@ -5,10 +5,12 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 ---
 
 ## 1. Modul Tugas: Pengiriman via File
-- **Deskripsi:** Menambahkan kemampuan agar tugas dapat dikirim/dikumpulkan melalui file (semua jenis kecuali program/makro, maks 25 MB × 5 file).
-- **Status:** 🔨 Dikerjakan
-  - ✅ **Story 1 — File jawaban siswa** (2 Okt 2025): skema `submission_file`, adapter S3-compatible (R2/MinIO), presigned upload direct-browser, route akses terautentikasi, UI portal siswa + koreksi guru, 52 test baru. Menunggu: akun R2 untuk uji manual production-like. Blueprint: `docs/product/assignment-file-blueprint.md`
-  - ⏳ **Story 2 — Lampiran guru** (soal/LKPD di tugas): tertunda di `_bmad-output/implementation-artifacts/deferred-work.md`
+- **Deskripsi:** Menambahkan kemampuan agar tugas bisa dikirim/dikumpulkan melalui file (semua jenis kecuali program/makro, maks 25 MB × 5 file) ke dua arah: jawaban siswa dan lampiran guru.
+- **Status:** ✅ Selesai
+  - ✅ **Story 1 — File jawaban siswa**: skema `submission_file`, adapter S3-compatible (R2/MinIO/SeaweedFS), presigned upload direct-browser, route akses terautentikasi, UI portal siswa + koreksi guru.
+  - ✅ **Story 2 — Lampiran guru**: skema `assignment_attachment`, upload presign guru, dialog kelola lampiran di portal guru (ubah kapan saja), tampilan chip lampiran di portal siswa.
+  - ✅ **Pengujian Lokal**: didukung SeaweedFS lokal di `127.0.0.1:8333`, 857/857 unit & integration test passing.
+  - Blueprint: `docs/product/assignment-file-blueprint.md`
 
 ---
 

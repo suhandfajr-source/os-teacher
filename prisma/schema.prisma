@@ -562,6 +562,7 @@ model Assignment {
   updatedAt         DateTime         @updatedAt
 
   submissions AssignmentSubmission[]
+  attachments AssignmentAttachment[]
 
   @@index([teachingContextId])
   @@index([teachingSessionId])
@@ -607,6 +608,20 @@ model SubmissionFile {
 
   @@index([submissionId])
   @@map("submission_file")
+}
+
+model AssignmentAttachment {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  storageKey   String     @unique
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  createdAt    DateTime   @default(now())
+
+  @@index([assignmentId])
+  @@map("assignment_attachment")
 }
 
 // -------------------------------------------------

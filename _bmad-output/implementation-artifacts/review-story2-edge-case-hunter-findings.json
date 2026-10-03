@@ -1,0 +1,132 @@
+[
+  {
+    "location": "src/app/api/assignments/files/upload-url/route.ts:68-74",
+    "trigger_condition": "Guru pemilik kelas memiliki cookie sesi siswa aktif di browser yang sama",
+    "guard_snippet": "const auth = await verifyTeachingContextAccess(teachingContextId).catch(() => null); if (!auth) { const studentSession = await verifyStudentSession(); if (studentSession) return NextResponse.json({ error: \"Hanya guru pemilik kelas yang dapat mengunggah lampiran.\" }, { status: 403 }); return NextResponse.json({ error: \"Kelas tidak tersedia.\" }, { status: 404 }); }",
+    "potential_consequence": "Guru sah diblokir 403 dari mengunggah lampiran tugas akibat cookie siswa tersisa"
+  },
+  {
+    "location": "src/app/api/assignments/attachments/[fileId]/route.ts:52-58",
+    "trigger_condition": "Guru dengan status akun dibekukan (isBanned) mengakses atau mengunduh lampiran tugas",
+    "guard_snippet": "const auth = await verifyTeachingContextAccess(file.assignment.teachingContextId); if (!auth.isBanned) authorized = true;",
+    "potential_consequence": "Guru yang dibekukan masih dapat mengunduh dan mengakses file lampiran tugas"
+  },
+  {
+    "location": "src/modules/assignments/assignment.actions.ts:646",
+    "trigger_condition": "Guru dengan status akun dibekukan (isBanned) mengubah atau menghapus lampiran tugas",
+    "guard_snippet": "const auth = await verifyTeachingContextAccess(data.teachingContextId); assertNotBanned(auth);",
+    "potential_consequence": "Guru dibekukan dapat menambah dan menghapus lampiran tugas yang sudah ada"
+  },
+  {
+    "location": "src/modules/assignments/assignment.actions.ts:718",
+    "trigger_condition": "Guru dengan status akun dibekukan (isBanned) memanggil aksi melihat daftar lampiran",
+    "guard_snippet": "const auth = await verifyTeachingContextAccess(teachingContextId); assertNotBanned(auth);",
+    "potential_consequence": "Guru dibekukan dapat membaca daftar berkas lampiran tugas tanpa otorisasi"
+  },
+  {
+    "location": "src/app/api/assignments/files/upload-url/route.ts:79-84",
+    "trigger_condition": "Guru yang dibekukan (isBanned) meminta URL presigned untuk mengunggah lampiran baru",
+    "guard_snippet": "const auth = await verifyTeachingContextAccess(teachingContextId); if (auth.isBanned) return NextResponse.json({ error: \"Akun dinonaktifkan.\" }, { status: 403 });",
+    "potential_consequence": "Guru dibekukan dapat mengunggah file baru ke direktori penyimpanan S3"
+  },
+  {
+    "location": "src/app/api/assignments/attachments/[fileId]/route.ts:61-73",
+    "trigger_condition": "Siswa dengan status akun dinonaktifkan atau ditolak mengunduh lampiran tugas",
+    "guard_snippet": "const student = await prisma.student.findUnique({ where: { id: studentSession.studentId }, select: { status: true, accountStatus: true } }); if (student?.status === \"ACTIVE\" && student?.accountStatus === \"ACTIVE\") { authorized = Boolean(membership); }",
+    "potential_consequence": "Siswa yang dinonaktifkan sekolah tetap dapat mengunduh lampiran tugas via cookie"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/AssignmentAttachmentsDialog.tsx:210-216",
+    "trigger_condition": "Guru menghapus lampiran di dialog lalu menutupnya tanpa menyimpan perubahan",
+    "guard_snippet": "const handleClose = () => { setKept(initialAttachments); setPendingFiles([]); setOpen(false); };",
+    "potential_consequence": "File hilang permanen dari database jika guru membuka lagi dan menyimpan"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/AssignmentAttachmentsDialog.tsx:248-251",
+    "trigger_condition": "Guru menghapus lampiran awal lalu berhasil menyimpan perubahan via dialog",
+    "guard_snippet": "const isDirty = pendingFiles.length > 0 || kept.length !== initialAttachments.length || !kept.every((k) => initialAttachments.some((init) => init.id === k.id));",
+    "potential_consequence": "Tombol Simpan Lampiran tetap aktif setelah sukses memicu request ganda"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/AssignmentAttachmentsDialog.tsx:200-207",
+    "trigger_condition": "Guru mengklik tautan lampiran pratinjau (PDF/gambar) di dalam dialog kelola",
+    "guard_snippet": "<a href={`/api/assignments/attachments/${f.id}${f.isPreviewable ? \"?disposition=inline\" : \"\"}`} target=\"_blank\" rel=\"noopener noreferrer\">",
+    "potential_consequence": "Browser guru selalu mengunduh file alih-alih membuka pratinjau di tab"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/AssignmentAttachmentsDialog.tsx:124-142",
+    "trigger_condition": "Koneksi terputus saat mengunggah salah satu file pada multi-file pending",
+    "guard_snippet": "catch (err) { if (uploaded.length > 0) deleteObjects(uploaded.map((u) => u.storageKey)).catch(console.error); toast.error(`File \"${pendingFiles[i].name}\" gagal diunggah`); setBusy(false); return; }",
+    "potential_consequence": "File yang terunggah sebagian tertinggal sebagai file yatim di storage"
+  },
+  {
+    "location": "src/app/siswa/portal/tugas/page.tsx:115-132",
+    "trigger_condition": "Guru mengunggah lampiran dengan nama file panjang tanpa spasi",
+    "guard_snippet": "<span className=\"truncate max-w-[160px] sm:max-w-[240px]\" title={att.originalName}>{att.originalName}</span>",
+    "potential_consequence": "Nama file panjang menyebabkan horizontal overflow pada tampilan portal siswa mobile"
+  },
+  {
+    "location": "src/modules/assignments/assignment.actions.ts:655",
+    "trigger_condition": "Input keepFileIds bernilai null atau bukan tipe array pada aksi server",
+    "guard_snippet": "const keepIds = new Set(Array.isArray(data.keepFileIds) ? data.keepFileIds : []);",
+    "potential_consequence": "Server melempar TypeError dan mengembalikan error 500 tidak terduga ke klien"
+  },
+  {
+    "location": "src/modules/assignments/assignment.actions.ts:681-690",
+    "trigger_condition": "Input newFiles membawa storageKey yang sudah ada pada daftar lampiran tugas",
+    "guard_snippet": "if (keptRows.some((k) => newRows.some((n) => n.storageKey === k.storageKey))) return { success: false, error: \"Duplikasi file terdeteksi.\" };",
+    "potential_consequence": "Transaksi Prisma melempar error P2002 dan penyimpanan lampiran gagal status 500"
+  },
+  {
+    "location": "prisma/schema.prisma:616",
+    "trigger_condition": "Tugas dihapus dari database saat masih memiliki data lampiran tersimpan",
+    "guard_snippet": "const attachments = await prisma.assignmentAttachment.findMany({ where: { assignmentId } }); if (attachments.length) await deleteObjects(attachments.map(a => a.storageKey));",
+    "potential_consequence": "Objek lampiran tertinggal selamanya di storage S3 saat tugas dihapus database"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/TugasClient.tsx:268-273",
+    "trigger_condition": "Guru menyimpan perubahan lampiran dialog tanpa melakukan refresh halaman penuh",
+    "guard_snippet": "<AssignmentAttachmentsDialog onAttachmentsSaved={(updated) => setAssignments((prev) => prev.map((a) => a.id === assignment.id ? { ...a, attachments: updated } : a))} />",
+    "potential_consequence": "State daftar tugas di TugasClient tidak sinkron dengan data lampiran terbaru"
+  },
+  {
+    "location": "src/app/api/assignments/attachments/[fileId]/route.ts:52-58",
+    "trigger_condition": "Akses unduh guru pemilik konteks via verifyTeachingContextAccess",
+    "guard_snippet": "if (auth.isBanned) return notFound();",
+    "potential_consequence": "Guru yang akunnya dibekukan dapat mengunduh lampiran karena isBanned tidak diperiksa",
+    "kind": "claim",
+    "confidence": "high"
+  },
+  {
+    "location": "src/app/api/assignments/files/upload-url/route.ts:68-74",
+    "trigger_condition": "Route upload presign kind=attachment wajib sesi guru pemilik konteks",
+    "guard_snippet": "const studentSession = await verifyStudentSession(); if (studentSession && !teacherSession) return 403;",
+    "potential_consequence": "Guru pemilik kelas sah ditolak 403 bila peramban menyimpan cookie siswa",
+    "kind": "claim",
+    "confidence": "high"
+  },
+  {
+    "location": "src/app/(dashboard)/kelas/[teachingContextId]/tugas/AssignmentAttachmentsDialog.tsx:200-207",
+    "trigger_condition": "Pratinjau inline hanya tipe previewable (guard di route)",
+    "guard_snippet": "href={`/api/assignments/attachments/${f.id}${f.isPreviewable ? \"?disposition=inline\" : \"\"}`}",
+    "potential_consequence": "Guru tidak mendapatkan pratinjau inline di dialog karena parameter query diabaikan",
+    "kind": "claim",
+    "confidence": "medium"
+  },
+  {
+    "location": "src/app/api/assignments/attachments/[fileId]/route.ts:61-73",
+    "trigger_condition": "Siswa dengan membership aktif di rombel+periode tugas itu",
+    "guard_snippet": "if (!student || student.status !== \"ACTIVE\" || student.accountStatus !== \"ACTIVE\") return notFound();",
+    "potential_consequence": "Siswa nonaktif/ditolak tetap dapat mengunduh materi tugas kelas via cookie lama",
+    "kind": "claim",
+    "confidence": "high"
+  },
+  {
+    "location": "src/app/api/assignments/files/upload-url/route.ts:50-54",
+    "trigger_condition": "Pemeriksaan autentikasi sesi siswa sebelum validasi payload body request",
+    "guard_snippet": "if (!session && !isTeacher) return NextResponse.json({ error: \"Sesi tidak valid.\" }, { status: 401 });",
+    "potential_consequence": "Request tanpa autentikasi mendapat respons 400 Bad Request alih-alih 401 Unauthorized",
+    "kind": "deletion",
+    "confidence": "medium"
+  }
+]

@@ -1,7 +1,7 @@
 import React from "react";
 import { verifyStudentSession } from "@/modules/student-auth/student-session";
 import { prisma } from "@/lib/auth";
-import { ClipboardList, Clock, BookOpen, AlertCircle } from "lucide-react";
+import { ClipboardList, Clock, BookOpen, AlertCircle, FileText } from "lucide-react";
 import { SubmitAssignmentForm } from "@/modules/student-portal/components/SubmitAssignmentForm";
 import { isSubmissionLate, isPreviewable, type StudentSubmissionView } from "@/modules/assignments/submission.service";
 
@@ -36,6 +36,7 @@ export default async function StudentAssignmentsPage() {
         status: "ACTIVE",
       },
       include: {
+        attachments: { orderBy: { createdAt: "asc" } },
         teachingContext: {
           include: {
             subject: { select: { name: true } },
@@ -106,6 +107,36 @@ export default async function StudentAssignmentsPage() {
                 <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
                   {item.description}
                 </p>
+              )}
+              {(item.attachments?.length ?? 0) > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-[9px] font-bold uppercase text-slate-400 self-center">Lampiran:</span>
+                  {item.attachments.map(
+                    (att: { id: string; originalName: string; mimeType: string; sizeBytes: number }) => {
+                      const previewable = isPreviewable(att.mimeType);
+                      return (
+                        <a
+                          key={att.id}
+                          href={`/api/assignments/attachments/${att.id}${previewable ? "?disposition=inline" : ""}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50/60 px-2 py-1 text-[10px] font-semibold text-teal-800 hover:bg-teal-100 max-w-full"
+                          title={att.originalName}
+                        >
+                          <FileText className="w-3 h-3 shrink-0" />
+                          <span className="truncate max-w-[160px] sm:max-w-[240px]">
+                            {att.originalName}
+                          </span>
+                          <span className="font-normal text-slate-400 shrink-0">
+                            {att.sizeBytes >= 1024 * 1024
+                              ? `${(att.sizeBytes / 1024 / 1024).toFixed(1)} MB`
+                              : `${Math.max(1, Math.round(att.sizeBytes / 1024))} KB`}
+                          </span>
+                        </a>
+                      );
+                    }
+                  )}
+                </div>
               )}
               <div className="text-[10px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
                 <span>Guru: {item.teachingContext.teacherProfile.user.name}</span>

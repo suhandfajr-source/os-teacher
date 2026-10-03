@@ -10,6 +10,108 @@ import {
   isPreviewable,
   type TeacherQueueItem,
 } from "@/modules/assignments/submission.service";
+import { validateFileList, type FileMetaInput } from "@/modules/storage/file-validation";
+import {
+  headObjectSize,
+  deleteObjects,
+  isClaimableKey,
+  isStorageConfigured,
+} from "@/modules/storage/storage.service";
+
+/** Metadata lampiran guru yang diklaim — sudah terunggah via presign. */
+export interface AssignmentAttachmentInput extends FileMetaInput {
+  storageKey: string;
+}
+
+/** Bentuk tampilan lampiran untuk guru & portal siswa. */
+export interface AssignmentAttachmentView {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  isPreviewable: boolean;
+}
+
+function toAttachmentView(f: {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+}): AssignmentAttachmentView {
+  return {
+    id: f.id,
+    originalName: f.originalName,
+    mimeType: f.mimeType,
+    sizeBytes: f.sizeBytes,
+    isPreviewable: isPreviewable(f.mimeType),
+  };
+}
+
+/** Mapper publik untuk page server-component yang memetakan row Prisma → view. */
+export function toAssignmentAttachmentView(row: {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+}): AssignmentAttachmentView {
+  return toAttachmentView(row);
+}
+
+/**
+ * Claim lampiran: validasi list + key claimable + HEAD-check ukuran.
+ * Dipakai createAssignment & setAssignmentAttachmentsAction (Story 2).
+ */
+async function claimAttachmentFiles(
+  files: AssignmentAttachmentInput[]
+): Promise<{ ok: true; rows: Array<{ storageKey: string; originalName: string; mimeType: string; sizeBytes: number }> } | { ok: false; error: string }> {
+  if (files.length > 5) {
+    return { ok: false, error: "Maksimal 5 file per tugas." };
+  }
+
+  const validation = validateFileList(files);
+  if (!validation.ok) return validation;
+
+  if (files.length > 0 && !isStorageConfigured()) {
+    return { ok: false, error: "Penyimpanan file belum dikonfigurasi." };
+  }
+
+  const seen = new Set<string>();
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    if (seen.has(f.storageKey)) {
+      return { ok: false, error: "Terdapat duplikasi file dalam lampiran." };
+    }
+    seen.add(f.storageKey);
+    if (!isClaimableKey(f.storageKey, "attachment")) {
+      return { ok: false, error: `File "${validation.files[i].name}" belum terunggah dengan benar.` };
+    }
+  }
+
+  // HEAD check secara paralel (Promise.all) untuk menekan latensi S3
+  const headResults = await Promise.all(
+    files.map(async (f, i) => {
+      const actualSize = await headObjectSize(f.storageKey);
+      return { f, meta: validation.files[i], actualSize };
+    })
+  );
+
+  const rows = [];
+  for (const { f, meta, actualSize } of headResults) {
+    if (actualSize == null) {
+      return { ok: false, error: `File "${meta.name}" belum selesai terunggah — coba lagi.` };
+    }
+    if (actualSize !== f.sizeBytes || actualSize > 25 * 1024 * 1024) {
+      return { ok: false, error: `Ukuran file "${meta.name}" tidak sesuai.` };
+    }
+    rows.push({
+      storageKey: f.storageKey,
+      originalName: meta.name,
+      mimeType: meta.mimeType,
+      sizeBytes: meta.sizeBytes,
+    });
+  }
+  return { ok: true, rows };
+}
 
 function assertNotBanned(authContext: { isBanned?: boolean }) {
   if (authContext.isBanned) {
@@ -23,10 +125,22 @@ export async function createAssignment(data: {
   title: string;
   description?: string;
   dueDate?: Date;
+  files?: AssignmentAttachmentInput[];
 }) {
   const auth = await verifyTeachingContextAccess(data.teachingContextId);
   assertNotBanned(auth);
   const { context } = auth;
+
+  // Story 2 — claim lampiran SEBELUM tugas dibuat (gagal claim = gagal total,
+  // tidak meninggalkan tugas tanpa lampiran yang dijanjikan)
+  let attachmentRows: Array<{ storageKey: string; originalName: string; mimeType: string; sizeBytes: number }> = [];
+  if (data.files && data.files.length > 0) {
+    const claimed = await claimAttachmentFiles(data.files);
+    if (!claimed.ok) {
+      throw new Error(claimed.error);
+    }
+    attachmentRows = claimed.rows;
+  }
 
   if (data.teachingSessionId) {
     const session = await prisma.teachingSession.findUnique({
@@ -50,7 +164,16 @@ export async function createAssignment(data: {
       description: data.description,
       dueDate: data.dueDate,
       status: "ACTIVE",
+      attachments: {
+        create: attachmentRows.map((f) => ({
+          storageKey: f.storageKey,
+          originalName: f.originalName,
+          mimeType: f.mimeType,
+          sizeBytes: f.sizeBytes,
+        })),
+      },
     },
+    include: { attachments: { orderBy: { createdAt: "asc" } } },
   });
 
   revalidatePath(`/kelas/${context.id}/tugas`);
@@ -58,7 +181,10 @@ export async function createAssignment(data: {
     revalidatePath(`/kelas/${context.id}/pertemuan/${data.teachingSessionId}`);
   }
 
-  return assignment;
+  return {
+    ...assignment,
+    attachments: assignment.attachments.map(toAttachmentView),
+  };
 }
 
 /**
@@ -520,4 +646,120 @@ export async function batchSaveDirectAssignmentScoresAction(data: {
       error: err instanceof Error ? err.message : "Gagal menyimpan nilai massal.",
     };
   }
+}
+
+/**
+ * Story 2 — kelola lampiran tugas kapan saja (K8: lampiran = instruksi,
+ * bukan data penilaian — bebas diubah walau sudah ada yang mengumpulkan).
+ * Pola keep+new Story 1: delete selektif (id stabil) + insert file baru;
+ * objek yang dilepas dihapus dari storage SETELAH commit (gagal = log saja).
+ */
+export async function setAssignmentAttachmentsAction(data: {
+  teachingContextId: string;
+  assignmentId: string;
+  keepFileIds: string[];
+  newFiles: AssignmentAttachmentInput[];
+}): Promise<{ success: boolean; error?: string; attachments?: AssignmentAttachmentView[] }> {
+  try {
+    const auth = await verifyTeachingContextAccess(data.teachingContextId);
+    assertNotBanned(auth);
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: data.assignmentId },
+      select: { id: true, teachingContextId: true, teachingSessionId: true },
+    });
+    if (!assignment || assignment.teachingContextId !== data.teachingContextId) {
+      return { success: false, error: "Tugas tidak ditemukan." };
+    }
+
+    // Fail-fast guard jumlah awal (BH7)
+    if (data.keepFileIds.length + data.newFiles.length > 5) {
+      return {
+        success: false,
+        error: `Maksimal 5 file per tugas (dipertahankan ${data.keepFileIds.length} + baru ${data.newFiles.length}).`,
+      };
+    }
+
+    // Claim file baru SEBELUM mutasi DB
+    let newRows: Array<{ storageKey: string; originalName: string; mimeType: string; sizeBytes: number }> = [];
+    if (data.newFiles.length > 0) {
+      const claimed = await claimAttachmentFiles(data.newFiles);
+      if (!claimed.ok) return { success: false, error: claimed.error };
+      newRows = claimed.rows;
+    }
+
+    const current = await prisma.assignmentAttachment.findMany({
+      where: { assignmentId: data.assignmentId },
+    });
+    const keepIds = new Set(data.keepFileIds);
+    const keptRows = current.filter((f) => keepIds.has(f.id));
+    const removedRows = current.filter((f) => !keepIds.has(f.id));
+
+    // Guard jumlah GABUNGAN — maks 5 file per tugas (server-side)
+    if (keptRows.length + newRows.length > 5) {
+      return {
+        success: false,
+        error: `Maksimal 5 file per tugas (dipertahankan ${keptRows.length} + baru ${newRows.length}).`,
+      };
+    }
+
+    await prisma.$transaction([
+      prisma.assignmentAttachment.deleteMany({
+        where: { assignmentId: data.assignmentId, id: { notIn: keptRows.map((f) => f.id) } },
+      }),
+      prisma.assignmentAttachment.createMany({
+        data: newRows.map((f) => ({ ...f, assignmentId: data.assignmentId })),
+      }),
+    ]);
+
+    const removedKeys = removedRows.map((f) => f.storageKey);
+    if (removedKeys.length > 0) {
+      deleteObjects(removedKeys).catch((e) =>
+        console.error("[setAssignmentAttachmentsAction] gagal hapus objek:", e)
+      );
+    }
+
+    const final = await prisma.assignmentAttachment.findMany({
+      where: { assignmentId: data.assignmentId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    revalidatePath(`/kelas/${data.teachingContextId}/tugas`);
+    revalidatePath(`/kelas/${data.teachingContextId}/tugas/${data.assignmentId}`);
+    if (assignment.teachingSessionId) {
+      revalidatePath(`/kelas/${data.teachingContextId}/pertemuan/${assignment.teachingSessionId}`);
+    }
+    revalidatePath("/siswa/portal/tugas");
+
+    return { success: true, attachments: final.map(toAttachmentView) };
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("Akses ditolak")) {
+      return { success: false, error: err.message };
+    }
+    console.error("[setAssignmentAttachmentsAction]", err);
+    return { success: false, error: "Gagal menyimpan lampiran. Coba lagi." };
+  }
+}
+
+/** Story 2 — daftar lampiran satu tugas (untuk dialog kelola guru). */
+export async function getAssignmentAttachmentsAction(
+  teachingContextId: string,
+  assignmentId: string
+): Promise<AssignmentAttachmentView[]> {
+  const auth = await verifyTeachingContextAccess(teachingContextId);
+  assertNotBanned(auth);
+
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    select: { id: true, teachingContextId: true },
+  });
+  if (!assignment || assignment.teachingContextId !== teachingContextId) {
+    throw new Error("Assignment not found");
+  }
+
+  const rows = await prisma.assignmentAttachment.findMany({
+    where: { assignmentId },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map(toAttachmentView);
 }

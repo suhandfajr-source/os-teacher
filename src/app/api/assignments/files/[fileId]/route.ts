@@ -87,7 +87,9 @@ export async function GET(
       disposition,
     });
 
-    return NextResponse.redirect(url, 302);
+    const response = NextResponse.redirect(url, 302);
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   } catch (err) {
     if (err instanceof StorageNotConfiguredError) {
       return NextResponse.json({ error: err.message }, { status: 503 });
