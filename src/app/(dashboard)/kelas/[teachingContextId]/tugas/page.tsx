@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/auth";
 import { verifyTeachingContextAccess } from "@/lib/authorization";
-import { toAssignmentAttachmentView } from "@/modules/assignments/assignment.actions";
+import { toAssignmentAttachmentView } from "@/modules/assignments/attachment.types";
 import TugasClient from "./TugasClient";
 
 export default async function TugasPage({ params }: { params: Promise<{ teachingContextId: string }> }) {

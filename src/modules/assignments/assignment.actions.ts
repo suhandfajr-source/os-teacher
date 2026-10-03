@@ -18,44 +18,12 @@ import {
   isStorageConfigured,
 } from "@/modules/storage/storage.service";
 
-/** Metadata lampiran guru yang diklaim — sudah terunggah via presign. */
-export interface AssignmentAttachmentInput extends FileMetaInput {
-  storageKey: string;
-}
-
-/** Bentuk tampilan lampiran untuk guru & portal siswa. */
-export interface AssignmentAttachmentView {
-  id: string;
-  originalName: string;
-  mimeType: string;
-  sizeBytes: number;
-  isPreviewable: boolean;
-}
-
-function toAttachmentView(f: {
-  id: string;
-  originalName: string;
-  mimeType: string;
-  sizeBytes: number;
-}): AssignmentAttachmentView {
-  return {
-    id: f.id,
-    originalName: f.originalName,
-    mimeType: f.mimeType,
-    sizeBytes: f.sizeBytes,
-    isPreviewable: isPreviewable(f.mimeType),
-  };
-}
-
-/** Mapper publik untuk page server-component yang memetakan row Prisma → view. */
-export function toAssignmentAttachmentView(row: {
-  id: string;
-  originalName: string;
-  mimeType: string;
-  sizeBytes: number;
-}): AssignmentAttachmentView {
-  return toAttachmentView(row);
-}
+import {
+  toAssignmentAttachmentView,
+  type AssignmentAttachmentInput,
+  type AssignmentAttachmentView,
+} from "./attachment.types";
+export type { AssignmentAttachmentInput, AssignmentAttachmentView };
 
 /**
  * Claim lampiran: validasi list + key claimable + HEAD-check ukuran.
@@ -183,7 +151,7 @@ export async function createAssignment(data: {
 
   return {
     ...assignment,
-    attachments: assignment.attachments.map(toAttachmentView),
+    attachments: assignment.attachments.map(toAssignmentAttachmentView),
   };
 }
 
@@ -731,7 +699,7 @@ export async function setAssignmentAttachmentsAction(data: {
     }
     revalidatePath("/siswa/portal/tugas");
 
-    return { success: true, attachments: final.map(toAttachmentView) };
+    return { success: true, attachments: final.map(toAssignmentAttachmentView) };
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes("Akses ditolak")) {
       return { success: false, error: err.message };
@@ -761,5 +729,5 @@ export async function getAssignmentAttachmentsAction(
     where: { assignmentId },
     orderBy: { createdAt: "asc" },
   });
-  return rows.map(toAttachmentView);
+  return rows.map(toAssignmentAttachmentView);
 }
