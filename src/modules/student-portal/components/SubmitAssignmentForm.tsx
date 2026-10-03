@@ -105,11 +105,11 @@ export function SubmitAssignmentForm({ assignmentId, dueDateIso, submission }: P
     return null;
   }
 
-  function handleAddFiles(list: FileList | null) {
-    if (!list) return;
+  function handleAddFiles(incoming: File[]) {
+    if (!incoming || incoming.length === 0) return;
     setFiles((prev) => {
       const next = [...prev];
-      for (const f of Array.from(list)) {
+      for (const f of incoming) {
         if (next.length >= MAX_FILES) {
           toast.error(`Maksimal ${MAX_FILES} file per pengumpulan.`);
           break;
@@ -351,8 +351,11 @@ export function SubmitAssignmentForm({ assignmentId, dueDateIso, submission }: P
                 multiple
                 className="hidden"
                 onChange={(e) => {
-                  handleAddFiles(e.target.files);
+                  const selected = e.target.files ? Array.from(e.target.files) : [];
                   e.target.value = "";
+                  if (selected.length > 0) {
+                    handleAddFiles(selected);
+                  }
                 }}
               />
             </label>

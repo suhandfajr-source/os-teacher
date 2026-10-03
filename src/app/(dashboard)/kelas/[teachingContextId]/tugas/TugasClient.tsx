@@ -44,11 +44,11 @@ export default function TugasClient({ teachingContextId, initialAssignments, ses
   const [newFiles, setNewFiles] = useState<Array<{ localId: string; name: string; size: number; mimeType: string; file: File }>>([]);
   const [uploading, setUploading] = useState(false);
 
-  function addFiles(list: FileList | null) {
-    if (!list) return;
+  function addFiles(files: File[]) {
+    if (!files || files.length === 0) return;
     setNewFiles((prev) => {
       const next = [...prev];
-      for (const f of Array.from(list)) {
+      for (const f of files) {
         if (next.length >= MAX_FILES) {
           toast.error(`Maksimal ${MAX_FILES} file per tugas.`);
           break;
@@ -222,8 +222,11 @@ export default function TugasClient({ teachingContextId, initialAssignments, ses
               multiple
               className="hidden"
               onChange={(e) => {
-                addFiles(e.target.files);
+                const selected = e.target.files ? Array.from(e.target.files) : [];
                 e.target.value = "";
+                if (selected.length > 0) {
+                  addFiles(selected);
+                }
               }}
             />
           </label>

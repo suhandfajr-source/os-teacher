@@ -66,13 +66,6 @@ export function AssignmentAttachmentsDialog({
   const [pendingFiles, setPendingFiles] = useState<PendingItem[]>([]);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      setKept(initialAttachments);
-      setPendingFiles([]);
-    }
-  }, [open, initialAttachments]);
-
   const total = kept.length + pendingFiles.length;
 
   const handleClose = () => {
@@ -86,11 +79,11 @@ export function AssignmentAttachmentsDialog({
     kept.length !== initialAttachments.length ||
     !kept.every((k) => initialAttachments.some((init) => init.id === k.id));
 
-  function addFiles(list: FileList | null) {
-    if (!list) return;
+  function addFiles(files: File[]) {
+    if (!files || files.length === 0) return;
     setPendingFiles((prev) => {
       const next = [...prev];
-      for (const f of Array.from(list)) {
+      for (const f of files) {
         if (next.length + kept.length >= MAX_FILES) {
           toast.error(`Maksimal ${MAX_FILES} file per tugas.`);
           break;
@@ -180,11 +173,16 @@ export function AssignmentAttachmentsDialog({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        type="button"
+        onClick={() => {
+          setKept(initialAttachments);
+          setPendingFiles([]);
+          setOpen(true);
+        }}
         className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-700 hover:text-teal-800 hover:underline"
       >
         <Paperclip className="w-4 h-4" />
-        Lampiran{kept.length > 0 ? ` (${kept.length})` : ""}
+        Lampiran{initialAttachments.length > 0 ? ` (${initialAttachments.length})` : ""}
       </button>
 
       {open && (
@@ -294,8 +292,11 @@ export function AssignmentAttachmentsDialog({
                     multiple
                     className="hidden"
                     onChange={(e) => {
-                      addFiles(e.target.files);
+                      const selected = e.target.files ? Array.from(e.target.files) : [];
                       e.target.value = "";
+                      if (selected.length > 0) {
+                        addFiles(selected);
+                      }
                     }}
                   />
                 </label>
