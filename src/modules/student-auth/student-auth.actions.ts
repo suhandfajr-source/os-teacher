@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/auth";
 import { validatePinFormat, hashPin, verifyPin } from "@/lib/student-pin";
 import { redactMetadata } from "@/lib/audit-metadata";
+import { lockoutAfter } from "./lockout";
 import { Prisma } from "@prisma/client";
 import { 
   setStudentSessionCookie, 
@@ -23,16 +24,9 @@ const SAFE_STUDENT_SELECT = {
 } as const;
 
 /**
- * BH-9 (defer Story 6, diterapkan 2026-10-02): sumber tunggal formula eskalasi
- * lockout (B3/F6): percobaan gagal ke-5 → 15 menit, 6–9 → 1 jam, ≥10 → 24 jam.
- * Dipakai loginStudent (ACTIVE/PENDING/REJECTED) & cabang klaim ulang registerStudent.
+ * BH-9 (defer Story 6, diterapkan 2026-10-02): formula eskalasi lockout
+ * (B3/F6) dipindah ke lockout.ts — file "use server" hanya boleh async export.
  */
-export function lockoutAfter(failedAttempts: number, now: Date): Date | null {
-  if (failedAttempts >= 10) return new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  if (failedAttempts >= 6) return new Date(now.getTime() + 60 * 60 * 1000);
-  if (failedAttempts === 5) return new Date(now.getTime() + 15 * 60 * 1000);
-  return null;
-}
 
 /**
  * Catat kegagalan PIN + kunci bila eskalasi tercapai. Increment atomic
