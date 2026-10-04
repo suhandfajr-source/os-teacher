@@ -67,7 +67,7 @@ export function StudentBottomNav() {
   return (
     <nav 
       aria-label="Navigasi Siswa"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-[env(safe-area-inset-bottom)]"
     >
       <div className="max-w-md mx-auto flex items-center justify-around h-16 px-1">
         {navItems.map((item) => {

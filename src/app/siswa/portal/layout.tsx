@@ -55,13 +55,25 @@ export default async function StudentPortalLayout({
         schoolName={schoolName}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-md mx-auto p-4 pb-24">
+      {/* Main Content Area: Responsive Mobile to PC Desktop */}
+      <main className="flex-1 w-full max-w-md md:max-w-6xl mx-auto p-4 pb-24 md:p-6 md:pb-12 transition-all">
         {children}
       </main>
 
-      {/* Navigasi Bawah 5 Item */}
+      {/* Navigasi Bawah Khusus Mobile (< md) */}
       <StudentBottomNav />
+
+      {/* Footer Khusus PC / Desktop (>= md) */}
+      <footer className="hidden md:block w-full border-t border-slate-200/80 bg-white/70 py-4 text-xs text-slate-500 mt-auto">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
+          <p className="font-medium text-slate-600">
+            KLASSA Student Workspace · <span className="text-slate-400">{schoolName}</span>
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Mode Komputer Lab & Belajar Mandiri
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -33,9 +33,12 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 
 ## 3. Perapihan Mode PC & Mobile Masing-Masing Portal
 - **Deskripsi:** Pembenahan tampilan dan pengalaman responsif (PC/Desktop vs Mobile) pada setiap portal agar nyaman dan rapi di semua perangkat.
-- **Status:** 📋 Direncanakan (Pending)
+- **Status:** 🟡 Sedang Berjalan (In-Progress)
 - **Cakupan Portal:**
-  - **Portal Guru** (Dashboard, Manajemen Kelas, KBM, Penilaian, Jadwal, dsb.)
   - **Portal Siswa** (Halaman tugas, kuis, nilai, presensi, jadwal)
+    - ✅ **Story 1 — Responsive Shell & Dual-Mode Navigation**: Kontainer adaptif `max-w-md md:max-w-6xl`, navigasi horizontal di Topbar untuk PC desktop, bilah BottomNav otomatis disembunyikan di PC (`md:hidden`), footer desktop, dan penguncian navigasi otomatis saat mode kuis aktif.
+    - 📋 **Story 2 — Bento Grid Dashboard & Jadwal Mingguan PC/Mobile**
+    - 📋 **Story 3 — Card Grid Tugas & Layar Pengerjaan Kuis CBT Responsif**
+  - **Portal Guru** (Dashboard, Manajemen Kelas, KBM, Penilaian, Jadwal, dsb.)
   - **Portal Orang Tua / Wali**
   - **Portal Superadmin**
