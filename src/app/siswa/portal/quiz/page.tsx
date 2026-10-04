@@ -76,18 +76,18 @@ export default function StudentQuizListPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+          <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
             <CheckSquare className="w-4 h-4 text-[#0F766E]" />
             <span>Pusat Kuis & Ujian</span>
           </h1>
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] sm:text-xs text-slate-500">
             Kerjakan kuis rombel dan tinjau hasil belajarmu
           </p>
         </div>
         <button
           onClick={loadQuizzes}
           title="Muat ulang kuis"
-          className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+          className="p-1.5 sm:p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-xs"
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
@@ -121,9 +121,9 @@ export default function StudentQuizListPage() {
 
       {/* TAB 1: KUIS AKTIF / TERSEDIA */}
       {activeTab === "active" && (
-        <div className="space-y-2.5">
+        <div>
           {activeQuizzes.length === 0 ? (
-            <div className="p-8 bg-white rounded-3xl border border-slate-200/80 text-center space-y-2">
+            <div className="p-8 bg-white rounded-3xl border border-slate-200/80 text-center space-y-2 shadow-xs">
               <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
                 <Sparkles className="w-5 h-5" />
               </div>
@@ -133,17 +133,24 @@ export default function StudentQuizListPage() {
               </p>
             </div>
           ) : (
-            activeQuizzes.map((quiz) => (
-              <div
-                key={quiz.id}
-                className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] font-extrabold uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
-                      {quiz.subjectName}
-                    </span>
-                    <h3 className="text-xs font-bold text-slate-900 leading-tight">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {activeQuizzes.map((quiz) => (
+                <div
+                  key={quiz.id}
+                  className="p-4 sm:p-5 bg-white rounded-2xl md:rounded-3xl border border-slate-200/80 shadow-xs space-y-3 hover:border-slate-300 transition-colors flex flex-col justify-between h-full"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[10px] font-extrabold uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
+                        {quiz.subjectName}
+                      </span>
+                      {quiz.attemptStatus === "IN_PROGRESS" && (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
+                          Sedang Berjalan
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
                       {quiz.title}
                     </h3>
                     <p className="text-[11px] text-slate-400">
@@ -151,47 +158,41 @@ export default function StudentQuizListPage() {
                     </p>
                   </div>
 
-                  {quiz.attemptStatus === "IN_PROGRESS" && (
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">
-                      Sedang Berjalan
-                    </span>
-                  )}
-                </div>
+                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-[11px] text-slate-500">
+                    <div className="flex items-center gap-3">
+                      {quiz.durationMinutes && (
+                        <span className="flex items-center gap-1 font-mono">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{quiz.durationMinutes} Menit</span>
+                        </span>
+                      )}
+                      {quiz.deadline && (
+                        <span className="flex items-center gap-1 text-slate-500">
+                          <span>Batas: {new Date(quiz.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                        </span>
+                      )}
+                    </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-                  <div className="flex items-center gap-3">
-                    {quiz.durationMinutes && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{quiz.durationMinutes} Menit</span>
-                      </span>
-                    )}
-                    {quiz.deadline && (
-                      <span className="flex items-center gap-1 text-slate-500">
-                        <span>Batas: {new Date(quiz.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                      </span>
-                    )}
+                    <Link
+                      href={`/siswa/portal/quiz/${quiz.shareToken}`}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#0F766E] hover:bg-[#0D655E] text-white font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1 shrink-0"
+                    >
+                      <span>{quiz.attemptStatus === "IN_PROGRESS" ? "Lanjutkan" : "Kerjakan"}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
-
-                  <Link
-                    href={`/siswa/portal/quiz/${quiz.shareToken}`}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#0F766E] hover:bg-[#0D655E] text-white font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1"
-                  >
-                    <span>{quiz.attemptStatus === "IN_PROGRESS" ? "Lanjutkan" : "Kerjakan"}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       )}
 
       {/* TAB 2: RIWAYAT KUIS SELESAI */}
       {activeTab === "completed" && (
-        <div className="space-y-2.5">
+        <div>
           {completedQuizzes.length === 0 ? (
-            <div className="p-8 bg-white rounded-3xl border border-slate-200/80 text-center space-y-2">
+            <div className="p-8 bg-white rounded-3xl border border-slate-200/80 text-center space-y-2 shadow-xs">
               <div className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center mx-auto">
                 <HelpCircle className="w-5 h-5" />
               </div>
@@ -201,40 +202,42 @@ export default function StudentQuizListPage() {
               </p>
             </div>
           ) : (
-            completedQuizzes.map((quiz) => (
-              <div
-                key={quiz.id}
-                className="p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3"
-              >
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-extrabold uppercase text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                      {quiz.subjectName}
-                    </span>
-                    <span className="text-[10px] text-slate-400">
-                      {quiz.submittedAt && new Date(quiz.submittedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
-                    </span>
-                  </div>
-                  <h3 className="text-xs font-bold text-slate-900 truncate">
-                    {quiz.title}
-                  </h3>
-                  <div className="flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-teal-600" />
-                    <span className="text-xs font-black text-[#0F766E]">
-                      Nilai: {quiz.score ?? 0}
-                    </span>
-                  </div>
-                </div>
-
-                <Link
-                  href={`/siswa/portal/quiz/${quiz.shareToken}/review`}
-                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors shrink-0 flex items-center gap-1"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              {completedQuizzes.map((quiz) => (
+                <div
+                  key={quiz.id}
+                  className="p-4 sm:p-5 bg-white rounded-2xl md:rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3 hover:border-slate-300 transition-colors"
                 >
-                  <span>Pembahasan</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            ))
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                        {quiz.subjectName}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {quiz.submittedAt && new Date(quiz.submittedAt).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}
+                      </span>
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                      {quiz.title}
+                    </h3>
+                    <div className="flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-teal-600" />
+                      <span className="text-xs sm:text-sm font-black text-[#0F766E]">
+                        Nilai: {quiz.score ?? 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/siswa/portal/quiz/${quiz.shareToken}/review`}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors shrink-0 flex items-center gap-1"
+                  >
+                    <span>Pembahasan</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

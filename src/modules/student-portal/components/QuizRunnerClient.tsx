@@ -240,23 +240,23 @@ export function QuizRunnerClient({
   };
 
   return (
-    <div className="space-y-3 pt-1">
+    <div className="space-y-4 pt-1">
       {/* 1. Header Bar Kuis: Judul, Timer & Autosave Status */}
-      <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-2">
+      <div className="p-4 sm:p-5 bg-white rounded-2xl md:rounded-3xl border border-slate-200/80 shadow-xs flex items-center justify-between gap-3">
         <div className="min-w-0">
           <span className="text-[10px] font-extrabold uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
             Ujian Berlangsung
           </span>
-          <h2 className="text-xs font-bold text-slate-900 truncate mt-0.5">
+          <h2 className="text-xs sm:text-sm font-bold text-slate-900 truncate mt-0.5">
             {quizTitle}
           </h2>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Timer Badge */}
           {timeLeftSec !== null && (
             <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-black border transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-mono font-black border transition-colors shadow-xs ${
                 timeLeftSec < 120
                   ? "bg-rose-50 text-rose-700 border-rose-200 animate-pulse"
                   : timeLeftSec < 300
@@ -264,28 +264,28 @@ export function QuizRunnerClient({
                   : "bg-teal-50 text-[#0F766E] border-teal-200"
               }`}
             >
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>{formatTimer(timeLeftSec)}</span>
             </div>
           )}
 
           {/* Autosave Status */}
-          <div className="text-[10px] text-slate-400">
+          <div className="text-[10px] sm:text-[11px] text-slate-400">
             {saveStatus === "saving" ? (
               <span className="text-amber-600 font-medium">Menyimpan...</span>
             ) : saveStatus === "error" ? (
               <span className="text-rose-600 font-medium">Gagal simpan</span>
             ) : (
-              <span className="text-teal-700 flex items-center gap-0.5">
-                <CheckCircle2 className="w-3 h-3 text-teal-600" /> Tersimpan
+              <span className="text-teal-700 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" /> Tersimpan
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* 2. Navigator Soal Horizontal (1 .. N) */}
-      <div className="p-2.5 bg-white rounded-2xl border border-slate-200/80 overflow-x-auto">
+      {/* 2. Navigator Soal Horizontal (Hanya Muncul di Mobile < lg) */}
+      <div className="lg:hidden p-2.5 bg-white rounded-2xl border border-slate-200/80 overflow-x-auto shadow-xs">
         <div className="flex items-center gap-1.5 min-w-max">
           {questions.map((q, idx) => {
             const isAns = answers[q.id]?.selectedIndex !== null && answers[q.id]?.selectedIndex !== undefined;
@@ -311,114 +311,194 @@ export function QuizRunnerClient({
         </div>
       </div>
 
-      {/* 3. Lembar Soal Aktif */}
-      {currentQ && (
-        <div className="p-4 bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
-          {/* Header Soal */}
-          <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
-            <span className="font-extrabold text-[#0F766E]">
-              Soal {currentIndex + 1} dari {questions.length}
-            </span>
-            <span className="text-[11px] text-slate-400 font-medium">
-              Poin: {currentQ.points ?? 1}
-            </span>
-          </div>
+      {/* 3. DUAL-PANEL CBT LAYOUT (Desktop >= lg: Lembar Soal di Kiri, Kisi Navigator di Kanan) */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-6 items-start space-y-4 lg:space-y-0">
+        
+        {/* PANEL KIRI: Lembar Soal Aktif + Tombol Navigasi Bawah */}
+        <div className="lg:col-span-8 space-y-4">
+          {currentQ && (
+            <div className="p-5 sm:p-6 bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
+              {/* Header Soal */}
+              <div className="flex items-center justify-between text-xs pb-3 border-b border-slate-100">
+                <span className="font-extrabold text-[#0F766E] text-xs sm:text-sm">
+                  Soal {currentIndex + 1} dari {questions.length}
+                </span>
+                <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
+                  Poin: {currentQ.points ?? 1}
+                </span>
+              </div>
 
-          {/* Teks Pertanyaan */}
-          <div className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
-            {currentQ.text}
-          </div>
+              {/* Teks Pertanyaan */}
+              <div className="text-xs sm:text-sm font-semibold text-slate-800 leading-relaxed">
+                {currentQ.text}
+              </div>
 
-          {/* Pilihan Ganda */}
-          {currentQ.type === "MULTIPLE_CHOICE" && currentQ.options && (
-            <div className="space-y-2 pt-1">
-              {(currentQ.options as string[]).map((optionText, optIdx) => {
-                const isSelected = currentAnswer?.selectedIndex === optIdx;
-                const letter = String.fromCharCode(65 + optIdx); // A, B, C, D
+              {/* Pilihan Ganda */}
+              {currentQ.type === "MULTIPLE_CHOICE" && currentQ.options && (
+                <div className="space-y-2.5 pt-1">
+                  {(currentQ.options as string[]).map((optionText, optIdx) => {
+                    const isSelected = currentAnswer?.selectedIndex === optIdx;
+                    const letter = String.fromCharCode(65 + optIdx); // A, B, C, D
+
+                    return (
+                      <button
+                        key={optIdx}
+                        type="button"
+                        onClick={() => handleSelectOption(optIdx)}
+                        className={`w-full p-3.5 rounded-2xl border text-left transition-all flex items-start gap-3 active:scale-[0.99] ${
+                          isSelected
+                            ? "bg-teal-50/90 border-teal-600 ring-1 ring-teal-600 text-teal-950 shadow-xs"
+                            : "bg-white border-slate-200/90 hover:border-slate-300 text-slate-700"
+                        }`}
+                      >
+                        <span
+                          className={`w-6 h-6 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${
+                            isSelected
+                              ? "bg-[#0F766E] text-white"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {letter}
+                        </span>
+                        <span className="text-xs sm:text-sm leading-relaxed pt-0.5">
+                          {optionText}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Soal Esai */}
+              {currentQ.type === "ESSAY" && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] sm:text-xs font-bold text-slate-600 block">
+                    Jawaban Esai Anda:
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={currentAnswer?.essayAnswer || ""}
+                    onChange={(e) => handleEssayChange(e.target.value)}
+                    placeholder="Tuliskan jawaban esai kamu secara lengkap di sini..."
+                    className="w-full p-3.5 text-xs sm:text-sm rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 leading-relaxed"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Kontrol Navigasi Soal Bawah */}
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={currentIndex === 0}
+              onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+              className="h-11 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 px-4 sm:px-5"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              <span>Sebelumnya</span>
+            </Button>
+
+            {currentIndex < questions.length - 1 ? (
+              <Button
+                type="button"
+                onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+                className="h-11 rounded-2xl bg-[#0F766E] hover:bg-[#0D655E] text-white text-xs sm:text-sm font-bold px-4 sm:px-5"
+              >
+                <span>Selanjutnya</span>
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                className="h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-4 sm:px-5 shadow-sm"
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                <span>Kumpulkan Ujian</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* PANEL KANAN (Desktop >= lg): KISI NOMOR SOAL & PANEL INFORMASI UJIAN */}
+        <div className="hidden lg:block lg:col-span-4 sticky top-20 space-y-4">
+          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+            {/* Header Panel Navigator */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                  Daftar Nomor Soal
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {answeredCount} dari {questions.length} terjawab
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60">
+                {Math.round((answeredCount / (questions.length || 1)) * 100)}% Selesai
+              </span>
+            </div>
+
+            {/* Grid 5 Kolom Nomor Soal */}
+            <div className="grid grid-cols-5 gap-2 max-h-[340px] overflow-y-auto pr-1">
+              {questions.map((q, idx) => {
+                const isAns = answers[q.id]?.selectedIndex !== null && answers[q.id]?.selectedIndex !== undefined;
+                const isCurr = idx === currentIndex;
 
                 return (
                   <button
-                    key={optIdx}
+                    key={q.id}
                     type="button"
-                    onClick={() => handleSelectOption(optIdx)}
-                    className={`w-full p-3 rounded-2xl border text-left transition-all flex items-start gap-3 active:scale-[0.99] ${
-                      isSelected
-                        ? "bg-teal-50/90 border-teal-600 ring-1 ring-teal-600 text-teal-950 shadow-xs"
-                        : "bg-white border-slate-200/90 hover:border-slate-300 text-slate-700"
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center ${
+                      isCurr
+                        ? "bg-[#0F766E] text-white ring-2 ring-teal-600/30 font-black shadow-xs scale-105"
+                        : isAns
+                        ? "bg-teal-50 text-teal-800 border border-teal-200 font-bold hover:bg-teal-100"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                   >
-                    <span
-                      className={`w-6 h-6 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors ${
-                        isSelected
-                          ? "bg-[#0F766E] text-white"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {letter}
-                    </span>
-                    <span className="text-xs leading-relaxed pt-0.5">
-                      {optionText}
-                    </span>
+                    {idx + 1}
                   </button>
                 );
               })}
             </div>
-          )}
 
-          {/* Soal Esai */}
-          {currentQ.type === "ESSAY" && (
-            <div className="space-y-1.5 pt-1">
-              <label className="text-[11px] font-bold text-slate-600 block">
-                Jawaban Esai Anda:
-              </label>
-              <textarea
-                rows={4}
-                value={currentAnswer?.essayAnswer || ""}
-                onChange={(e) => handleEssayChange(e.target.value)}
-                placeholder="Tuliskan jawaban esai kamu secara lengkap di sini..."
-                className="w-full p-3 text-xs rounded-2xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 leading-relaxed"
-              />
+            {/* Keterangan Status / Legend */}
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-1 text-[10px] text-slate-500">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-md bg-[#0F766E] shrink-0"></span>
+                <span>Aktif</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-md bg-teal-50 border border-teal-200 shrink-0"></span>
+                <span>Terjawab</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-md bg-slate-100 shrink-0"></span>
+                <span>Belum</span>
+              </div>
             </div>
-          )}
+
+            {/* Tombol Kumpulkan di Panel Samping */}
+            <div className="pt-2">
+              <Button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                className="w-full h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all"
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                <span>Kumpulkan Ujian</span>
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* 4. Kontrol Navigasi Soal Bawah */}
-      <div className="flex items-center justify-between gap-2 pt-1">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={currentIndex === 0}
-          onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-          className="h-11 rounded-2xl text-xs font-bold text-slate-700 px-4"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          <span>Sebelumnya</span>
-        </Button>
-
-        {currentIndex < questions.length - 1 ? (
-          <Button
-            type="button"
-            onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-            className="h-11 rounded-2xl bg-[#0F766E] hover:bg-[#0D655E] text-white text-xs font-bold px-4"
-          >
-            <span>Selanjutnya</span>
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            onClick={() => setShowConfirmModal(true)}
-            className="h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 shadow-sm"
-          >
-            <Send className="w-3.5 h-3.5 mr-1.5" />
-            <span>Kumpulkan Ujian</span>
-          </Button>
-        )}
       </div>
 
-      {/* Tombol Kumpul Cepat (Selalu Terlihat di Bagian Bawah) */}
-      <div className="pt-2">
+      {/* Tombol Kumpul Cepat (Hanya Muncul di Mobile Bagian Bawah) */}
+      <div className="pt-2 lg:hidden">
         <button
           type="button"
           onClick={() => setShowConfirmModal(true)}

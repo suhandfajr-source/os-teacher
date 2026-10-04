@@ -63,17 +63,17 @@ export default async function StudentAssignmentsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+        <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-1.5">
           <ClipboardList className="w-4 h-4 text-[#0F766E]" />
           <span>Daftar Tugas Mandiri</span>
         </h1>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] sm:text-xs text-slate-500">
           Tugas kelas yang diberikan oleh guru pengampu
         </p>
       </div>
 
       {assignments.length === 0 ? (
-        <div className="p-8 bg-white rounded-3xl border border-slate-200/80 text-center space-y-2">
+        <div className="p-8 bg-white rounded-3xl border border-slate-200/80 text-center space-y-2 shadow-xs">
           <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
             <BookOpen className="w-5 h-5" />
           </div>
@@ -83,11 +83,11 @@ export default async function StudentAssignmentsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {assignments.map((item) => (
             <div
               key={item.id}
-              className="p-3.5 bg-white rounded-2xl border border-slate-200/80 space-y-1.5"
+              className="p-4 sm:p-5 bg-white rounded-2xl md:rounded-3xl border border-slate-200/80 space-y-3 shadow-xs hover:border-slate-300 transition-colors"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-extrabold uppercase text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
