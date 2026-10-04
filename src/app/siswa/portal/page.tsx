@@ -109,302 +109,314 @@ export default function StudentPortalHomePage() {
   const hiddenCount = rankedSubjects.length - visibleSubjects.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       
-      {/* 1. KARTU SAMBUTAN & STATUS */}
-      <div className="p-4 bg-gradient-to-br from-[#0F766E] to-[#115E59] rounded-3xl text-white shadow-lg shadow-teal-900/10 space-y-2 relative overflow-hidden">
+      {/* 1. KARTU SAMBUTAN & STATUS (Full Width Hero) */}
+      <div className="p-4 sm:p-5 bg-gradient-to-br from-[#0F766E] to-[#115E59] rounded-3xl text-white shadow-lg shadow-teal-900/10 space-y-2 relative overflow-hidden">
         <div className="relative z-10 flex justify-between items-start">
           <div className="space-y-0.5">
             <span className="text-[10px] font-bold text-teal-200 uppercase tracking-wider flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-teal-300" />
               {today.dayName} • {today.currentTime} WIB
             </span>
-            <h1 className="text-base font-black tracking-tight">
+            <h1 className="text-base sm:text-lg font-black tracking-tight">
               Semangat Belajar, {student.fullName.split(" ")[0]}! 👋
             </h1>
-            <p className="text-[11px] text-teal-100/90 font-medium">
+            <p className="text-[11px] sm:text-xs text-teal-100/90 font-medium">
               {student.className} • NIS: {student.nis}
             </p>
           </div>
           <button
             onClick={loadData}
             title="Muat ulang"
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
 
         {!hasActivePeriod && (
-          <div className="p-2 bg-amber-500/20 border border-amber-300/40 rounded-xl text-[11px] text-amber-100 flex items-center gap-2">
+          <div className="p-2 sm:p-2.5 bg-amber-500/20 border border-amber-300/40 rounded-xl text-[11px] text-amber-100 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>Tahun ajaran belum diaktifkan oleh sekolah. Jadwal mungkin belum tersedia.</span>
           </div>
         )}
       </div>
 
-      {/* 2. PELAJARAN HARI INI (DAILY STREAM) */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="w-4 h-4 text-[#0F766E]" />
-            <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
-              Pelajaran Hari Ini
-            </h2>
-          </div>
-          <Link
-            href="/siswa/portal/jadwal"
-            className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
-          >
-            Lihat Jadwal <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-
-        {today.schedules.length === 0 ? (
-          <div className="p-5 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1.5">
-            <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
-              <BookOpen className="w-5 h-5" />
+      {/* BENTO GRID: 2 KOLOM DI DESKTOP PC (>= lg), 1 KOLOM DI MOBILE */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        
+        {/* KOLOM UTAMA (KIRI - 2/3): PELAJARAN HARI INI & KUIS MENDESAK */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* 2. PELAJARAN HARI INI (DAILY STREAM) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="w-4 h-4 text-[#0F766E]" />
+                <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                  Pelajaran Hari Ini
+                </h2>
+              </div>
+              <Link
+                href="/siswa/portal/jadwal"
+                className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
+              >
+                Lihat Jadwal Lengkap <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-            <h3 className="text-xs font-bold text-slate-800">Tidak Ada Jadwal Hari Ini</h3>
-            <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-              Selamat beristirahat atau gunakan waktu untuk memeriksa kuis dan tugas mandiri.
-            </p>
+
+            {today.schedules.length === 0 ? (
+              <div className="p-6 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1.5 shadow-xs">
+                <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-800">Tidak Ada Jadwal Hari Ini</h3>
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                  Selamat beristirahat atau gunakan waktu untuk memeriksa kuis dan tugas mandiri.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {today.schedules.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                      item.isLive
+                        ? "bg-teal-50/90 border-teal-300 shadow-sm ring-1 ring-teal-400"
+                        : "bg-white border-slate-200/80 hover:border-slate-300 shadow-xs"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                            {item.subjectName}
+                          </h4>
+                          {item.isLive && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-teal-600 text-white text-[9px] font-black tracking-wider uppercase animate-pulse">
+                              LIVE
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] sm:text-xs text-slate-500 flex items-center gap-2">
+                          <span className="flex items-center gap-1">
+                            <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400" />
+                            <span className="truncate">{item.teacherName}</span>
+                          </span>
+                          {item.room && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400" />
+                              <span>{item.room}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 text-[11px] sm:text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl shrink-0">
+                        <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400" />
+                        <span>{item.startTime} - {item.endTime}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="space-y-2">
-            {today.schedules.map((item) => (
-              <div
-                key={item.id}
-                className={`p-3.5 rounded-2xl border transition-all ${
-                  item.isLive
-                    ? "bg-teal-50/90 border-teal-300 shadow-sm ring-1 ring-teal-400"
-                    : "bg-white border-slate-200/80 hover:border-slate-300"
-                }`}
+
+          {/* 3. KUIS & UJIAN MENDESAK */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <FileQuestion className="w-4 h-4 text-[#0F766E]" />
+                <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                  Kuis & Ujian Rombel
+                </h2>
+              </div>
+              <Link
+                href="/siswa/portal/quiz"
+                className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="text-xs font-black text-slate-900 truncate">
-                        {item.subjectName}
+                Pusat Kuis <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {urgentQuizzes.length === 0 ? (
+              <div className="p-6 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1 shadow-xs">
+                <p className="text-xs font-semibold text-slate-700">Tidak ada kuis aktif</p>
+                <p className="text-[11px] text-slate-400">
+                  Gurumu belum mempublikasikan kuis baru untuk rombel ini.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {urgentQuizzes.slice(0, 4).map((quiz) => (
+                  <div
+                    key={quiz.id}
+                    className="p-3.5 sm:p-4 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300 transition-colors"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold uppercase text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md border border-teal-200/60">
+                          {quiz.subjectName}
+                        </span>
+                        {quiz.attemptStatus === "SUBMITTED" ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">
+                            Selesai • Nilai: {quiz.score ?? 0}
+                          </span>
+                        ) : quiz.attemptStatus === "IN_PROGRESS" ? (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md">
+                            Sedang Dikerjakan
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md">
+                            Belum Dikerjakan
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                        {quiz.title}
                       </h4>
-                      {item.isLive && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-teal-600 text-white text-[9px] font-black tracking-wider uppercase animate-pulse">
-                          LIVE
-                        </span>
+                      {quiz.deadline && (
+                        <p className="text-[10px] sm:text-[11px] text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>Batas: {new Date(quiz.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                        </p>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-500 flex items-center gap-2">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3 text-slate-400" />
-                        <span className="truncate">{item.teacherName}</span>
-                      </span>
-                      {item.room && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          <span>{item.room}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-xl shrink-0">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    <span>{item.startTime} - {item.endTime}</span>
+                    <Link
+                      href={
+                        quiz.attemptStatus === "SUBMITTED"
+                          ? `/siswa/portal/quiz/${quiz.shareToken}/review`
+                          : `/siswa/portal/quiz/${quiz.shareToken}`
+                      }
+                      className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 active:scale-95 ${
+                        quiz.attemptStatus === "SUBMITTED"
+                          ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                          : "bg-[#0F766E] hover:bg-[#0D655E] text-white shadow-sm"
+                      }`}
+                    >
+                      {quiz.attemptStatus === "SUBMITTED" ? "Pembahasan" : "Kerjakan"}
+                    </Link>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
-
-      {/* 3. KUIS & UJIAN MENDESAK */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <FileQuestion className="w-4 h-4 text-[#0F766E]" />
-            <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
-              Kuis & Ujian Rombel
-            </h2>
-          </div>
-          <Link
-            href="/siswa/portal/quiz"
-            className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
-          >
-            Pusat Kuis <ArrowRight className="w-3 h-3" />
-          </Link>
         </div>
 
-        {urgentQuizzes.length === 0 ? (
-          <div className="p-4 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1">
-            <p className="text-xs font-semibold text-slate-700">Tidak ada kuis aktif</p>
-            <p className="text-[11px] text-slate-400">
-              Gurumu belum mempublikasikan kuis baru untuk rombel ini.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {urgentQuizzes.slice(0, 3).map((quiz) => (
-              <div
-                key={quiz.id}
-                className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs"
+        {/* KOLOM PENDAMPING (KANAN - 1/3): CAPAIAN BELAJAR & MATERI BELAJAR */}
+        <div className="lg:col-span-1 space-y-5">
+          {/* 3.5 MATERI BELAJAR (Gelombang 3) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <BookMarked className="w-4 h-4 text-[#0F766E]" />
+                <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                  Materi Belajar
+                </h2>
+              </div>
+              <Link
+                href="/siswa/portal/materi"
+                className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
               >
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-extrabold uppercase text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md border border-teal-200/60">
-                      {quiz.subjectName}
-                    </span>
-                    {quiz.attemptStatus === "SUBMITTED" ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">
-                        Selesai • Nilai: {quiz.score ?? 0}
-                      </span>
-                    ) : quiz.attemptStatus === "IN_PROGRESS" ? (
-                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md">
-                        Sedang Dikerjakan
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md">
-                        Belum Dikerjakan
-                      </span>
-                    )}
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-900 truncate">
-                    {quiz.title}
-                  </h4>
-                  {quiz.deadline && (
-                    <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      <span>Batas: {new Date(quiz.deadline).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                    </p>
-                  )}
-                </div>
-
-                <Link
-                  href={
-                    quiz.attemptStatus === "SUBMITTED"
-                      ? `/siswa/portal/quiz/${quiz.shareToken}/review`
-                      : `/siswa/portal/quiz/${quiz.shareToken}`
-                  }
-                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 active:scale-95 ${
-                    quiz.attemptStatus === "SUBMITTED"
-                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                      : "bg-[#0F766E] hover:bg-[#0D655E] text-white shadow-sm"
-                  }`}
-                >
-                  {quiz.attemptStatus === "SUBMITTED" ? "Pembahasan" : "Kerjakan"}
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* 3.5 MATERI BELAJAR (Gelombang 3) */}
-      <div className="space-y-2.5 pt-1">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <BookMarked className="w-4 h-4 text-[#0F766E]" />
-            <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
-              Materi Belajar
-            </h2>
-          </div>
-          <Link
-            href="/siswa/portal/materi"
-            className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
-          >
-            Buka Materi <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-        <Link
-          href="/siswa/portal/materi"
-          className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs active:scale-[0.99] transition-transform"
-        >
-          <div className="min-w-0 space-y-0.5">
-            <h4 className="text-xs font-bold text-slate-900">Pustaka Materi Rombel</h4>
-            <p className="text-[10px] text-slate-500">
-              Ringkasan & bahan ajar yang dipublikasikan gurumu
-            </p>
-          </div>
-          <BookMarked className="w-5 h-5 text-teal-600 shrink-0" />
-        </Link>
-      </div>
-
-      {/* 4. WIDGET CAPAIAN BELAJAR (Gelombang 2) */}
-      {widget?.hasActivePeriod && (
-        <div className="space-y-2.5 pt-1">
-          <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-[#0F766E]" />
-              <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
-                Capaian Belajar
-              </h2>
+                Buka Materi <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
             <Link
-              href="/siswa/portal/nilai"
-              className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
+              href="/siswa/portal/materi"
+              className="p-4 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs active:scale-[0.99] hover:border-teal-200 hover:bg-teal-50/20 transition-all"
             >
-              Lihat Detail <ArrowRight className="w-3 h-3" />
+              <div className="min-w-0 space-y-0.5">
+                <h4 className="text-xs font-bold text-slate-900">Pustaka Materi Rombel</h4>
+                <p className="text-[10px] text-slate-500">
+                  Ringkasan & bahan ajar yang dipublikasikan gurumu
+                </p>
+              </div>
+              <div className="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+                <BookMarked className="w-4 h-4" />
+              </div>
             </Link>
           </div>
 
-          {visibleSubjects.length === 0 && widget.subjects.length === 0 ? (
-            <div className="p-4 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1">
-              <p className="text-xs font-semibold text-slate-700">Belum ada mapel</p>
-              <p className="text-[11px] text-slate-400">
-                Mapel rombelmu akan muncul di sini setelah guru mengelolanya.
-              </p>
-            </div>
-          ) : visibleSubjects.length === 0 ? (
-            <div className="p-4 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1">
-              <p className="text-xs font-semibold text-slate-700">Belum ada nilai final</p>
-              <p className="text-[11px] text-slate-400">
-                Capaian per mapel muncul setelah guru memfinalisasi penilaian.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {visibleSubjects.map((s) => (
+          {/* 4. WIDGET CAPAIAN BELAJAR (Gelombang 2) */}
+          {widget?.hasActivePeriod && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-[#0F766E]" />
+                  <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+                    Capaian Belajar
+                  </h2>
+                </div>
                 <Link
-                  key={s.teachingContextId}
                   href="/siswa/portal/nilai"
-                  className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs"
+                  className="text-[11px] font-bold text-teal-700 hover:underline flex items-center gap-0.5"
                 >
-                  <div className="min-w-0 space-y-0.5">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{s.subjectName}</h4>
-                    {s.assessedTpCount > 0 ? (
-                      <p className="text-[10px] text-slate-500">
-                        TP tuntas: {s.tuntasTpCount}/{s.assessedTpCount}
-                      </p>
-                    ) : (
-                      <p className="text-[10px] text-slate-400">belum ada nilai</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {s.hasFinalData ? (
-                      <span className="text-lg font-black text-[#0F766E]">{s.runningScore ?? "–"}</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-slate-400">–</span>
-                    )}
-                    {s.assessedTpCount > 0 && s.tuntasTpCount === s.assessedTpCount && (
-                      <Award className="w-4 h-4 text-emerald-500" />
-                    )}
-                  </div>
+                  Lihat Detail <ArrowRight className="w-3 h-3" />
                 </Link>
-              ))}
-              {hiddenCount > 0 && (
-                <p className="text-[10px] text-slate-400 text-center pt-0.5">
-                  +{hiddenCount} mapel lainnya — lihat detail di halaman Nilai
+              </div>
+
+              {visibleSubjects.length === 0 && widget.subjects.length === 0 ? (
+                <div className="p-5 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1 shadow-xs">
+                  <p className="text-xs font-semibold text-slate-700">Belum ada mapel</p>
+                  <p className="text-[11px] text-slate-400">
+                    Mapel rombelmu akan muncul di sini setelah guru mengelolanya.
+                  </p>
+                </div>
+              ) : visibleSubjects.length === 0 ? (
+                <div className="p-5 bg-white rounded-3xl border border-slate-200/80 text-center space-y-1 shadow-xs">
+                  <p className="text-xs font-semibold text-slate-700">Belum ada nilai final</p>
+                  <p className="text-[11px] text-slate-400">
+                    Capaian per mapel muncul setelah guru memfinalisasi penilaian.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {visibleSubjects.map((s) => (
+                    <Link
+                      key={s.teachingContextId}
+                      href="/siswa/portal/nilai"
+                      className="p-3.5 bg-white rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300 transition-colors"
+                    >
+                      <div className="min-w-0 space-y-0.5">
+                        <h4 className="text-xs font-bold text-slate-900 truncate">{s.subjectName}</h4>
+                        {s.assessedTpCount > 0 ? (
+                          <p className="text-[10px] text-slate-500">
+                            TP tuntas: {s.tuntasTpCount}/{s.assessedTpCount}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-slate-400">belum ada nilai</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {s.hasFinalData ? (
+                          <span className="text-lg font-black text-[#0F766E]">{s.runningScore ?? "–"}</span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-slate-400">–</span>
+                        )}
+                        {s.assessedTpCount > 0 && s.tuntasTpCount === s.assessedTpCount && (
+                          <Award className="w-4 h-4 text-emerald-500" />
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                  {hiddenCount > 0 && (
+                    <p className="text-[10px] text-slate-400 text-center pt-0.5">
+                      +{hiddenCount} mapel lainnya — lihat detail di halaman Nilai
+                    </p>
+                  )}
+                </div>
+              )}
+              {widgetError && (
+                <p className="text-[10px] text-amber-600 text-center">
+                  Widget capaian gagal dimuat — coba muat ulang beranda.
                 </p>
               )}
             </div>
           )}
-          {widgetError && (
-            <p className="text-[10px] text-amber-600 text-center">
-              Widget capaian gagal dimuat — coba muat ulang beranda.
-            </p>
-          )}
         </div>
-      )}
+      </div>
 
     </div>
   );
