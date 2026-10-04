@@ -1,0 +1,437 @@
+diff --git a/TODO.md b/TODO.md
+index 0b43436..0ee0385 100644
+--- a/TODO.md
++++ b/TODO.md
+@@ -15,12 +15,17 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
+ ---
+ 
+ ## 2. Klassa Agent
+-- **Deskripsi:** Agent di dalam ekosistem Klassa yang membantu mengerjakan tugas-tugas guru dan menjadi ruang diskusi interaktif mengenai berbagai masalah di kelas.
+-- **Status:** ⏳ Menunggu detailing lebih lanjut dari user
+-- **Rincian Awal:**
+-  - Integrasi AI agent dengan konteks data kelas (profil siswa, catatan akademik, presensi, masalah perilaku).
+-  - Asistensi pengerjaan tugas rutin guru.
+-  - Fitur konsultasi / diskusi problem-solving masalah kelas.
++- **Deskripsi:** Agent kustom di dalam ekosistem Klassa yang membantu mengerjakan tugas-tugas guru dan menjadi ruang diskusi interaktif mengenai berbagai masalah di kelas.
++- **Status:** 🟢 IN PROGRESS — Tahap 1: Fondasi Skema Database & Runtime Core
++- **Stage Dokumentasi:** `docs/development/stages/DEV_STAGE_12_KLASSA_AGENT.md`
++- **Ringkasan Arsitektur & Keputusan:**
++  - **Universal Multi-Model:** 100% bebas lock-in vendor, bebas dipasang model komersial (Gemini, Claude, GPT) maupun model lokal (Hermes/vLLM) via protokol standar.
++  - **3 Kapabilitas Utama:** Admin Ber-Data (kalkulasi deterministik untuk SEMUA hal yang bisa dihitung), Pedagogi Solutif (non-klinis), Operasional (semua fitur Klassa).
++  - **Matriks Aksi (Human-in-the-Loop):** Aksi baca/draf langsung jalan; aksi tulis resmi/sensitif wajib persetujuan guru via kartu interaktif di chat.
++  - **Memori Komprehensif:** Mengingat preferensi ajar dan merangkum intisari percakapan umum guru agar agen selalu nyambung dari waktu ke waktu.
++  - **Klassa Pulse (Admin Console):** Visualisasi makro isu guru Indonesia, kurikulum tersulit, beban stres, dan jam lembur guru secara teranonimkan (UU PDP).
++  - Blueprint: `docs/product/klassa-agent-blueprint.md` (+ versi web: `klassa-agent-blueprint.html`)
++  - Hasil forge & laporan visual: `_bmad-output/forge/klassa-agent/` (`forged-idea.md` & `forge-report.html`)
+ 
+ ---
+ 
+diff --git a/_bmad-output/forge/klassa-agent/.memlog.md b/_bmad-output/forge/klassa-agent/.memlog.md
+index 0a5f01d..a446fd3 100644
+--- a/_bmad-output/forge/klassa-agent/.memlog.md
++++ b/_bmad-output/forge/klassa-agent/.memlog.md
+@@ -1,7 +1,8 @@
+ ---
+ idea: Klassa Agent: agent AI di ekosistem Klassa untuk bantu tugas guru + ruang diskusi interaktif masalah kelas
+ goal: Detailing: mempertajam scope, use case prioritas, dan batasan sampai siap di-plan
+-updated: 2026-10-02T21:28
++status: complete
++updated: 2026-10-03T16:09
+ ---
+ 
+ - (decision) V1 Klassa Agent = chat assistant tunggal (guru ngobrol biasa), 3 skill: (1) admin: baca/analisis/report DB siswa, (2) ahli psikologi & pendidikan: diskusi tindakan siswa bermasalah / metode pembelajaran, (3) operasional: eksekusi fitur Klassa (misal bikin RPP)
+@@ -11,3 +12,10 @@ updated: 2026-10-02T21:28
+ - (note) Branch baru dari user: pakai Hermes (open-weight, Nous Research) sebagai model agent - vs default Gemini API. Dipelajari: self-host menyangkut PII, biaya GPU, kualitas function-calling; provider factory existing memungkinkan swappable
+ - (note) User ingin Hermes via MCP di sistem. Klarifikasi konsep: Hermes = model (endpoint OpenAI-compatible via vLLM/Nous API), MCP = lapisan tool. Opsi arsitektur: (1) embedded loop tanpa MCP, (2) Klassa MCP server terpisah + Hermes, (3) bertahap: tools MCP-compatible embedded lalu dibungkus jadi MCP server nyata
+ - (direction) User berubah arah: BIKIN AGENT SENDIRI (bukan Hermes+MCP). Analisis komponen custom agent loop, alternatif substrate (bare provider / Vercel AI SDK), risiko, effort. Keputusan sebelumnya (3 skill, konfirmasi, PII A+scope, provider-agnostic) tetap berlaku
++- (lock) Arsitektur agen: Agen kustom Klassa dibangun di atas pipa AI SDK (Vercel AI SDK), provider-agnostic (Gemini v1 -> Hermes/vLLM v2 tanpa ubah tools)
++- (lock) 3 Skill inti: (1) Admin: query data siswa/nilai/absen per pengampu, (2) Pedagogi/Psikologi: konsultasi non-klinis, (3) Operasional: aksi buat draf terkonfirmasi guru
++- (lock) Human-in-the-loop: Agent meminta input minimal, merencanakan aksi, aksi eksekusi/tulis WAJIB konfirmasi eksplisit guru di UI chat
++- (lock) Privasi & Batasan: PII siswa apa adanya dikirim ke LLM namun terkurung scope kelas guru (B2 isPengampuRombel), audit metadata teredaksi (redactMetadata)
++- (lock) REVISI BLUEPRINT: (1) Dynamic Multi-Model (Gemini Flash default, High Reasoning, Hermes/Ollama on-premise), (2) Definisi tugas diperluas ke SEMUA fitur guru di Klassa dengan Matriks Konfirmasi Aksi (Read/Draft langsung, Sensitif/Publikasi WAJIB konfirmasi kartu chat), (3) Long-Term Memory guru (TeacherAgentMemory: gaya bicara, metode favorit, riwayat siswa), (4) Deterministic tools untuk hitungan database (anti halusinasi angka), (5) Tanpa kalkulasi biaya di blueprint
++- (lock) Insight Engine: Klassa Pulse ditambahkan ke Admin Console (Story 6). Menampilkan visualisasi analitik makro: Top 10 Isu Kelas, Geographical Heatmap, Treemap Kurikulum Tersulit, Gauge Stres/Burnout Guru, dan Heatmap Jam Lembur Guru (Recharts, teranonimkan sesuai UU PDP)
++- (lock) REVISI PENAJAMAN: (1) Universal Multi-Model: bebas pakai LLM apa pun (model komersial/open-weight via endpoint standar, daftar model sebelumnya hanya contoh), (2) Long-Term Memory: mampu merangkum inti pembahasan chat guru secara umum agar agen selalu nyambung, (3) Kalkulasi deterministik mencakup SEMUA hal di Klassa yang bisa dihitung (nilai, absen, ranking, durasi kuis, remedial, dsb.), (4) Pertanyaan pendidikan non-kelas dijawab 100%, pertanyaan non-pendidikan ditolak halus (polite deflection)
+diff --git a/package-lock.json b/package-lock.json
+index 812d3b1..e6533d5 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -9,6 +9,8 @@
+       "version": "0.1.0",
+       "hasInstallScript": true,
+       "dependencies": {
++        "@ai-sdk/google": "^4.0.87",
++        "@ai-sdk/openai-compatible": "^3.0.62",
+         "@aws-sdk/client-s3": "^3.1145.0",
+         "@aws-sdk/s3-presigned-post": "^3.1145.0",
+         "@aws-sdk/s3-request-presigner": "^3.1145.0",
+@@ -20,6 +22,7 @@
+         "@milkdown/theme-nord": "^7.22.2",
+         "@prisma/adapter-pg": "^7.9.1",
+         "@prisma/client": "^7.9.1",
++        "ai": "^7.0.127",
+         "better-auth": "^1.6.29",
+         "class-variance-authority": "^0.7.1",
+         "clsx": "^2.1.1",
+@@ -63,6 +66,89 @@
+         "tsx": "^4.23.15",
+         "typescript": "^5",
+         "vitest": "^4.1.11"
++      },
++      "engines": {
++        "node": ">=20.12"
++      }
++    },
++    "node_modules/@ai-sdk/gateway": {
++      "version": "4.0.103",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/gateway/-/gateway-4.0.103.tgz",
++      "integrity": "sha512-nnGTUHzPRQ14jhv9CL4OQrzcRBIFTBMIPKGIi9Z9u/4GtwSRxa/nxUX6np2Iwp5phOzO0a0njj/j9Jolf5AEaA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/provider": "4.0.21",
++        "@ai-sdk/provider-utils": "5.0.53",
++        "@vercel/oidc": "3.2.0"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
++    "node_modules/@ai-sdk/google": {
++      "version": "4.0.87",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/google/-/google-4.0.87.tgz",
++      "integrity": "sha512-s0tWc+QeSce7O2ZLm+VWSRQy16dGfqEcMIUxEWh+LFvXX3h0TLH8jxCQ2H1qhiBgTta+6A97eHPhBlRFu1xy+g==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/provider": "4.0.21",
++        "@ai-sdk/provider-utils": "5.0.53"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
++    "node_modules/@ai-sdk/openai-compatible": {
++      "version": "3.0.62",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/openai-compatible/-/openai-compatible-3.0.62.tgz",
++      "integrity": "sha512-IAz1xv8zot4KLGa8kN7UfAA6H5+ARzAgAKLsoKxHPBzZuOc2E3ohaELg0x/JR9HVTbMbiftb0dPyCb8cT2KBRg==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/provider": "4.0.21",
++        "@ai-sdk/provider-utils": "5.0.53"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
++    "node_modules/@ai-sdk/provider": {
++      "version": "4.0.21",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/provider/-/provider-4.0.21.tgz",
++      "integrity": "sha512-UpbC9C1oht8dhfKPbVXSLRZS3DI8uk8n5v2uMjBPNIYGsC2kL045ywq7D8Hh9KgnH9rP5W/GxQdYtWScRouqlA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "json-schema": "^0.4.0"
++      },
++      "engines": {
++        "node": ">=22"
++      }
++    },
++    "node_modules/@ai-sdk/provider-utils": {
++      "version": "5.0.53",
++      "resolved": "https://registry.npmjs.org/@ai-sdk/provider-utils/-/provider-utils-5.0.53.tgz",
++      "integrity": "sha512-VVe6UDd0y0/B4TfauuKKzcppqvhTmSluwwUVT4WG2/8h7gFbyFm7PM4UGM+ZXe3/RI6bv+Vl1cw/7aiBoQqdxg==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/provider": "4.0.21",
++        "@standard-schema/spec": "^1.1.0",
++        "@workflow/serde": "4.1.0",
++        "eventsource-parser": "^3.0.8",
++        "undici": "^7.29.0"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
+       }
+     },
+     "node_modules/@alloc/quick-lru": {
+@@ -6062,6 +6148,15 @@
+         "win32"
+       ]
+     },
++    "node_modules/@vercel/oidc": {
++      "version": "3.2.0",
++      "resolved": "https://registry.npmjs.org/@vercel/oidc/-/oidc-3.2.0.tgz",
++      "integrity": "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==",
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">= 20"
++      }
++    },
+     "node_modules/@visx/curve": {
+       "version": "4.0.1-alpha.0",
+       "resolved": "https://registry.npmjs.org/@visx/curve/-/curve-4.0.1-alpha.0.tgz",
+@@ -6436,6 +6531,12 @@
+       "integrity": "sha512-uksS7YGMR5NZyr4JNq0Rp+QyLns0ueaz20KwzIPW9R0LH1Vnt4E+XUM29PNseEbf1www2gOuhuDi5AKOIXag9Q==",
+       "license": "MIT"
+     },
++    "node_modules/@workflow/serde": {
++      "version": "4.1.0",
++      "resolved": "https://registry.npmjs.org/@workflow/serde/-/serde-4.1.0.tgz",
++      "integrity": "sha512-pav4F2BoirECWR7Nf1TKt+2eETcBj7jj4cBefQ8VXQCA6NPkaKeLfj/zMgi+3zYV5ZIBT4GuUiphsj0/b9hPQQ==",
++      "license": "Apache-2.0"
++    },
+     "node_modules/@xmldom/xmldom": {
+       "version": "0.9.12",
+       "resolved": "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.9.12.tgz",
+@@ -6499,6 +6600,23 @@
+         "node": ">= 14"
+       }
+     },
++    "node_modules/ai": {
++      "version": "7.0.127",
++      "resolved": "https://registry.npmjs.org/ai/-/ai-7.0.127.tgz",
++      "integrity": "sha512-JNsNPk4ZvRGEJuqdVo2lYFkm7uAuf3p/RwKFWn1Wh/+IK3U1RyFWw2GXoFnhzqNfxEuj7XJB4WpIUhl1sHToWg==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "@ai-sdk/gateway": "4.0.103",
++        "@ai-sdk/provider": "4.0.21",
++        "@ai-sdk/provider-utils": "5.0.53"
++      },
++      "engines": {
++        "node": ">=22"
++      },
++      "peerDependencies": {
++        "zod": "^3.25.76 || ^4.1.8"
++      }
++    },
+     "node_modules/ajv": {
+       "version": "6.15.0",
+       "resolved": "https://registry.npmjs.org/ajv/-/ajv-6.15.0.tgz",
+@@ -11551,6 +11669,12 @@
+       "integrity": "sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==",
+       "license": "MIT"
+     },
++    "node_modules/json-schema": {
++      "version": "0.4.0",
++      "resolved": "https://registry.npmjs.org/json-schema/-/json-schema-0.4.0.tgz",
++      "integrity": "sha512-es94M3nTIfsEPisRafak+HDLfHXnKBhV3vU5eqPcS3flIWqcxJWgXHXiey3YrpaNsanY5ei1VoYEbOzijuq9BA==",
++      "license": "(AFL-2.1 OR BSD-3-Clause)"
++    },
+     "node_modules/json-schema-traverse": {
+       "version": "0.4.1",
+       "resolved": "https://registry.npmjs.org/json-schema-traverse/-/json-schema-traverse-0.4.1.tgz",
+diff --git a/package.json b/package.json
+index 4a33db1..8e31735 100644
+--- a/package.json
++++ b/package.json
+@@ -18,6 +18,8 @@
+     "audit:nis": "tsx --env-file-if-exists=.env scripts/backfill-student-canonical-nis.ts"
+   },
+   "dependencies": {
++    "@ai-sdk/google": "^4.0.87",
++    "@ai-sdk/openai-compatible": "^3.0.62",
+     "@aws-sdk/client-s3": "^3.1145.0",
+     "@aws-sdk/s3-presigned-post": "^3.1145.0",
+     "@aws-sdk/s3-request-presigner": "^3.1145.0",
+@@ -29,6 +31,7 @@
+     "@milkdown/theme-nord": "^7.22.2",
+     "@prisma/adapter-pg": "^7.9.1",
+     "@prisma/client": "^7.9.1",
++    "ai": "^7.0.127",
+     "better-auth": "^1.6.29",
+     "class-variance-authority": "^0.7.1",
+     "clsx": "^2.1.1",
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 7200935..6306c99 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -158,29 +158,29 @@ enum ImportCategory {
+ // -------------------------------------------------
+ 
+ model User {
+-  id            String    @id
+-  name          String
+-  email         String
+-  emailVerified Boolean
+-  image         String?
+-  createdAt     DateTime
+-  updatedAt     DateTime
+-  platformRole  String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
++  id                 String    @id
++  name               String
++  email              String
++  emailVerified      Boolean
++  image              String?
++  createdAt          DateTime
++  updatedAt          DateTime
++  platformRole       String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
+   // Single-Admin Lane — asal-usul akun: PUBLIC_REGISTER (pintu publik, tak pernah bisa jadi superadmin)
+   // | PLATFORM_SEED (lahir dari seeder). Default backfill user lama = PUBLIC_REGISTER.
+-  registrationOrigin String @default("PUBLIC_REGISTER")
++  registrationOrigin String    @default("PUBLIC_REGISTER")
+   // DEV STAGE 11 Story 5 — kolom plugin admin Better Auth (kanal otorisasi plugin; platformRole tetap kanonik untuk requireSuperAdmin)
+-  role          String    @default("USER") // kanal plugin Better Auth: "admin" lowercase | "USER"
+-  banned        Boolean   @default(false)
+-  banReason     String?
+-  banExpires    DateTime?
+-  sessions      Session[]
+-  accounts      Account[]
+-
+-  teacherProfile   TeacherProfile?
+-  parentProfile    ParentProfile?
+-  approvedStudents Student[]       @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
+-  notifications    Notification[]
++  role               String    @default("USER") // kanal plugin Better Auth: "admin" lowercase | "USER"
++  banned             Boolean   @default(false)
++  banReason          String?
++  banExpires         DateTime?
++  sessions           Session[]
++  accounts           Account[]
++
++  teacherProfile    TeacherProfile?
++  parentProfile     ParentProfile?
++  approvedStudents  Student[]                  @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
++  notifications     Notification[]
+   revocationReviews TeacherRevocationRequest[] @relation("RevocationReviewer")
+ 
+   @@unique([email])
+@@ -250,16 +250,16 @@ model School {
+   // DEV STAGE 11 Story 5 — penanda nonaktif (B5); null = aktif
+   deactivatedAt DateTime?
+ 
+-  memberships       TeacherSchoolMembership[]
+-  notifications     Notification[]
+-  students          Student[]
+-  academicPeriods   AcademicPeriod[]
+-  subjects          Subject[]
+-  classes           Class[]
+-  teachingContexts  TeachingContext[]
+-  aiContentDrafts   AiContentDraft[]
+-  documentTemplates DocumentTemplate[]
+-  importSessions    ImportSession[]
++  memberships        TeacherSchoolMembership[]
++  notifications      Notification[]
++  students           Student[]
++  academicPeriods    AcademicPeriod[]
++  subjects           Subject[]
++  classes            Class[]
++  teachingContexts   TeachingContext[]
++  aiContentDrafts    AiContentDraft[]
++  documentTemplates  DocumentTemplate[]
++  importSessions     ImportSession[]
+   revocationRequests TeacherRevocationRequest[]
+ 
+   @@index([normalizedName])
+@@ -331,7 +331,7 @@ model Student {
+   accountRequestedAt DateTime? // Story 5 F2 — waktu pengajuan akun (sumber tunggal eskalasi)
+   approvedBy         User?     @relation("StudentApprover", fields: [approvedById], references: [id])
+ 
+-  birthDate          String?   // Tanggal lahir (DD/MM/YYYY atau YYYY-MM-DD)
++  birthDate String? // Tanggal lahir (DD/MM/YYYY atau YYYY-MM-DD)
+ 
+   classMemberships      ClassStudent[]
+   attendanceRecords     AttendanceRecord[]
+@@ -381,11 +381,13 @@ model TeacherProfile {
+   teachingContexts              TeachingContext[]
+   aiContentDrafts               AiContentDraft[]
+   documentTemplates             DocumentTemplate[]
+-  createdParentInvitations      ParentInvitation[]        @relation("CreatedParentInvitations")
+-  grantedParentTeachingAccesses ParentTeachingAccess[]    @relation("GrantedParentTeachingAccesses")
++  createdParentInvitations      ParentInvitation[]         @relation("CreatedParentInvitations")
++  grantedParentTeachingAccesses ParentTeachingAccess[]     @relation("GrantedParentTeachingAccesses")
+   importSessions                ImportSession[]
+   assignmentSubmissions         AssignmentSubmission[]
+   revocationRequests            TeacherRevocationRequest[] @relation("RevocationRequester")
++  agentConversations            AgentConversation[]
++  agentMemory                   TeacherAgentMemory?
+ 
+   @@map("teacher_profile")
+ }
+@@ -588,7 +590,7 @@ model AssignmentSubmission {
+   createdAt           DateTime                   @default(now())
+   updatedAt           DateTime                   @updatedAt
+ 
+-  files               SubmissionFile[]
++  files SubmissionFile[]
+ 
+   @@unique([assignmentId, studentId])
+   @@index([assignmentId, status])
+@@ -1196,3 +1198,70 @@ model QuizStudentAccess {
+   @@index([studentId])
+   @@map("quiz_student_access")
+ }
++
++// ==========================================
++// STAGE 12: KLASSA AGENT MODELS
++// ==========================================
++
++model AgentConversation {
++  id               String         @id @default(cuid())
++  teacherProfileId String
++  teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
++  classContextId   String?
++  title            String         @default("Percakapan Baru")
++  modelUsed        String         @default("gemini-1.5-flash")
++  createdAt        DateTime       @default(now())
++  updatedAt        DateTime       @updatedAt
++  messages         AgentMessage[]
++
++  @@index([teacherProfileId])
++  @@index([classContextId])
++  @@map("agent_conversation")
++}
++
++model AgentMessage {
++  id             String            @id @default(cuid())
++  conversationId String
++  conversation   AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
++  role           String // "user" | "assistant" | "system" | "tool"
++  content        String            @db.Text
++  toolCalls      Json?
++  toolResults    Json?
++  pendingAction  Json?
++  actionStatus   String            @default("NONE") // "NONE" | "PENDING" | "CONFIRMED" | "REJECTED"
++  createdAt      DateTime          @default(now())
++
++  @@index([conversationId])
++  @@map("agent_message")
++}
++
++model TeacherAgentMemory {
++  id                String         @id @default(cuid())
++  teacherProfileId  String         @unique
++  teacherProfile    TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
++  communicationTone String         @default("RAMAH_SOPAN") // "LUGAS_RINGKAS" | "RAMAH_SOPAN" | "FORMAL"
++  preferredModel    String         @default("gemini-1.5-flash")
++  pedagogyDefaults  Json?
++  customContext     String?        @db.Text
++  createdAt         DateTime       @default(now())
++  updatedAt         DateTime       @updatedAt
++
++  @@map("teacher_agent_memory")
++}
++
++model AgentInsightAggregate {
++  id           String   @id @default(cuid())
++  schoolId     String?
++  period       String // e.g. "2026-W40", "2026-10"
++  category     String // "CURRICULUM_BOTTLENECK" | "BURNOUT_RISK" | "STUDENT_STRUGGLE" | "OPERATIONAL_HOURS"
++  metricKey    String
++  metricValue  Float
++  sampleCount  Int      @default(1)
++  tags         String[]
++  metadata     Json?
++  anonymizedAt DateTime @default(now())
++
++  @@index([schoolId])
++  @@index([category, period])
++  @@map("agent_insight_aggregate")
++}

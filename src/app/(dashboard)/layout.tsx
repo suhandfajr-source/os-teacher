@@ -2,6 +2,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { AccountBannedBanner } from "@/components/AccountBannedBanner";
+import { FloatingAgentLauncher } from "@/components/agent/FloatingAgentLauncher";
 import { redirect } from "next/navigation";
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { isCurrentPlatformAdmin } from "@/lib/superadmin";
@@ -43,6 +44,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </main>
         </div>
       </div>
+      <FloatingAgentLauncher />
       <BottomNav />
     </div>
   );

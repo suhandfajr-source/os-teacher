@@ -43,7 +43,9 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
+  Activity,
 } from "lucide-react";
+import { KlassaPulseTab } from "@/components/admin/KlassaPulseTab";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -221,7 +223,7 @@ export function AdminConsoleClient({
   initialClasses,
   initialRevocationRequests = [],
 }: AdminConsoleClientProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "ai-usage" | "schools" | "teachers" | "students" | "classes">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "klassa-pulse" | "ai-usage" | "schools" | "teachers" | "students" | "classes">("overview");
   const [selectedSchoolFilter, setSelectedSchoolFilter] = useState<string>("ALL");
   const [isPending, startTransition] = useTransition();
 
@@ -710,6 +712,7 @@ export function AdminConsoleClient({
   // Nav items definition
   const navTabs = [
     { id: "overview", label: "Ringkasan & Analitik", icon: BarChart2, badge: null },
+    { id: "klassa-pulse", label: "Klassa Pulse", icon: Activity, badge: "AI Insights" },
     { id: "ai-usage", label: "Token & AI Studio", icon: Bot, badge: aiStats?.summary.totalDrafts ?? null },
     { id: "schools", label: "Sekolah", icon: Building2, badge: stats.schools.total },
     { id: "teachers", label: "Guru & Staf", icon: Users, badge: stats.teachers.total },
@@ -997,6 +1000,15 @@ export function AdminConsoleClient({
             </Card>
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: KLASSA PULSE AGGREGATION & TEACHER INSIGHTS                         */}
+      {/* ========================================================================= */}
+      {activeTab === "klassa-pulse" && (
+        <KlassaPulseTab
+          selectedSchoolFilter={selectedSchoolFilter === "ALL" ? undefined : selectedSchoolFilter}
+        />
       )}
 
       {/* ========================================================================= */}

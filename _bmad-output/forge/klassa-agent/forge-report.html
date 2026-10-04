@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Forge Idea — Klassa Agent</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #e5e7eb;
+      --text-muted: #9ca3af;
+      --primary: #0d9488;
+      --primary-light: #14b8a6;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 2rem 1rem; line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 2.5rem; position: relative; }
+    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(13, 148, 136, 0.2); color: var(--primary-light); border: 1px solid rgba(20, 184, 166, 0.3); margin-bottom: 0.75rem; }
+    h1 { font-size: 2.25rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem; }
+    .subtitle { color: var(--text-muted); font-size: 1rem; }
+    
+    .seal-wrap { display: flex; justify-content: center; margin: 2rem 0; }
+    .seal { width: 140px; height: 140px; }
+
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 1rem; display: flex; items-center: center; gap: 0.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem; }
+    
+    .grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @media (min-width: 640px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } }
+
+    .item { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 0.75rem; padding: 1rem; }
+    .item-title { font-weight: 600; color: var(--primary-light); margin-bottom: 0.25rem; font-size: 0.95rem; }
+    .item-desc { font-size: 0.875rem; color: var(--text-muted); }
+
+    .rejected-list { list-style: none; }
+    .rejected-item { padding: 0.75rem; margin-bottom: 0.5rem; border-left: 3px solid var(--danger); background: rgba(239, 68, 68, 0.05); border-radius: 0 0.5rem 0.5rem 0; font-size: 0.875rem; }
+    .rejected-name { font-weight: 600; color: #fca5a5; }
+
+    .persona-card { display: flex; gap: 1rem; padding: 0.75rem; border-radius: 0.5rem; background: rgba(255, 255, 255, 0.015); border: 1px solid var(--card-border); margin-bottom: 0.75rem; }
+    .persona-icon { font-size: 1.75rem; line-height: 1; }
+    .persona-meta { flex: 1; }
+    .persona-name { font-weight: 700; font-size: 0.9rem; color: #fff; }
+    .persona-role { font-size: 0.75rem; color: var(--primary-light); margin-bottom: 0.25rem; }
+    .persona-quote { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+
+    .footer { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 3rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Sesi BMad Forge Selesai</span>
+      <h1>Laporan Forge: Klassa Agent</h1>
+      <p class="subtitle">Penajaman spesifikasi agen pintar guru dalam ekosistem Klassa OS</p>
+    </div>
+
+    <div class="seal-wrap">
+      <svg class="seal" viewBox="0 0 160 160">
+        <circle cx="80" cy="80" r="72" fill="#064e3b" stroke="#10b981" stroke-width="4" stroke-dasharray="6,3"/>
+        <circle cx="80" cy="80" r="58" fill="#042f2e" stroke="#14b8a6" stroke-width="2"/>
+        <path id="curve" d="M 30,80 A 50,50 0 1,1 130,80 A 50,50 0 1,1 30,80" fill="none" />
+        <text font-size="11" font-weight="bold" fill="#5eead4" letter-spacing="2">
+          <textPath href="#curve" startOffset="50%" text-anchor="middle">KLASSA FORGE APPROVED</textPath>
+        </text>
+        <text x="80" y="85" font-size="16" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">HARDENED</text>
+        <text x="80" y="102" font-size="9" fill="#a7f3d0" text-anchor="middle">2 OKT 2026</text>
+      </svg>
+    </div>
+
+    <div class="card">
+      <h2>🛡️ Ringkasan Keputusan Terkunci (Locked)</h2>
+      <div class="grid grid-2">
+        <div class="item">
+          <div class="item-title">1. Desain Chat Terpadu</div>
+          <div class="item-desc">Satu ruang dialog percakapan untuk semua interaksi guru. Agen secara otonom menentukan alat yang dipanggil berdasarkan maksud instruksi.</div>
+        </div>
+        <div class="item">
+          <div class="item-title">2. 3 Pilar Kemampuan</div>
+          <div class="item-desc"><strong>Admin</strong> (analisis database kelas), <strong>Pedagogis/Psikologi</strong> (konsultasi non-klinis), dan <strong>Operasional</strong> (bikin RPP, pesan ortu, draf materi).</div>
+        </div>
+        <div class="item">
+          <div class="item-title">3. Human-in-the-Loop Total</div>
+          <div class="item-desc">Agen hanya meminta input minimal. Setiap aksi yang menghasilkan karya atau data WAJIB dikonfirmasi melalui kartu interaktif sebelum disimpan ke draf.</div>
+        </div>
+        <div class="item">
+          <div class="item-title">4. Keamanan Scope B2</div>
+          <div class="item-desc">Data siswa dibaca apa adanya (nama & nilai) namun terisolasi mutlak hanya pada rombel yang diampu oleh guru tersebut (isPengampuRombel).</div>
+        </div>
+        <div class="item">
+          <div class="item-title">5. Agen Milik Sendiri (Native SDK)</div>
+          <div class="item-desc">Menggunakan Vercel AI SDK sebagai perpipaan ringan, menjamin logika alat, pagar, dan prompt 100% kustom tanpa terikat vendor.</div>
+        </div>
+        <div class="item">
+          <div class="item-title">6. Provider Agnostic (Gemini ➔ Hermes)</div>
+          <div class="item-desc">V1 menggunakan Gemini API untuk kecepatan dan efisiensi biaya. Kontrak alat bantu dirancang siap dialihkan ke Hermes mandiri saat siap.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>❌ Alternatif yang Ditolak & Alasannya</h2>
+      <ul class="rejected-list">
+        <li class="rejected-item">
+          <span class="rejected-name">Framework Penuh (LangChain / LangGraph):</span>
+          <span>Ditolak karena abstraksi berlebihan yang memperumit kontrol kode di Next.js.</span>
+        </li>
+        <li class="rejected-item">
+          <span class="rejected-name">Menulis Loop Agent from Scratch:</span>
+          <span>Ditolak karena menghabiskan 2–3 minggu hanya untuk urusan plumbing yang sudah diselesaikan secara matang oleh AI SDK standar.</span>
+        </li>
+        <li class="rejected-item">
+          <span class="rejected-name">Otonomi Eksekusi Otomatis (Tanpa Konfirmasi):</span>
+          <span>Ditolak demi keamanan dan pencegahan halusinasi data kelas guru.</span>
+        </li>
+        <li class="rejected-item">
+          <span class="rejected-name">Pseudonimisasi Buta (Siswa A/B):</span>
+          <span>Ditolak karena menyulitkan guru dalam memahami siswa mana yang sedang didiskusikan perilakunya.</span>
+        </li>
+        <li class="rejected-item">
+          <span class="rejected-name">Microservice MCP Server Terpisah di V1:</span>
+          <span>Ditolak karena memicu beban pemeliharaan infrastruktur ekstra di fase rilis awal.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>👥 Panel Persona yang Menguji Ide</h2>
+      <div class="persona-card">
+        <div class="persona-icon">📋</div>
+        <div class="persona-meta">
+          <div class="persona-name">John (Product Manager)</div>
+          <div class="persona-role">BMad Core Agent</div>
+          <div class="persona-quote">"Memastikan Klassa Agent fokus pada pemecahan masalah kelas, bukan sekadar bot serba bisa yang dangkal."</div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-icon">🏗️</div>
+        <div class="persona-meta">
+          <div class="persona-name">Winston (System Architect)</div>
+          <div class="persona-role">BMad Core Agent</div>
+          <div class="persona-quote">"Memetakan gerbang konfirmasi human-in-the-loop dan isolasi hak akses pengampu di level fungsi alat."</div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-icon">🧑‍🏫</div>
+        <div class="persona-meta">
+          <div class="persona-name">Bu Ratna (Guru Senior 45 Tahun)</div>
+          <div class="persona-role">Persona Pengguna Nyata</div>
+          <div class="persona-quote">"Menjaga agar agen tidak bertindak lancang mengubah data kelas dan meminta bantuan dalam alur yang paling sedikit mengetik."</div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-icon">🏫</div>
+        <div class="persona-meta">
+          <div class="persona-name">Pak Hendra (Kepala Sekolah)</div>
+          <div class="persona-role">Pengendali Data Sekolah</div>
+          <div class="persona-quote">"Menekankan batasan ketat agar guru tidak dapat mengintip rekam jejak siswa dari kelas yang bukan tanggung jawabnya."</div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-icon">🩹</div>
+        <div class="persona-meta">
+          <div class="persona-name">Dinda (Ex-ML Engineer)</div>
+          <div class="persona-role">Suara Praktisi Lapangan</div>
+          <div class="persona-quote">"Menyelamatkan tim dari jebakan menulis perpipaan loop agen dari nol yang membuang waktu berminggu-minggu."</div>
+        </div>
+      </div>
+      <div class="persona-card">
+        <div class="persona-icon">🖥️</div>
+        <div class="persona-meta">
+          <div class="persona-name">Bang Rizky (DevOps Specialist)</div>
+          <div class="persona-role">Pengawal Beban Operasional</div>
+          <div class="persona-quote">"Mengingatkan biaya tinggi sewa GPU jika memaksakan model mandiri sebelum produk divalidasi oleh para guru."</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Dokumen ini digenerate secara otomatis oleh workflow BMad Forge Idea &bull; Disimpan di <code>_bmad-output/forge/klassa-agent/</code>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,25 +1,115 @@
-# Review Findings — Story 2 (Blind Hunter, Content Review)
+# Blind Adversarial Review Report: Story 2 (Tools Query & Deterministic Math)
 
-**Subject:** Unified diff Story 2 — Lampiran Guru pada Tugas (Soal/LKPD via File)
-**Target Diff:** `_bmad-output/implementation-artifacts/review-story2-blind-hunter-prompt.md`
-**Tanggal Review:** 2026-10-03
-
-**Arithmetic:** kB = 74, N = min(floor(sqrt(74) + 1), 10) = min(9, 10) = **9** (13 findings ditemukan ≥ N ✓).
+**Target Source Code:** `_bmad-output/implementation-artifacts/review-story2-blind-hunter-prompt.md` / `src/modules/agent/tools/`  
+**Reviewer Role:** Lead Security & Adversarial Reviewer (Senior Principal Security Architect)  
+**Tanggal Review:** 2026-10-03  
+**Status Evaluasi:** Selesai  
 
 ---
 
-## Findings
+## Ringkasan Eksekutif
+Review adversarial (blind inspection) dilakukan terhadap kode implementasi **Story 2: Tools Query & Deterministic Math** (`agent-deterministic-math.ts` dan `agent-query.tools.ts`).
 
-- **Akses dan mutasi lampiran tidak memeriksa status pemblokiran guru (`assertNotBanned`)**: Pada `createAssignment`, pemanggilan `assertNotBanned(auth)` dilakukan setelah `verifyTeachingContextAccess`. Namun pada `setAssignmentAttachmentsAction`, `getAssignmentAttachmentsAction`, dan rute presign `src/app/api/assignments/files/upload-url/route.ts` (cabang `kind === "attachment"`), pemanggilan `verifyTeachingContextAccess` tidak diikuti dengan `assertNotBanned`. Karena `verifyTeachingContextAccess` tidak melempar error untuk akun yang diblokir melainkan mengembalikan objek dengan properti `isBanned: true`, guru yang telah dinonaktifkan/diblokir oleh administrator tetap dapat meminta presigned URL upload, mengubah lampiran, dan menghapus lampiran tugas.
-- **Rute unduhan lampiran tidak memverifikasi status keaktifan tugas (`assignment.status`)**: Di `src/app/api/assignments/attachments/[fileId]/route.ts`, query relasi ke tugas hanya mengambil `teachingContextId`, `classId`, dan `academicPeriodId` tanpa memeriksa `assignment.status === "ACTIVE"`. Jika tugas berstatus arsip (`ARCHIVED`) atau draf, siswa yang memiliki `fileId` lampiran masih dapat mengunduh atau melihat file tersebut. Berbeda dengan rute upload Story 1 yang memvalidasi `status: "ACTIVE"`.
-- **Status akun siswa (`student.accountStatus`) tidak divalidasi pada otorisasi rute unduhan**: Pada `src/app/api/assignments/attachments/[fileId]/route.ts` (Jalur 2), otorisasi siswa hanya memeriksa `verifyStudentSession()` dan keberadaan data `prisma.classStudent` pada periode akademik aktif. Status akun siswa pada tabel `student` (`accountStatus: "ACTIVE"`) tidak diperiksa sama sekali. Siswa yang status akunnya telah dinonaktifkan (`INACTIVE` atau `SUSPENDED`) namun masih memegang cookie sesi aktif tetap dapat mengunduh materi tugas.
-- **Ketiadaan header anti-cache (`Cache-Control: no-store`) pada redirect 302 presigned download**: Rute `GET /api/assignments/attachments/[fileId]` melakukan redirect langsung menggunakan `NextResponse.redirect(url, 302)` tanpa menyertakan header caching. Browser klien atau proxy perantara dapat menyimpan cache respons 302 ini. Karena URL presigned S3 memiliki masa kedaluwarsa terbatas (TTL), permintaan berikutnya dari cache yang menggunakan URL bertanda tangan kedaluwarsa akan menghasilkan error `403 Forbidden` langsung dari S3.
-- **State dialog lampiran (`AssignmentAttachmentsDialog`) tidak di-reset saat ditutup dan tidak sinkron ke parent**: State `kept` diinisialisasi sekali melalui `useState(initialAttachments)`. Jika guru menghapus lampiran atau menambahkan antrean file lalu menutup dialog menggunakan tombol silang (`X`) tanpa menyimpan, perubahan tersebut tetap tersimpan di memori state lokal komponen. Saat dialog dibuka kembali, daftar file yang tampil sudah tidak sesuai dengan data riil server. Selain itu, setelah `handleSave` berhasil, dialog tidak menutup otomatis dan tidak memberikan callback ke komponen induk (`TugasClient.tsx`), sehingga daftar `assignments` di `TugasClient` tetap memegang `attachments` lama yang belum terbarui.
-- **Pemeriksaan ukuran file (`headObjectSize`) dilakukan secara serial (*waterfall*)**: Pada fungsi `claimAttachmentFiles` di `assignment.actions.ts`, pengecekan HEAD ukuran objek storage dilakukan dalam perulangan `for` secara sekuensial (`await headObjectSize(f.storageKey)`). Jika guru melampirkan 5 file sekaligus, server melakukan 5 kali round-trip request jaringan S3 berturut-turut yang menambah latensi server action secara signifikan dibanding eksekusi paralel dengan `Promise.all`.
-- **Validasi batas gabungan (`keptRows + newRows > 5`) dieksekusi setelah pemanggilan S3 HEAD**: Pada `setAssignmentAttachmentsAction`, pemanggilan `claimAttachmentFiles(data.newFiles)` dijalankan terlebih dahulu sebelum memeriksa apakah `keptRows.length + newRows.length > 5`. Jika guru mempertahankan 3 file dan mengirim 4 file baru (total 7 > 5), server tetap memproses validasi dan melakukan HEAD request S3 untuk seluruh file baru sebelum akhirnya menolak permintaan. Seharusnya validasi jumlah awal `data.keepFileIds.length + data.newFiles.length > 5` dilakukan di awal untuk *fail-fast*.
-- **File terbengkalai (*orphan storage objects*) saat terjadi kegagalan upload parsial atau error database**: Pada `AssignmentAttachmentsDialog.tsx` dan `TugasClient.tsx`, jika pengunggahan batch terhenti di tengah jalan (misal file ke-1 sukses dan file ke-2 gagal koneksi), file ke-1 telah tersimpan di bucket storage pada prefix `attachments/tmp/` namun tidak pernah diklaim atau dihapus. Begitu pula jika `createAssignment` atau `setAssignmentAttachmentsAction` gagal di sisi server database setelah upload S3 selesai, file di storage tidak di-rollback/dibersihkan.
-- **Inkonsistensi revalidasi cache Next.js pada pertemuan kelas (`teachingSession`)**: Di `createAssignment`, jika tugas terikat pada pertemuan sesi (`teachingSessionId`), dilakukan `revalidatePath(/kelas/${context.id}/pertemuan/${data.teachingSessionId})`. Namun pada `setAssignmentAttachmentsAction`, revalidasi hanya dilakukan pada rute `/kelas/.../tugas` dan `/siswa/portal/tugas`. Halaman detail pertemuan (`/kelas/.../pertemuan/[id]`) dan halaman koreksi tugas guru (`/kelas/.../tugas/[assignmentId]`) tidak direvalidasi, sehingga lampiran yang diperbarui tidak tampil di halaman tersebut sampai cache server kedaluwarsa.
-- **Komponen input file tidak dilengkapi atribut `accept`**: Pada `AssignmentAttachmentsDialog.tsx` dan `TugasClient.tsx`, elemen `<input type="file" multiple className="hidden" />` tidak menyertakan atribut `accept`. Hal ini menyebabkan dialog pemilihan file di perangkat pengguna (terutama mobile) mengizinkan pemilihan semua jenis file tanpa filter awal, termasuk file biner executable yang dilarang, yang kemudian baru ditolak setelah dipilih oleh pengguna.
-- **Penggunaan `target="_blank"` pada tautan unduhan non-previewable di portal siswa**: Pada `src/app/siswa/portal/tugas/page.tsx`, semua tautan lampiran dirender dengan atribut `target="_blank"`. Untuk jenis file non-previewable (seperti `.docx`, `.zip`, dll.) yang diarahkan dengan `disposition=attachment`, peramban akan membuka tab baru kosong (`about:blank`) sebelum memunculkan dialog unduh, meninggalkan tab kosong yang tidak tertutup di peramban siswa.
-- **Pesan error validasi jumlah file tidak kontekstual untuk lampiran guru**: Fungsi `claimAttachmentFiles` memakai `validateFileList` dari Story 1. Jika guru mencoba mengirim lebih dari 5 file, pesan error yang dihasilkan berbunyi `"Maksimal 5 file per pengumpulan."` (istilah untuk pengumpulan tugas siswa), bukan `"Maksimal 5 file per tugas."` untuk lampiran guru.
-- **Duplikasi fungsi pengunggahan XHR dan formatting ukuran file di berbagai komponen**: Logika pengunggahan XMLHttpRequest ke S3 dengan timeout 60 detik diimplementasikan berulang secara identik di `TugasClient.tsx`, `AssignmentAttachmentsDialog.tsx`, dan `SubmitAssignmentForm.tsx`. Hal serupa terjadi pada fungsi pemformatan ukuran file (`fmtSize`) yang diduplikasi di 3 file terpisah alih-alih memanfaatkan utility bersama di `@/modules/storage`.
+Meskipun helper matematika deterministik terbukti aman dari *divide-by-zero*, inspeksi kode nyata mendeteksi **2 Celah Kritis (Blocker Runtime)** dan **1 Celah Logika Scope Data** yang wajib diperbaiki sebelum kode ini dapat beroperasi di lingkungan produksi.
+
+---
+
+## 1. Critical Runtime Errors & Schema Drift (High Severity)
+
+### C-01: Fungsi Otorisasi `verifyTeacherClassAccess` Tidak Ada di `@/lib/authorization`
+- **Lokasi:** `src/modules/agent/tools/agent-query.tools.ts` (baris 5, 84, 126, 180, 231)
+- **Deskripsi:**  
+  File `agent-query.tools.ts` mengimpor `verifyTeacherClassAccess` dari `@/lib/authorization`:
+  ```ts
+  import {
+    verifyActiveSchoolMembership,
+    verifyTeacherClassAccess,
+  } from "@/lib/authorization";
+  ```
+  Di dalam `src/lib/authorization.ts`, fungsi validasi rombel yang tersedia adalah `verifyClassRosterAccess(classId: string)`. Fungsi bernama `verifyTeacherClassAccess` **TIDAK ADA**.
+- **Dampak:**  
+  Unit test (`agent-tools.test.ts`) lolos hanya karena fungsi tersebut di-mock secara manual (`vi.mock("@/lib/authorization")`). Namun, pada runtime Next.js sesungguhnya, setiap pemanggilan tool akan crash seketika dengan pesan:  
+  `TypeError: (0, authorization_1.verifyTeacherClassAccess) is not a function`.
+- **Rekomendasi:**  
+  Ganti impor dan pemanggilan menjadi `verifyClassRosterAccess(classId)` atau ekspor alias `verifyTeacherClassAccess = verifyClassRosterAccess` di `src/lib/authorization.ts`.
+
+---
+
+### C-02: Model Prisma Tidak Sesuai Skema (`prisma.assessmentRecord` vs `prisma.assessmentResult`)
+- **Lokasi:** `src/modules/agent/tools/agent-query.tools.ts` (baris 189, 239)
+- **Deskripsi:**  
+  Pada tool `getStudentAcademicSummaryTool` dan `analyzeClassPerformanceTool`, query database memanggil model yang tidak ada di Prisma Client:
+  ```ts
+  // Baris 189:
+  const assessments = await prisma.assessmentRecord.findMany({ where: whereClause });
+
+  // Baris 239:
+  include: { attendanceRecords: true, assessmentRecords: true }
+  ```
+  Pada `prisma/schema.prisma`, model penilaian yang sah adalah `AssessmentResult` (`prisma.assessmentResult`), bukan `assessmentRecord`. Selain itu, kolom nilai pada `AssessmentResult` adalah `finalScore` / `normalizedScore`, bukan `score`.
+- **Dampak:**  
+  Query penilaian akademik akan melempar unhandled exception / fatal crash di runtime database (`Cannot read properties of undefined (reading 'findMany')`).
+- **Rekomendasi:**  
+  Sesuaikan nama relasi dan model Prisma ke `prisma.assessmentResult` dengan field `finalScore`.
+
+---
+
+## 2. Scope Rombel B2 & Data Isolation Invariants (Medium Severity)
+
+### M-01: Kebocoran Data Presensi Lintas-Konteks/Lintas-Semester (*Over-fetching Scope*)
+- **Lokasi:** `src/modules/agent/tools/agent-query.tools.ts` (`getStudentAttendanceSummaryTool`)
+- **Deskripsi:**  
+  Filter pencarian presensi siswa saat ini:
+  ```ts
+  const whereClause = {
+    student: {
+      classMemberships: {
+        some: { classId },
+      },
+    },
+    ...(studentId ? { studentId } : {}),
+  };
+  const records = await prisma.attendanceRecord.findMany({ where: whereClause });
+  ```
+  Kondisi ini hanya mengecek apakah siswa terdaftar di `classId`. Query mengambil **seluruh** baris presensi siswa tersebut tanpa memfilter sesi pengajaran (`teachingSession`) dari kelas yang bersangkutan.
+- **Dampak:**  
+  Jika seorang siswa pernah berada di rombel lain pada tahun ajaran sebelumnya, atau memiliki catatan presensi dari guru/mapel lain, data presensi dari sesi luar akan ikut terhitung ke dalam statistik kelas saat ini.
+- **Rekomendasi:**  
+  Perketat relasi presensi agar difilter melalui sesi kelas terkait:
+  ```ts
+  where: {
+    ...whereClause,
+    teachingSession: {
+      teachingContext: {
+        classId,
+      },
+    },
+  }
+  ```
+
+---
+
+## 3. Deterministic Robustness (Low Severity / Math Check)
+
+### L-01: Penanganan Nol Data & Divide-by-Zero (PASS)
+- Fungsi `calculateAttendanceStats`:
+  - Jika `total === 0`, mengembalikan `persentaseKehadiran: 0` dan kategori `"BELUM_ADA_DATA"`. Terlindungi dari `0 / 0 = NaN`.
+- Fungsi `calculateAcademicGradeStats`:
+  - Jika `scores.length === 0`, mengembalikan `totalItem: 0`, `rataRata: 0`, dan status `"BELUM_ADA_NILAI"`. Terlindungi dari `NaN`.
+- Pembulatan desimal:
+  - Menggunakan `Math.round((sum / totalItem) * 10) / 10` (1 digit di belakang koma) dan `Math.round((hadir / total) * 100)` (angka bulat). Akurasi deterministik terjamin.
+
+---
+
+## 4. Verdict & Action Items
+
+| Kategori | Temuan | Status |
+|---|---|---|
+| Critical Runtime / Schema Drift | 2 (Missing function export & wrong Prisma model name) | **FAIL (Blocker)** |
+| Scope Rombel B2 Isolation | 1 (Cross-session attendance over-fetching) | **NEEDS_FIX** |
+| Deterministic Math & Divide-by-Zero | 0 (Penanganan nol data aman) | **PASS** |
+
+### **Verdict: CHANGES_REQUESTED**
+Implementasi matematika deterministik sudah tepat, namun kode tools query saat ini **akan langsung crash di runtime** akibat inkonsistensi nama fungsi otorisasi (`verifyTeacherClassAccess`) dan model database (`assessmentRecord`). 
+
+Perlu dilakukan perbaikan cepat (*hotfix*) pada `agent-query.tools.ts` sebelum Story 2 dapat disahkan (*Approved*).

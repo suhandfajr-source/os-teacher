@@ -155,6 +155,19 @@ describe("Story 4 Deep Real-Database Integration & Security Audit", () => {
         },
       });
 
+      // Jika hari ini Minggu (dayOfWeek 7 atau 0), tambahkan juga jadwal di Senin (1) agar jadwal mingguan (1-6) terisi
+      if (todayDay > 6 || todayDay === 0) {
+        await prisma.teachingSchedule.create({
+          data: {
+            teachingContextId: tc.id,
+            dayOfWeek: 1,
+            startTime: "08:00",
+            endTime: "09:30",
+            room: "Lab Sains 1",
+          },
+        });
+      }
+
       // 8. Setup Student with ACTIVE status & Scrypt PIN
       studentNis = `NIS${timestamp.toString().slice(-6)}`;
       const pinHash = await hashPin(studentPin);
@@ -255,10 +268,7 @@ describe("Story 4 Deep Real-Database Integration & Security Audit", () => {
         await prisma.school.delete({ where: { id: schoolId } });
       }
       if (teacherUserId) {
-        await prisma.user.delete({ where: { id: teacherUserId } });
-      }
-      if (subjectId) {
-        await prisma.subject.delete({ where: { id: subjectId } });
+        await prisma.user.delete({ where: { id: teacherUserId } }).catch(() => {});
       }
     } catch {
       // Ignore cleanup error
@@ -303,8 +313,9 @@ describe("Story 4 Deep Real-Database Integration & Security Audit", () => {
       expect(res.data?.length).toBe(6);
 
       const todayDay = getNormalizedDayOfWeek(new Date(), "Asia/Jakarta");
-      const todayGroup = res.data?.find((d) => d.dayOfWeek === todayDay);
-      expect(todayGroup?.items.some((i) => i.room === "Lab Sains 1")).toBe(true);
+      const targetDay = todayDay > 6 || todayDay === 0 ? 1 : todayDay;
+      const targetGroup = res.data?.find((d) => d.dayOfWeek === targetDay);
+      expect(targetGroup?.items.some((i) => i.room === "Lab Sains 1")).toBe(true);
     });
 
     it("fetches student quiz center list with active and completed buckets", async () => {

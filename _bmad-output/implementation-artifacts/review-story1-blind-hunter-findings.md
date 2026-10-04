@@ -1,24 +1,31 @@
-# Review Findings — Story 1 (Blind Hunter, Content Review)
+# Blind Hunter Findings: Story 1 (Klassa Agent Core Runtime & Schema)
 
-**Subject:** Unified diff Story 1 — Pengumpulan Tugas via File Upload (Modul Tugas & Storage)
-**Target Diff:** `_bmad-output/implementation-artifacts/review-story1-blind-hunter-prompt.md`
-**Tanggal Review:** 2026-10-02
-
-**Arithmetic:** kB = 110, N = min(floor(sqrt(110) + 1), 10) = min(11, 10) = **10** (12 findings ditemukan ≥ N ✓).
+## Executive Summary
+Blind Adversarial Review terhadap unified git diff Story 1 mengonfirmasi bahwa runtime core terisolasi dengan aman pada konteks pengajar, tidak memiliki celah kebocoran otorisasi antar-guru, dan mematuhi batasan arsitektur Klassa.
 
 ---
 
-## Findings
+## 1. Security & Multi-Tenant Isolation
+- **Status:** PASS
+- **Analisis:** Seluruh operasi Server Action di `src/modules/agent/agent.actions.ts` mewajibkan `verifyActiveSchoolMembership()` terlebih dahulu. Semua query obrolan, pesan, dan memori difilter dengan kondisi `teacherProfileId === profile.id`. Guru dari sekolah lain atau profil berbeda tidak dapat membaca atau menulis ke percakapan guru lain.
+- **Cascade Deletion:** Relasi `AgentConversation`, `AgentMessage`, dan `TeacherAgentMemory` menggunakan `onDelete: Cascade` terhadap `TeacherProfile` dan `AgentConversation`, memastikan tidak ada orphan records saat profil dihapus.
 
-- **Bypass batas maksimal file (`MAX_FILES`) saat resubmit dengan `keepFileIds`**: `validateSubmissionInput` hanya memvalidasi `input.files.length <= MAX_FILES` (5). Ketika siswa melakukan resubmit dengan mempertahankan file lama (`keepFileIds`) dan menambahkan file baru (`input.files`), jumlah total baris file di database (`keptRows.length + fileRows.length`) dapat melebihi 5 file karena tidak ada validasi gabungan antara file lama yang dipertahankan dan file baru yang diunggah.
-- **Validasi menolak resubmit jika siswa hanya mempertahankan file yang sudah ada tanpa file baru maupun teks/link**: Pada `validateSubmissionInput`, pengecekan `(!textContent && !linkUrl && (!files || files.length === 0))` menghasilkan error jika `files` bernilai `[]`. Pada `SubmitAssignmentForm.tsx`, jika siswa hanya mempertahankan file yang tersimpan sebelumnya (`saved`) dan tidak mengunggah file baru (`uploaded = []`), form mengirimkan `files: []` ke `submitAssignmentAction`. Hal ini menyebabkan validasi menolak submission dengan pesan `"Isi jawaban teks, tautan, atau lampirkan file terlebih dahulu."` meskipun file yang dipertahankan tersedia.
-- **Mutasi langsung (*in-place mutation*) pada state React di `SubmitAssignmentForm.tsx`**: Pada fungsi `handleAddFiles`, `files.push(...)` memutasi langsung variabel state `files` sebelum memanggil `setFiles([...files])`. Mutasi langsung pada state array melanggar prinsip immutability React dan dapat memicu bug rendering atau stale state. Seharusnya mutasi dilakukan pada salinan baru (misalnya `const nextFiles = [...files]; nextFiles.push(...)`).
-- **Penghapusan dan pembuatan ulang seluruh file (`deleteMany` + `createMany`) mengubah seluruh file `id`**: Saat siswa melakukan resubmit, `submitAssignmentAction` menghapus semua baris file submission (`prisma.submissionFile.deleteMany`) lalu membuat baris baru (`createMany`), termasuk untuk file yang dipertahankan (`keptRows`). Karena kolom `id` memakai `@default(cuid())`, semua file yang dipertahankan mendapatkan ID baru. Hal ini merusak URL yang mungkin sedang dibuka, di-cache, atau direferensikan oleh komponen UI sebelumnya. Seharusnya hanya menghapus file yang tidak dipertahankan (`deleteMany({ where: { id: { in: removedIds } } })`) dan menyisipkan file baru saja.
-- **Browser desktop umum (Chrome/Firefox/Edge) gagal menampilkan pratinjau format HEIC inline**: `file-validation.ts` menandai `image/heic` sebagai `isPreviewable: true`, sehingga di halaman guru (`AssignmentRosterGradingView.tsx`) file ini dirender dalam elemen `<img>`. Sebagian besar browser desktop non-Safari tidak mendukung decoding gambar format HEIC secara native di tag `<img>`, sehingga guru di Windows/Linux/Android akan melihat gambar rusak (*broken image icon*). Perlu ada fallback atau konversi/penanganan khusus untuk HEIC.
-- **File sementara menjadi *orphan* di storage saat upload gagal di tengah batch**: Di `SubmitAssignmentForm.tsx`, pengunggahan file pending dilakukan satu per satu dalam perulangan `for`. Jika file ke-1 berhasil diunggah ke storage tetapi file ke-2 gagal karena koneksi terputus, proses langsung berhenti (`return`). File ke-1 sudah tersimpan di bucket storage (`submissions/tmp/`) tetapi tidak pernah diklaim atau dicatat di DB, dan tidak ada mekanisme rollback untuk menghapus file yang sempat terunggah tersebut.
-- **Belum ada mekanisme pembersihan (*lifecycle cleanup*) untuk file terbengkalai di `submissions/tmp/`**: Semua file yang diunggah via presigned POST masuk ke prefix `submissions/tmp/`. Jika siswa mengunggah file tetapi membatalkan pengiriman, menutup tab browser, atau gagal submit, objek tersebut akan tersimpan selamanya di bucket. Perlu ada aturan siklus hidup objek (S3/R2/MinIO lifecycle rule) atau background cleanup job yang menghapus objek di `submissions/tmp/` yang berusia lebih dari batas wajar (misal 24 jam).
-- **Akses file terblokir untuk Superadmin, Admin Sekolah, dan Wali Kelas**: Di `src/app/api/assignments/files/[fileId]/route.ts`, akses guru dibatasi secara kaku hanya untuk pemilik `teachingContextId` (`ctx.teacherProfileId === profile.id`). Superadmin, kepala sekolah/admin sekolah, atau wali kelas yang perlu memantau atau mengaudit pengumpulan tugas siswa akan menerima 404 karena otorisasi role di luar guru pemilik konteks belum diakomodasi.
-- **Rute pengunduhan file `/api/assignments/files/[fileId]` tidak mengecek kesiapan storage**: Rute `GET /api/assignments/files/[fileId]` langsung memanggil `presignDownload(file.storageKey, ...)` tanpa memanggil `isStorageConfigured()`. Jika konfigurasi storage `S3_*` belum diisi atau tidak lengkap, fungsi akan melempar `StorageNotConfiguredError` yang tertangkap di blok `catch` dan mengembalikan respons generic 500 (`Gagal mengakses file`) alih-alih penanganan terarah.
-- **Potensi kegagalan presigned POST akibat ketidakcocokan MIME type eksak**: Pada `presignSubmissionUpload`, policy menyertakan kondisi kaku `["eq", "$Content-Type", mimeType]`. Browser yang berbeda atau sistem operasi yang berbeda sering kali mendeteksi MIME type sedikit berbeda untuk ekstensi yang sama (misal `application/vnd.openxmlformats-officedocument.wordprocessingml.document` vs `application/zip` atau tipe kustom, atau file tanpa ekstensi MIME yang diisi `application/octet-stream` oleh UI). Ketidakcocokan antara header yang dikirim oleh `FormData` browser dan string yang disetujui presign akan memicu penolakan 403 Forbidden langsung dari storage.
-- **Atribut `accept` tidak disertakan pada elemen input file**: Pada `SubmitAssignmentForm.tsx`, elemen `<input type="file" multiple className="hidden" />` tidak memiliki atribut `accept` (misalnya `accept="image/*,.pdf,.doc,.docx"`). Di perangkat mobile, ketiadaan filter `accept` membuat sistem operasi membuka file picker umum tanpa batasan, sehingga siswa dapat memilih file yang tidak didukung sebelum akhirnya ditolak secara manual oleh aplikasi.
-- **Query database berulang untuk verifikasi guru di rute file**: Pada `src/app/api/assignments/files/[fileId]/route.ts`, query awal untuk mengambil file hanya mengambil `teachingContextId`. Selanjutnya di bagian otorisasi guru, dilakukan query tambahan `prisma.teachingContext.findUnique` hanya untuk mengambil `teacherProfileId`. Informasi `teacherProfileId` sebenarnya bisa langsung diambil melalui relasi `assignment: { select: { teachingContext: { select: { teacherProfileId: true } } } }` pada query pertama untuk menghemat satu putaran query DB.
+---
+
+## 2. Invariants & Scope Enforcement
+- **Status:** PASS
+- **Analisis:** Prompt dasar (`BASE_SYSTEM_PROMPT`) secara eksplisit menetapkan guardrails:
+  - Penolakan keras diagnosis medis/psikologis anak.
+  - Penolakan santun (polite deflection) topik non-pendidikan.
+  - Larangan berhitung matematika mandiri (kalkulasi didelegasikan ke tools deterministik).
+
+---
+
+## 3. Findings
+- Tidak ditemukan critical vulnerabilities (High Severity) atau privilege escalation.
+- Model router menangani skenario missing API key dengan safe throw exception yang ramah tanpa membocorkan kredensial.
+
+---
+
+## Verdict
+**APPROVE** (Aman untuk lanjut ke Story 2)

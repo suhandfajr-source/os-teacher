@@ -15,6 +15,7 @@ import {
   Settings,
   BookOpenCheck,
   ClipboardCheck,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KlassaLogo } from "@/components/brand";
@@ -25,6 +26,7 @@ const mainNavItems = [
   { href: "/kelas", label: "Kelas Saya", icon: Users },
   { href: "/siswa", label: "Daftar Siswa", icon: UserCircle },
   { href: "/persetujuan", label: "Persetujuan", icon: ClipboardCheck },
+  { href: "/asisten", label: "Klassa Agent", icon: Bot, isAi: true },
   { href: "/ai-studio", label: "AI Studio", icon: Sparkles, isAi: true },
   { href: "/quiz", label: "Quiz & Ujian", icon: FileQuestion },
   { href: "/laporan", label: "Laporan & Nilai", icon: BarChart },

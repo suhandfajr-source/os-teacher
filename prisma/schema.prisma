@@ -158,29 +158,29 @@ enum ImportCategory {
 // -------------------------------------------------
 
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean
-  image         String?
-  createdAt     DateTime
-  updatedAt     DateTime
-  platformRole  String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
+  id                 String    @id
+  name               String
+  email              String
+  emailVerified      Boolean
+  image              String?
+  createdAt          DateTime
+  updatedAt          DateTime
+  platformRole       String    @default("USER") // DEV STAGE 11 — USER | ADMIN (superadmin, non-registrable)
   // Single-Admin Lane — asal-usul akun: PUBLIC_REGISTER (pintu publik, tak pernah bisa jadi superadmin)
   // | PLATFORM_SEED (lahir dari seeder). Default backfill user lama = PUBLIC_REGISTER.
-  registrationOrigin String @default("PUBLIC_REGISTER")
+  registrationOrigin String    @default("PUBLIC_REGISTER")
   // DEV STAGE 11 Story 5 — kolom plugin admin Better Auth (kanal otorisasi plugin; platformRole tetap kanonik untuk requireSuperAdmin)
-  role          String    @default("USER") // kanal plugin Better Auth: "admin" lowercase | "USER"
-  banned        Boolean   @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
+  role               String    @default("USER") // kanal plugin Better Auth: "admin" lowercase | "USER"
+  banned             Boolean   @default(false)
+  banReason          String?
+  banExpires         DateTime?
+  sessions           Session[]
+  accounts           Account[]
 
-  teacherProfile   TeacherProfile?
-  parentProfile    ParentProfile?
-  approvedStudents Student[]       @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
-  notifications    Notification[]
+  teacherProfile    TeacherProfile?
+  parentProfile     ParentProfile?
+  approvedStudents  Student[]                  @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
+  notifications     Notification[]
   revocationReviews TeacherRevocationRequest[] @relation("RevocationReviewer")
 
   @@unique([email])
@@ -250,17 +250,18 @@ model School {
   // DEV STAGE 11 Story 5 — penanda nonaktif (B5); null = aktif
   deactivatedAt DateTime?
 
-  memberships       TeacherSchoolMembership[]
-  notifications     Notification[]
-  students          Student[]
-  academicPeriods   AcademicPeriod[]
-  subjects          Subject[]
-  classes           Class[]
-  teachingContexts  TeachingContext[]
-  aiContentDrafts   AiContentDraft[]
-  documentTemplates DocumentTemplate[]
-  importSessions    ImportSession[]
+  memberships        TeacherSchoolMembership[]
+  notifications      Notification[]
+  students           Student[]
+  academicPeriods    AcademicPeriod[]
+  subjects           Subject[]
+  classes            Class[]
+  teachingContexts   TeachingContext[]
+  aiContentDrafts    AiContentDraft[]
+  documentTemplates  DocumentTemplate[]
+  importSessions     ImportSession[]
   revocationRequests TeacherRevocationRequest[]
+  agentActionProposals AgentActionProposal[]
 
   @@index([normalizedName])
   @@index([npsn])
@@ -331,7 +332,7 @@ model Student {
   accountRequestedAt DateTime? // Story 5 F2 — waktu pengajuan akun (sumber tunggal eskalasi)
   approvedBy         User?     @relation("StudentApprover", fields: [approvedById], references: [id])
 
-  birthDate          String?   // Tanggal lahir (DD/MM/YYYY atau YYYY-MM-DD)
+  birthDate String? // Tanggal lahir (DD/MM/YYYY atau YYYY-MM-DD)
 
   classMemberships      ClassStudent[]
   attendanceRecords     AttendanceRecord[]
@@ -381,11 +382,14 @@ model TeacherProfile {
   teachingContexts              TeachingContext[]
   aiContentDrafts               AiContentDraft[]
   documentTemplates             DocumentTemplate[]
-  createdParentInvitations      ParentInvitation[]        @relation("CreatedParentInvitations")
-  grantedParentTeachingAccesses ParentTeachingAccess[]    @relation("GrantedParentTeachingAccesses")
+  createdParentInvitations      ParentInvitation[]         @relation("CreatedParentInvitations")
+  grantedParentTeachingAccesses ParentTeachingAccess[]     @relation("GrantedParentTeachingAccesses")
   importSessions                ImportSession[]
   assignmentSubmissions         AssignmentSubmission[]
   revocationRequests            TeacherRevocationRequest[] @relation("RevocationRequester")
+  agentConversations            AgentConversation[]
+  agentMemory                   TeacherAgentMemory?
+  agentActionProposals          AgentActionProposal[]
 
   @@map("teacher_profile")
 }
@@ -435,6 +439,7 @@ model Class {
 
   teachingContexts TeachingContext[]
   classStudents    ClassStudent[]
+  agentActionProposals AgentActionProposal[]
 
   @@unique([schoolId, normalizedName])
   @@map("class")
@@ -588,7 +593,7 @@ model AssignmentSubmission {
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
 
-  files               SubmissionFile[]
+  files SubmissionFile[]
 
   @@unique([assignmentId, studentId])
   @@index([assignmentId, status])
@@ -1196,3 +1201,111 @@ model QuizStudentAccess {
   @@index([studentId])
   @@map("quiz_student_access")
 }
+
+// ==========================================
+// STAGE 12: KLASSA AGENT MODELS
+// ==========================================
+
+model AgentConversation {
+  id               String         @id @default(cuid())
+  teacherProfileId String
+  teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  classContextId   String?
+  title            String         @default("Percakapan Baru")
+  modelUsed        String         @default("gemini-1.5-flash")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  messages         AgentMessage[]
+  actionProposals  AgentActionProposal[]
+
+  @@index([teacherProfileId])
+  @@index([classContextId])
+  @@map("agent_conversation")
+}
+
+model AgentMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // "user" | "assistant" | "system" | "tool"
+  content        String            @db.Text
+  toolCalls      Json?
+  toolResults    Json?
+  pendingAction  Json?
+  actionStatus   String            @default("NONE") // "NONE" | "PENDING" | "CONFIRMED" | "REJECTED"
+  createdAt      DateTime          @default(now())
+
+  @@index([conversationId])
+  @@map("agent_message")
+}
+
+model TeacherAgentMemory {
+  id                String         @id @default(cuid())
+  teacherProfileId  String         @unique
+  teacherProfile    TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+  communicationTone String         @default("RAMAH_SOPAN") // "LUGAS_RINGKAS" | "RAMAH_SOPAN" | "FORMAL"
+  preferredModel    String         @default("gemini-1.5-flash")
+  pedagogyDefaults  Json?
+  customContext     String?        @db.Text
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("teacher_agent_memory")
+}
+
+model AgentInsightAggregate {
+  id           String   @id @default(cuid())
+  schoolId     String?
+  period       String // e.g. "2026-W40", "2026-10"
+  category     String // "CURRICULUM_BOTTLENECK" | "BURNOUT_RISK" | "STUDENT_STRUGGLE" | "OPERATIONAL_HOURS"
+  metricKey    String
+  metricValue  Float
+  sampleCount  Int      @default(1)
+  tags         String[]
+  metadata     Json?
+  anonymizedAt DateTime @default(now())
+
+  @@index([schoolId])
+  @@index([category, period])
+  @@map("agent_insight_aggregate")
+}
+
+// -------------------------------------------------
+// KLASSA AGENT: HUMAN-IN-THE-LOOP ACTION ENGINE (STAGE 12 STORY 3)
+// -------------------------------------------------
+
+enum AgentActionStatus {
+  PENDING
+  EXECUTED
+  CANCELLED
+  EXPIRED
+}
+
+model AgentActionProposal {
+  id               String            @id @default(cuid())
+  conversationId   String
+  conversation     AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  schoolId         String
+  school           School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacherProfileId String
+  teacherProfile   TeacherProfile    @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  actionType       String            // "RECORD_ATTENDANCE" | "CREATE_ANNOUNCEMENT" | "CREATE_ASSIGNMENT"
+  classId          String?
+  class            Class?            @relation(fields: [classId], references: [id], onDelete: SetNull)
+  summary          String            @db.Text
+  payload          Json
+  status           AgentActionStatus @default(PENDING)
+  executionResult  Json?
+  expiresAt        DateTime
+  executedAt       DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([conversationId])
+  @@index([schoolId, teacherProfileId])
+  @@index([status])
+  @@map("agent_action_proposal")
+}
+

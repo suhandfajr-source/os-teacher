@@ -138,6 +138,9 @@ export async function verifyClassRosterAccess(classId: string) {
   return { profile, activeSchoolId, context };
 }
 
+// Alias untuk Scope Rombel B2 Klassa Agent & modul lain
+export const verifyTeacherClassAccess = verifyClassRosterAccess;
+
 export async function verifyTeachingSessionAccess(sessionId: string) {
   const session = await prisma.teachingSession.findUnique({
     where: { id: sessionId }

@@ -15,12 +15,19 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 ---
 
 ## 2. Klassa Agent
-- **Deskripsi:** Agent di dalam ekosistem Klassa yang membantu mengerjakan tugas-tugas guru dan menjadi ruang diskusi interaktif mengenai berbagai masalah di kelas.
-- **Status:** ⏳ Menunggu detailing lebih lanjut dari user
-- **Rincian Awal:**
-  - Integrasi AI agent dengan konteks data kelas (profil siswa, catatan akademik, presensi, masalah perilaku).
-  - Asistensi pengerjaan tugas rutin guru.
-  - Fitur konsultasi / diskusi problem-solving masalah kelas.
+- **Deskripsi:** Agent kustom di dalam ekosistem Klassa yang membantu mengerjakan tugas-tugas guru dan menjadi ruang diskusi interaktif mengenai berbagai masalah di kelas.
+- **Status:** ✅ Selesai (Semua Story 1–6 Selesai & Terverifikasi Penuh via BMAD Build)
+- **Stage Dokumentasi:** `docs/development/stages/DEV_STAGE_12_KLASSA_AGENT.md`
+- **Ringkasan Arsitektur & Keputusan:**
+  - **Universal Multi-Model:** 100% bebas lock-in vendor, bebas dipasang model komersial (Gemini, Claude, GPT) maupun model lokal (Hermes/vLLM) via protokol standar.
+  - **3 Kapabilitas Utama:** Admin Ber-Data (kalkulasi deterministik untuk SEMUA hal yang bisa dihitung), Pedagogi Solutif (non-klinis), Operasional (semua fitur Klassa).
+  - **Matriks Aksi (Human-in-the-Loop):** Aksi baca/draf langsung jalan; aksi tulis resmi/sensitif wajib persetujuan guru via kartu interaktif di chat dengan Atomic Gate Lock anti-TOCTOU.
+  - **Memori Komprehensif:** Mengingat preferensi ajar dan merangkum intisari percakapan umum guru agar agen selalu nyambung dari waktu ke waktu dengan sanitasi tag XML.
+  - **Klassa Pulse (Admin Console):** Visualisasi makro isu guru Indonesia, kurikulum tersulit, beban stres, dan jam lembur guru secara teranonimkan (Zero-PII UU PDP).
+  - Blueprint: `docs/product/klassa-agent-blueprint.md` (+ versi web: `klassa-agent-blueprint.html`)
+  - Hasil forge & laporan visual: `_bmad-output/forge/klassa-agent/` (`forged-idea.md` & `forge-report.html`)
+  - Patch & Artefak Review: `_bmad-output/implementation-artifacts/diff-klassa-agent-*.patch`
+  - Hasil Pengujian: 55/55 agent tests passing, 910/910 full suite regression passing (0 regressions).
 
 ---
 

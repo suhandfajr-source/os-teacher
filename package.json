@@ -18,6 +18,8 @@
     "audit:nis": "tsx --env-file-if-exists=.env scripts/backfill-student-canonical-nis.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.87",
+    "@ai-sdk/openai-compatible": "^3.0.62",
     "@aws-sdk/client-s3": "^3.1145.0",
     "@aws-sdk/s3-presigned-post": "^3.1145.0",
     "@aws-sdk/s3-request-presigner": "^3.1145.0",
@@ -29,6 +31,7 @@
     "@milkdown/theme-nord": "^7.22.2",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "ai": "^7.0.127",
     "better-auth": "^1.6.29",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
