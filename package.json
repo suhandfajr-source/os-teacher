@@ -15,7 +15,8 @@
     "seed:superadmin": "tsx --env-file-if-exists=.env scripts/seed-superadmin.ts",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "backfill:schools": "tsx --env-file-if-exists=.env scripts/backfill-school-normalized-names.ts",
-    "audit:nis": "tsx --env-file-if-exists=.env scripts/backfill-student-canonical-nis.ts"
+    "audit:nis": "tsx --env-file-if-exists=.env scripts/backfill-student-canonical-nis.ts",
+    "seed:teacher-bambang": "tsx --env-file-if-exists=.env scripts/seed-teacher-bambang.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",
