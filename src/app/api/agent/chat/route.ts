@@ -4,6 +4,7 @@ import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership, verifyClassRosterAccess } from "@/lib/authorization";
 import { getAgentLanguageModel } from "@/modules/agent/agent.router";
 import { buildAgentSystemPrompt, DEFAULT_AGENT_MODEL } from "@/modules/agent/agent.config";
+import type { TeacherMemoryDTO } from "@/modules/agent/memory/agent-memory.types";
 import {
   getTeacherClassesTool,
   getClassStudentsTool,
@@ -97,9 +98,9 @@ export async function POST(req: NextRequest) {
         ? {
             id: memory.id,
             teacherProfileId: memory.teacherProfileId,
-            communicationTone: memory.communicationTone as any,
+            communicationTone: memory.communicationTone as TeacherMemoryDTO["communicationTone"],
             preferredModel: memory.preferredModel,
-            pedagogyDefaults: (memory.pedagogyDefaults as any) || {},
+            pedagogyDefaults: (memory.pedagogyDefaults ?? {}) as TeacherMemoryDTO["pedagogyDefaults"],
             customContext: memory.customContext,
             updatedAt: memory.updatedAt,
           }
@@ -135,9 +136,23 @@ export async function POST(req: NextRequest) {
       updateTeacherMemoryPreference: updateTeacherMemoryPreferenceTool,
     };
 
+    // 6a. Jalur cepat sapaan ringan (smalltalk) — TANPA tools.
+    // Alasan reliabilitas: pesan seperti "halo" tidak butuh function-calling, sementara
+    // lane traffic tools pada model flash sering di-503 "high demand". Tanpa tools,
+    // respon sapaan mengalir di jalur model yang sehat (~2-4 detik ke token pertama).
+    const isSmalltalk = (() => {
+      const t = message.trim().toLowerCase();
+      if (t.length > 60) return false;
+      return /^((hal+o+|ha+i+|hi+|hey|hello|hallo|test|tes|ping|permisi|siapa kamu|siapa anda|apa kabar|pagi|siang|sore|malam|assalamu['a-z\s]*|salam[\s!.,]*)[\s!.,?*)]*|terima kasih+|makasih+|thanks?|thank you|ok(e|ey)?|sip|siap)[\s!.,?]*$/i.test(t);
+    })();
+
     // 7. Call streamText
     let isPersisted = false;
-    const persistAssistantMessage = async (text: string, toolCalls?: any, toolResults?: any) => {
+    const persistAssistantMessage = async (
+      text: string,
+      toolCalls?: unknown[],
+      toolResults?: unknown[]
+    ) => {
       if (isPersisted) return;
       isPersisted = true;
       try {
@@ -152,8 +167,8 @@ export async function POST(req: NextRequest) {
             conversationId: convId,
             role: "assistant",
             content: finalContent,
-            toolCalls: toolCalls ? (toolCalls as object) : undefined,
-            toolResults: toolResults ? (toolResults as object) : undefined,
+            toolCalls: toolCalls && toolCalls.length > 0 ? (toolCalls as object) : undefined,
+            toolResults: toolResults && toolResults.length > 0 ? (toolResults as object) : undefined,
           },
         });
         await prisma.agentConversation.update({
@@ -169,10 +184,18 @@ export async function POST(req: NextRequest) {
       model: languageModel,
       system: systemPrompt,
       messages: modelMessages,
-      tools,
+      // Sapaan ringan dialirkan tanpa tools (jalur cepat); sisanya dengan tools penuh.
+      ...(isSmalltalk ? {} : { tools }),
       stopWhen: isStepCount(10),
-      onFinish: async (event: any) => {
-        await persistAssistantMessage(event.text, event.toolCalls, event.toolResults);
+      // Failover antar-model sudah ditangani agent.router (tanpa backoff);
+      // retry SDK dimatikan agar tidak menumpuk 50s+ exponential backoff saat provider 503.
+      maxRetries: 0,
+      onFinish: async (event: {
+        text?: string;
+        toolCalls?: unknown[];
+        toolResults?: unknown[];
+      }) => {
+        await persistAssistantMessage(event.text ?? "", event.toolCalls, event.toolResults);
       },
     });
 
@@ -193,9 +216,42 @@ export async function POST(req: NextRequest) {
       // Di luar Next.js request scope (misal dalam unit test)
     }
 
-    return result.toTextStreamResponse({
+    // Re-emit manual: streamText menelan error stream & mengakhirinya diam-diam,
+    // sehingga klien menerima 200 KOSONG saat provider gagal total (bug "halo lama lalu gagal").
+    // Di sini error stream diterjemahkan jadi teks fallback yang pasti tampil di UI.
+    const textStream = result.textStream;
+    const encoder = new TextEncoder();
+    const responseStream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let sentAny = false;
+        try {
+          for await (const chunk of textStream) {
+            if (chunk) {
+              sentAny = true;
+              controller.enqueue(encoder.encode(chunk));
+            }
+          }
+        } catch (streamErr) {
+          console.error("[agent-chat] Stream error setelah mulai:", streamErr);
+        } finally {
+          if (!sentAny) {
+            console.error("[agent-chat] Stream gagal total — kirim teks fallback ke klien.");
+            controller.enqueue(
+              encoder.encode(
+                "⚠️ Maaf, seluruh jalur model AI sedang sibuk (permintaan ditolak sementara oleh penyedia). Silakan kirim ulang pesan Anda sebentar lagi — percakapan ini tetap tersimpan."
+              )
+            );
+          }
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(responseStream, {
       headers: {
+        "content-type": "text/plain; charset=utf-8",
         "x-conversation-id": convId,
+        "cache-control": "no-store",
       },
     });
   } catch (err: unknown) {
