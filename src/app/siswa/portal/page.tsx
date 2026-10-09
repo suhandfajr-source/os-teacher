@@ -381,22 +381,15 @@ export default function StudentPortalHomePage() {
                     >
                       <div className="min-w-0 space-y-0.5">
                         <h4 className="text-xs font-bold text-slate-900 truncate">{s.subjectName}</h4>
-                        {s.assessedTpCount > 0 ? (
-                          <p className="text-[10px] text-slate-500">
-                            TP tuntas: {s.tuntasTpCount}/{s.assessedTpCount}
-                          </p>
-                        ) : (
-                          <p className="text-[10px] text-slate-400">belum ada nilai</p>
-                        )}
+                        <p className="text-[10px] text-slate-400">
+                          {s.hasFinalData ? "Nilai rata-rata" : "belum ada nilai"}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {s.hasFinalData ? (
                           <span className="text-lg font-black text-[#0F766E]">{s.runningScore ?? "–"}</span>
                         ) : (
                           <span className="text-[10px] font-bold text-slate-400">–</span>
-                        )}
-                        {s.assessedTpCount > 0 && s.tuntasTpCount === s.assessedTpCount && (
-                          <Award className="w-4 h-4 text-emerald-500" />
                         )}
                       </div>
                     </Link>

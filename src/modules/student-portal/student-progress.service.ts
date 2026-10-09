@@ -104,6 +104,9 @@ export interface TrendPoint {
   score: number;
   /** score / maxScore * 100 — tinggi bar tren lintas skala penilaian */
   percent: number;
+  assessmentTypeName?: string;
+  maxScore?: number;
+  minimumPassingScore?: number | null;
 }
 
 export type ScoringMode = "WEIGHTED" | "FLAT_FALLBACK";
@@ -247,6 +250,9 @@ export function buildSubjectProgress(raw: SubjectRawData): SubjectProgress {
       date: a.assessmentDate.toISOString(),
       score: a.finalScore as number,
       percent: Math.round(((a.finalScore as number) / a.maxScore) * 100),
+      assessmentTypeName: a.assessmentTypeName,
+      maxScore: a.maxScore,
+      minimumPassingScore: a.minimumPassingScore,
     })),
     tpTree,
   };

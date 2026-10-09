@@ -10,48 +10,20 @@ import {
   ChevronLeft,
   ChevronRight,
   CalendarCheck,
+  Calendar,
   BookOpen,
 } from "lucide-react";
 import {
   getStudentProgressDataAction,
   type StudentProgressPageData,
 } from "@/modules/student-portal/student-progress.actions";
-import type { SubjectProgress, MonthlyAttendanceRecap, TpMasteryItem } from "@/modules/student-portal/student-progress.service";
+import type { SubjectProgress, MonthlyAttendanceRecap } from "@/modules/student-portal/student-progress.service";
 import { Button } from "@/components/ui/button";
 
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
-
-function TpStatusBadge({ tp }: { tp: TpMasteryItem }) {
-  if (tp.status === "TUNTAS") {
-    return (
-      <span className="shrink-0 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-        ✓ {tp.masteredCount}/{tp.assessedCount} Tuntas
-      </span>
-    );
-  }
-  if (tp.status === "BELUM_TUNTAS") {
-    return (
-      <span className="shrink-0 text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-        {tp.masteredCount}/{tp.assessedCount} Tuntas
-      </span>
-    );
-  }
-  if (tp.status === "TANPA_KKTP") {
-    return (
-      <span className="shrink-0 text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
-        Dinilai
-      </span>
-    );
-  }
-  return (
-    <span className="shrink-0 text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
-      Belum Dinilai
-    </span>
-  );
-}
 
 function SubjectCard({ subject }: { subject: SubjectProgress }) {
   const [open, setOpen] = useState(false);
@@ -100,59 +72,70 @@ function SubjectCard({ subject }: { subject: SubjectProgress }) {
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
-          {/* Tren nilai */}
-          {subject.trend.length > 0 && (
-            <div className="space-y-1.5">
-              <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Tren Nilai</h4>
-              <div className="flex items-end gap-1.5 h-20">
-                {subject.trend.slice(-8).map((t) => (
-                  <div key={t.assessmentId} className="flex-1 flex flex-col items-center gap-1 group min-w-0">
-                    <div
-                      className="w-full rounded-t-lg bg-gradient-to-t from-[#0F766E] to-teal-400 min-h-[4px]"
-                      style={{ height: `${Math.max(6, (t.percent / 100) * 64)}px` }}
-                      title={`${t.title}: ${t.score}`}
-                    />
-                    <span className="text-[9px] font-bold text-slate-500 truncate w-full text-center">
-                      {t.score}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Pohon ketuntasan TP */}
-          <div className="space-y-1.5">
+        <div className="px-4 pb-4 space-y-3 border-t border-slate-100 pt-3">
+          <div className="space-y-2">
             <h4 className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
-              Ketuntasan TP (Tujuan Pembelajaran)
+              Rincian Penilaian & Ulangan
             </h4>
-            {subject.tpTree.length === 0 ? (
-              <p className="text-[11px] text-slate-400 py-1">
-                Guru belum menetapkan TP untuk mapel ini.
-              </p>
+            {subject.trend.length === 0 ? (
+              <p className="text-[11px] text-slate-400 py-1">Belum ada penilaian resmi yang dinilai.</p>
             ) : (
-              <div className="space-y-1.5">
-                {subject.tpTree.map((tp) => (
-                  <div
-                    key={tp.learningObjectiveId}
-                    className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-100 flex items-start justify-between gap-2"
-                  >
-                    <div className="min-w-0 space-y-0.5">
-                      <p className="text-[11px] font-bold text-slate-800 leading-snug">
-                        {tp.code ? `${tp.code} — ` : ""}
-                        {tp.description}
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap text-[10px] text-slate-500">
-                        {tp.averageScore !== null && <span>rata-rata {tp.averageScore}</span>}
-                        {tp.remedialCount > 0 && (
-                          <span className="text-amber-600">remedial: {tp.remedialCount}×</span>
+              <div className="space-y-2">
+                {subject.trend.map((t) => {
+                  const isPassed =
+                    t.minimumPassingScore !== null && t.minimumPassingScore !== undefined
+                      ? t.score >= t.minimumPassingScore
+                      : true;
+                  const formattedDate = new Date(t.date).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  });
+
+                  return (
+                    <div
+                      key={t.assessmentId}
+                      className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100/90 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
+                            {t.assessmentTypeName || "Penilaian"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            {formattedDate}
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-bold text-slate-900 leading-snug truncate">
+                          {t.title}
+                        </h5>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="flex items-baseline justify-end gap-1">
+                          <span className="text-base font-black text-slate-900">{t.score}</span>
+                          <span className="text-[10px] text-slate-400 font-semibold">
+                            /{t.maxScore || 100}
+                          </span>
+                        </div>
+                        {t.minimumPassingScore !== null && t.minimumPassingScore !== undefined && (
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded-full inline-block mt-0.5 ${
+                              isPassed
+                                ? "text-emerald-700 bg-emerald-50 border border-emerald-200/80"
+                                : "text-amber-700 bg-amber-50 border border-amber-200/80"
+                            }`}
+                          >
+                            {isPassed
+                              ? `✓ Tuntas (KKTP ${t.minimumPassingScore})`
+                              : `Remedial (KKTP ${t.minimumPassingScore})`}
+                          </span>
                         )}
                       </div>
                     </div>
-                    <TpStatusBadge tp={tp} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -291,7 +274,7 @@ export default function StudentProgressPage() {
             </span>
             <h1 className="text-base font-black tracking-tight">Capaian Belajarku</h1>
             <p className="text-[11px] text-teal-100/90 font-medium">
-              Nilai final & ketuntasan TP per mata pelajaran
+              Nilai final & rincian ulangan per mata pelajaran
             </p>
           </div>
           <button
@@ -318,7 +301,7 @@ export default function StudentProgressPage() {
             tab === "nilai" ? "bg-white text-[#0F766E] shadow-sm" : "text-slate-500"
           }`}
         >
-          Nilai & Ketuntasan
+          Daftar Nilai Ulangan
         </button>
         <button
           onClick={() => setTab("presensi")}
@@ -342,7 +325,7 @@ export default function StudentProgressPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             {data.subjects.map((s) => (
               <SubjectCard key={s.teachingContextId} subject={s} />
             ))}
