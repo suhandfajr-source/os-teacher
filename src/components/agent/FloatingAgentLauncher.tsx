@@ -3,17 +3,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bot,
   X,
   Send,
   Maximize2,
   Sparkles,
   Loader2,
-  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ChatMessageBubble, ChatMessageItem } from "./ChatMessageBubble";
 import { QuickPromptPills } from "./QuickPromptPills";
+import { AgentMark } from "@/components/brand";
 
 export function FloatingAgentLauncher() {
   const pathname = usePathname();
@@ -141,20 +140,19 @@ export function FloatingAgentLauncher() {
 
   return (
     <>
-      {/* 1. Floating Trigger Button */}
+      {/* 1. Floating Trigger Button — bubble K brand + sparkle mengorbit */}
       {!isOpen && (
         <button
           type="button"
           data-testid="floating-agent-button"
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 md:bottom-7 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-xl hover:bg-teal-700 active:scale-95 transition-all group"
+          className="fixed bottom-20 md:bottom-7 right-6 z-40 rounded-full transition-all active:scale-95 group"
           title="Tanya Klassa Agent"
         >
-          <Bot className="h-7 w-7 transition-transform group-hover:scale-110" />
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white" />
-          </span>
+          <AgentMark
+            size={56}
+            className="transition-transform duration-300 group-hover:scale-105"
+          />
         </button>
       )}
 
@@ -167,9 +165,7 @@ export function FloatingAgentLauncher() {
           {/* Header */}
           <div className="flex items-center justify-between bg-teal-700 px-4 py-3 text-white">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20">
-                <Bot className="h-5 w-5" />
-              </div>
+              <AgentMark size={32} orbit={false} streaming={isStreaming} />
               <div>
                 <h4 className="text-xs font-bold">Klassa Quick Assist</h4>
                 <p className="text-[10px] text-teal-100">Rekan mengajar AI Anda</p>

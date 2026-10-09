@@ -3,11 +3,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Send,
-  Bot,
   Plus,
   Trash2,
   Settings,
-  Sparkles,
   MessageSquare,
   Cpu,
   Loader2,
@@ -17,7 +15,6 @@ import {
 import { toast } from "sonner";
 import {
   AgentConversationDTO,
-  AgentMessageDTO,
 } from "@/modules/agent/agent.types";
 import {
   TeacherMemoryDTO,
@@ -36,6 +33,7 @@ import { QuickPromptPills } from "@/components/agent/QuickPromptPills";
 import { AgentSettingsModal } from "@/components/agent/AgentSettingsModal";
 import { AVAILABLE_AGENT_MODELS } from "@/modules/agent/agent.config";
 import { ActionProposalData } from "@/components/agent/ActionConfirmCard";
+import { AgentMark } from "@/components/brand";
 
 interface AsistenClientProps {
   initialConversations: AgentConversationDTO[];
@@ -64,7 +62,6 @@ export default function AsistenClient({
   const [memory, setMemory] = useState<TeacherMemoryDTO>(initialMemory);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [proposals, setProposals] = useState<ActionProposalData[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -81,8 +78,8 @@ export default function AsistenClient({
   // Load messages and proposals when active conversation changes
   useEffect(() => {
     if (!activeConversationId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset tampilan saat percakapan tidak aktif (sinkronisasi UI, aman)
       setMessages([]);
-      setProposals([]);
       return;
     }
 
@@ -98,9 +95,8 @@ export default function AsistenClient({
         if (!isMounted) return;
 
         const loadedProposals: ActionProposalData[] = propRes.success && propRes.data
-          ? (propRes.data as any)
+          ? (propRes.data as ActionProposalData[])
           : [];
-        setProposals(loadedProposals);
 
         if (msgRes.success && msgRes.data) {
           const formatted: ChatMessageItem[] = msgRes.data.map((m) => {
@@ -148,7 +144,6 @@ export default function AsistenClient({
   const handleNewChat = () => {
     setActiveConversationId(null);
     setMessages([]);
-    setProposals([]);
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -180,8 +175,7 @@ export default function AsistenClient({
     if (!activeConversationId) return;
     const propRes = await getAllActionProposals(activeConversationId);
     if (propRes.success && propRes.data) {
-      const updated = propRes.data as any;
-      setProposals(updated);
+      const updated = propRes.data as ActionProposalData[];
       setMessages((prev) =>
         prev.map((m, idx) => ({
           ...m,
@@ -274,7 +268,7 @@ export default function AsistenClient({
         setTimeout(async () => {
           const propRes = await getAllActionProposals(serverConvId);
           if (propRes.success && propRes.data && propRes.data.length > 0) {
-            const latestProp = propRes.data[propRes.data.length - 1] as any;
+            const latestProp = propRes.data[propRes.data.length - 1] as ActionProposalData;
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === tempAssistantMsgId
@@ -393,9 +387,7 @@ export default function AsistenClient({
               )}
             </button>
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white">
-                <Bot className="h-4 w-4" />
-              </div>
+              <AgentMark size={28} orbit={false} />
               <div>
                 <h2 className="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
                   Klassa Agent
@@ -439,9 +431,7 @@ export default function AsistenClient({
           {messages.length === 0 ? (
             /* Empty State Hero */
             <div className="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto py-8">
-              <div className="flex h-14 w-14 items-center justify-center rounded-3xl bg-teal-50 text-teal-600 border border-teal-100 shadow-xs mb-4">
-                <Sparkles className="h-7 w-7" />
-              </div>
+              <AgentMark size={56} className="mb-4" streaming={isStreaming} />
               <h3 className="text-base sm:text-lg font-bold text-slate-800">
                 Halo, {teacherName || "Bapak/Ibu Guru"}!
               </h3>

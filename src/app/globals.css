@@ -272,3 +272,192 @@
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.8) 0%, transparent 100%);
   background-attachment: fixed;
 }
+
+/* Ambient animated gradient mesh */
+@keyframes meshShift {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(30px, -45px) scale(1.1) rotate(12deg);
+  }
+  66% {
+    transform: translate(-35px, 25px) scale(0.95) rotate(-10deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes meshShiftReverse {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(-40px, 35px) scale(1.08) rotate(-15deg);
+  }
+  66% {
+    transform: translate(25px, -30px) scale(0.92) rotate(10deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes gradientPan {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-mesh-shift {
+  animation: meshShift 16s ease-in-out infinite;
+}
+
+.animate-mesh-shift-reverse {
+  animation: meshShiftReverse 20s ease-in-out infinite;
+}
+
+.animate-gradient-pan {
+  background-size: 200% 200%;
+  animation: gradientPan 12s ease-in-out infinite;
+}
+/* ══════════════════════════════════════════════════════════════
+   KLASSA AGENT MARK — bubble chat + mark K+sparkle bernapas +
+   titik orbit hijau bercahaya (dipakai src/components/brand/AgentMark.tsx)
+   Hierarki warna: ungu di dalam = AI; hijau di luar = online/hidup.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Titik orbit hijau: wrapper berputar dengan offset pusat +3% (ekor bubble
+   menarik pusat visual ke bawah) → titik menyinggung garis luar bubble
+   secara merata. */
+.agent-dot-orbit {
+  animation: agent-dot-spin 6s linear infinite;
+}
+
+.agent-dot-orbit--fast {
+  animation-duration: 1.2s;
+}
+
+@keyframes agent-dot-spin {
+  from {
+    transform: translateY(3%) rotate(0deg);
+  }
+  to {
+    transform: translateY(3%) rotate(360deg);
+  }
+}
+
+/* Titik hijau bercahaya — sinyal "agent online" */
+.agent-dot {
+  width: 8%;
+  height: 8%;
+  background: radial-gradient(circle at 35% 35%, #a7f3d0, #34d399 55%, #059669);
+  box-shadow:
+    0 0 4px 1px rgba(52, 211, 153, 0.9),
+    0 0 10px 3px rgba(16, 185, 129, 0.4);
+  animation: agent-dot-pulse 2.4s ease-in-out infinite;
+}
+
+.agent-dot-orbit--fast .agent-dot {
+  animation-duration: 0.6s;
+}
+
+@keyframes agent-dot-pulse {
+  0%,
+  100% {
+    scale: 0.9;
+    opacity: 0.9;
+  }
+  50% {
+    scale: 1.15;
+    opacity: 1;
+  }
+}
+
+/* Sparkle AI di dalam bubble: twinkle sendiri (anak grup bernapas K —
+   dua irama hidup berbeda yang saling tumpuk). Streaming → berputar. */
+.agent-sparkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: agent-sparkle-twinkle 2.4s ease-in-out infinite;
+}
+
+.agent-mark--streaming .agent-sparkle {
+  animation: agent-sparkle-spin 1.2s linear infinite;
+}
+
+@keyframes agent-sparkle-twinkle {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18) rotate(18deg);
+    opacity: 0.85;
+  }
+}
+
+@keyframes agent-sparkle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* K brand bernapas, disinkronkan dengan shadow bubble */
+.agent-k {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: agent-k-breathe 2.8s ease-in-out infinite;
+}
+
+.agent-mark--streaming .agent-k {
+  animation-duration: 1.2s;
+}
+
+@keyframes agent-k-breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* Shadow bubble ikut berdenyut — kesan objek utuh bernapas */
+.agent-bubble-shell {
+  animation: agent-bubble-pulse 2.8s ease-in-out infinite;
+}
+
+.agent-mark--streaming .agent-bubble-shell {
+  animation-duration: 1.2s;
+}
+
+@keyframes agent-bubble-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 2px 5px rgba(13, 148, 136, 0.18));
+  }
+  50% {
+    filter: drop-shadow(0 4px 12px rgba(79, 70, 229, 0.3));
+  }
+}
+
+/* Hormati preferensi pengguna yang menghindari gerakan */
+@media (prefers-reduced-motion: reduce) {
+  .agent-dot-orbit,
+  .agent-dot,
+  .agent-sparkle,
+  .agent-k,
+  .agent-bubble-shell {
+    animation: none;
+  }
+}

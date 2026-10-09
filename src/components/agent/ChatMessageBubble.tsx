@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Bot, User, Wrench, Sparkles, AlertCircle } from "lucide-react";
+import { User, Wrench, Sparkles, AlertCircle } from "lucide-react";
+import { AgentMark } from "@/components/brand";
 import { ActionConfirmCard, ActionProposalData } from "./ActionConfirmCard";
 import { FormattedMarkdown } from "./FormattedMarkdown";
 
@@ -10,7 +11,7 @@ export interface ChatMessageItem {
   role: "user" | "assistant" | "system";
   content: string;
   isStreaming?: boolean;
-  toolCalls?: any[];
+  toolCalls?: unknown[];
   pendingProposal?: ActionProposalData | null;
   createdAt?: string | Date;
 }
@@ -35,9 +36,7 @@ export function ChatMessageBubble({
     >
       {/* Avatar Asisten */}
       {!isUser && (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white shadow-xs">
-          <Bot className="h-4 w-4" />
-        </div>
+        <AgentMark size={32} orbit={false} streaming={message.isStreaming} />
       )}
 
       {/* Bubble Content */}
