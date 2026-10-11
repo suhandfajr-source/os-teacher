@@ -27,6 +27,7 @@ export const createQuizSchema = z.object({
   validFrom: z.string().datetime().optional(),
   deadline: z.string().datetime().optional(),
   accessMode: z.enum(["CLASSROOM_PIN", "INDIVIDUAL_PIN"]).default("CLASSROOM_PIN"),
+  lockdownMode: z.enum(["OFF", "MONITOR", "STRICT"]).default("STRICT"),
   questions: z.array(quizQuestionSchema).min(1, "Quiz minimal memiliki 1 soal").max(100),
 });
 
@@ -43,6 +44,7 @@ export const quizSettingsSchema = z.object({
   validFrom: z.string().datetime().optional(),
   deadline: z.string().datetime().optional(),
   accessMode: z.enum(["CLASSROOM_PIN", "INDIVIDUAL_PIN"]),
+  lockdownMode: z.enum(["OFF", "MONITOR", "STRICT"]).default("STRICT"),
 });
 
 export const submitAttemptSchema = z.object({
@@ -88,6 +90,45 @@ export interface PublicQuizView {
   roster: Array<{ id: string; fullName: string }>;
   pinRequired: boolean;
   accessMode: "CLASSROOM_PIN" | "INDIVIDUAL_PIN";
+  lockdownMode: QuizLockdownModeView;
+}
+
+// ----------------------------------------------------------------------------
+// Tahap 1 CBT Integrity Lockdown — kebijakan & pelanggaran
+// ----------------------------------------------------------------------------
+
+export type QuizLockdownModeView = "OFF" | "MONITOR" | "STRICT";
+export type QuizViolationKindView = "TAB_EXIT" | "FULLSCREEN_EXIT" | "WINDOW_BLUR";
+
+export const LOCKDOWN_MAX_STRIKES = 3;
+
+export interface QuizViolationView {
+  id: string;
+  kind: QuizViolationKindView;
+  awayMs: number;
+  occurredAt: string;
+}
+
+/** Laporan integritas per attempt — dikonsumsi panel guru. */
+export interface QuizIntegrityAttemptView {
+  attemptId: string;
+  studentId: string;
+  studentName: string;
+  status: "IN_PROGRESS" | "SUBMITTED" | "NEEDS_GRADING";
+  violationCount: number;
+  lockedBySystem: boolean;
+  lockedAt: string | null;
+  submittedAt: string | null;
+  startedAt: string;
+  score: number | null;
+  violations: QuizViolationView[];
+}
+
+export interface QuizIntegrityReportView {
+  quizId: string;
+  quizTitle: string;
+  lockdownMode: QuizLockdownModeView;
+  attempts: QuizIntegrityAttemptView[];
 }
 
 export interface AttemptResultView {

@@ -60,6 +60,7 @@ interface QuizDetail {
     validFrom?: string | null;
     deadline?: string | null;
     accessMode: "CLASSROOM_PIN" | "INDIVIDUAL_PIN";
+    lockdownMode: "OFF" | "MONITOR" | "STRICT";
     classroomPin?: string | null;
   };
   contextLabel: string;
@@ -82,6 +83,8 @@ interface QuizDetail {
     isRemedial: boolean;
     startedAt?: string;
     submittedAt?: string;
+    violationCount: number;
+    lockedBySystem: boolean;
   }>;
   assessments: Array<{ id: string; title: string; date: string }>;
 }
@@ -398,6 +401,23 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <span>·</span>
             <Badge variant="outline" className="text-xs">
               {quiz.accessMode === "CLASSROOM_PIN" ? "Mode Kode Kelas" : "Mode PIN Siswa"}
+            </Badge>
+            <span>·</span>
+            <Badge
+              variant="outline"
+              className={`text-xs ${
+                quiz.lockdownMode === "STRICT"
+                  ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                  : quiz.lockdownMode === "MONITOR"
+                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                  : ""
+              }`}
+            >
+              {quiz.lockdownMode === "STRICT"
+                ? "Integritas Ketat (3x Terkunci)"
+                : quiz.lockdownMode === "MONITOR"
+                ? "Integritas Terpantau"
+                : "Integritas Nonaktif"}
             </Badge>
           </div>
           {quiz.validFrom && (
@@ -841,6 +861,16 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         {r.attemptStatus === "NEEDS_GRADING" && (
                           <Badge variant="outline" className="ml-2 text-[10px] bg-amber-50 text-amber-800 border-amber-300">
                             Perlu Koreksi
+                          </Badge>
+                        )}
+                        {r.lockedBySystem && (
+                          <Badge variant="outline" className="ml-2 text-[10px] bg-rose-50 text-rose-700 border-rose-300">
+                            🚩 Diakhiri Sistem ({r.violationCount}x pelanggaran)
+                          </Badge>
+                        )}
+                        {!r.lockedBySystem && r.violationCount > 0 && (
+                          <Badge variant="outline" className="ml-2 text-[10px] bg-slate-50 text-slate-600 border-slate-300">
+                            {r.violationCount}x pelanggaran tercatat
                           </Badge>
                         )}
                       </p>

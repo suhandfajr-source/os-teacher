@@ -48,6 +48,8 @@ export default async function StudentQuizTakePage({
       durationMinutes={res.data.durationMinutes}
       startedAt={res.data.startedAt}
       isRemedial={res.data.isRemedial}
+      lockdownMode={res.data.lockdownMode}
+      violationCount={res.data.violationCount}
       questions={res.data.questions}
       savedAnswers={res.data.savedAnswers}
     />

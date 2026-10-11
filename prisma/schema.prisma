@@ -1097,6 +1097,20 @@ enum QuizAccessMode {
   INDIVIDUAL_PIN
 }
 
+// Tahap 1 CBT Integrity — kebijakan lockdown per kuis
+enum QuizLockdownMode {
+  OFF
+  MONITOR
+  STRICT
+}
+
+// Jenis pelanggaran integritas (episode "away" saat ujian berlangsung)
+enum QuizViolationKind {
+  TAB_EXIT
+  FULLSCREEN_EXIT
+  WINDOW_BLUR
+}
+
 model Quiz {
   id                String          @id @default(cuid())
   teachingContextId String
@@ -1109,6 +1123,7 @@ model Quiz {
   shuffleQuestions  Boolean         @default(true)
   shuffleOptions    Boolean         @default(true)
   standardScore     Decimal?        @db.Decimal(5, 2)
+  lockdownMode      QuizLockdownMode @default(STRICT)
   validFrom         DateTime?
   deadline          DateTime?
   accessMode        QuizAccessMode  @default(CLASSROOM_PIN)
@@ -1157,10 +1172,14 @@ model QuizAttempt {
   score         Decimal?          @db.Decimal(5, 2)
   isRemedial    Boolean           @default(false)
   questionOrder Json
+  // Tahap 1 CBT Integrity — hitungan strike server-authoritative & tanda kunci
+  violationCount   Int       @default(0)
+  lockdownLockedAt DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  answers QuizAnswer[]
+  answers    QuizAnswer[]
+  violations QuizViolation[]
 
   @@unique([quizId, studentId])
   @@index([quizId, status])
@@ -1200,6 +1219,20 @@ model QuizStudentAccess {
   @@unique([quizId, studentId])
   @@index([studentId])
   @@map("quiz_student_access")
+}
+
+// Tahap 1 CBT Integrity — catatan pelanggaran per attempt (server-authoritative)
+model QuizViolation {
+  id         String            @id @default(cuid())
+  attemptId  String
+  attempt    QuizAttempt       @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  kind       QuizViolationKind
+  awayMs     Int               @default(0)
+  occurredAt DateTime          @default(now())
+  createdAt  DateTime          @default(now())
+
+  @@index([attemptId, occurredAt])
+  @@map("quiz_violation")
 }
 
 // ==========================================

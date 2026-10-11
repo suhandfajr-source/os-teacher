@@ -10,14 +10,16 @@ import {
   Send, 
   AlertTriangle, 
   ShieldAlert,
-  HelpCircle,
-  Sparkles
+  Maximize2,
+  Lock,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { 
   saveQuizAnswerFromSessionAction, 
-  submitQuizAttemptFromSessionAction 
+  submitQuizAttemptFromSessionAction,
+  recordQuizViolationFromSessionAction
 } from "@/modules/quiz/quiz.actions";
 import type { StudentQuizQuestionView } from "@/modules/quiz/quiz.types";
 
@@ -34,6 +36,8 @@ interface QuizRunnerClientProps {
   durationMinutes?: number;
   startedAt: string;
   isRemedial: boolean;
+  lockdownMode: "OFF" | "MONITOR" | "STRICT";
+  violationCount: number;
   questions: StudentQuizQuestionView[];
   savedAnswers: SavedAnswerItem[];
 }
@@ -44,6 +48,9 @@ export function QuizRunnerClient({
   quizTitle,
   durationMinutes,
   startedAt,
+  isRemedial,
+  lockdownMode,
+  violationCount: initialViolationCount,
   questions,
   savedAnswers: initialSavedAnswers,
 }: QuizRunnerClientProps) {
@@ -82,41 +89,6 @@ export function QuizRunnerClient({
     return Math.max(0, diffSec);
   });
 
-  // Calculate timer sync from wall-clock
-  const syncTimer = useCallback(() => {
-    if (!durationMinutes) return;
-    const startMs = new Date(startedAt).getTime();
-    const endMs = startMs + durationMinutes * 60 * 1000;
-    const diffSec = Math.floor((endMs - Date.now()) / 1000);
-    const clamped = Math.max(0, diffSec);
-    setTimeLeftSec(clamped);
-
-    if (clamped <= 0) {
-      // Auto-submit when time expires (Temuan F7)
-      handleAutoSubmitOnExpire();
-    }
-  }, [durationMinutes, startedAt]);
-
-  useEffect(() => {
-    if (!durationMinutes) return;
-
-    // Interval tick every second
-    const interval = setInterval(syncTimer, 1000);
-
-    // Listener visibilitychange for instant sync when student wakes up phone
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        syncTimer();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [durationMinutes, syncTimer]);
-
   // Peringatan saat tab / jendela hendak ditutup atau navigasi tidak sengaja (Finding 5)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -126,6 +98,211 @@ export function QuizRunnerClient({
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
+
+  // ============================================================
+  // TAHAP 1 CBT INTEGRITY LOCKDOWN
+  // ============================================================
+  const lockdownActive = lockdownMode !== "OFF";
+  const isStrict = lockdownMode === "STRICT";
+  const MAX_STRIKES = 3;
+
+  const [violationCount, setViolationCount] = useState(initialViolationCount);
+  const [lockedBySystem, setLockedBySystem] = useState(false);
+  // Gerbang fullscreen: lazy-init deteksi dukungan API (tanpa setState dalam effect)
+  const [fsGateSupported] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      typeof document.documentElement.requestFullscreen === "function"
+  );
+  const [gateDismissed, setGateDismissed] = useState(false);
+  const awaitingFullscreen = lockdownActive && fsGateSupported && !gateDismissed;
+  const [fsPrompt, setFsPrompt] = useState(false); // ajakan kembali setelah keluar fullscreen
+  const [tabConflict, setTabConflict] = useState(false);
+  const [banner, setBanner] = useState<{ kind: string; awaySec: number } | null>(null);
+
+  const awayStartRef = useRef<number | null>(null);
+  const awayKindRef = useRef<"TAB_EXIT" | "FULLSCREEN_EXIT" | "WINDOW_BLUR">("TAB_EXIT");
+  const lastReportAtRef = useRef(0);
+  const pendingViolationsRef = useRef<Array<{ kind: "TAB_EXIT" | "FULLSCREEN_EXIT" | "WINDOW_BLUR"; awayMs: number }>>([]);
+  const bcRef = useRef<BroadcastChannel | null>(null);
+  const tabIdRef = useRef<string>("");
+
+  const reportViolation = useCallback(
+    async (kind: "TAB_EXIT" | "FULLSCREEN_EXIT" | "WINDOW_BLUR", awayMs: number) => {
+      lastReportAtRef.current = Date.now();
+      setBanner({ kind, awaySec: Math.max(1, Math.round(awayMs / 1000)) });
+      try {
+        const res = await recordQuizViolationFromSessionAction(attemptId, kind, awayMs);
+        if (res.success) {
+          setViolationCount(res.violationCount ?? 0);
+          if (res.locked) {
+            setLockedBySystem(true);
+            toast.error("Ujian diakhiri otomatis oleh sistem — 3x pelanggaran integritas.");
+          }
+          return;
+        }
+        if (res.error && res.error.includes("diakhiri sistem")) {
+          setLockedBySystem(true);
+          return;
+        }
+        pendingViolationsRef.current.push({ kind, awayMs });
+      } catch {
+        // Offline / network glitch: antrekan, kirim ulang saat fokus kembali
+        pendingViolationsRef.current.push({ kind, awayMs });
+      }
+    },
+    [attemptId]
+  );
+
+  const beginEpisode = useCallback((kind: "TAB_EXIT" | "FULLSCREEN_EXIT" | "WINDOW_BLUR") => {
+    if (awayStartRef.current === null) {
+      awayStartRef.current = Date.now();
+      awayKindRef.current = kind;
+    }
+  }, []);
+
+  const endEpisode = useCallback(() => {
+    const start = awayStartRef.current;
+    if (start === null) return;
+    awayStartRef.current = null;
+    const awayMs = Date.now() - start;
+    // Dedupe badai event (visibility+blur+fullscreen berdekatan) — cukup satu laporan
+    if (Date.now() - lastReportAtRef.current < 1500 && awayMs < 2000) return;
+    void reportViolation(awayKindRef.current, awayMs);
+  }, [reportViolation]);
+
+  // Gerbang fullscreen & lampiran listener away-episode (hanya saat mode aktif)
+  useEffect(() => {
+    if (!lockdownActive) return;
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") beginEpisode("TAB_EXIT");
+      else endEpisode();
+    };
+    const onBlur = () => beginEpisode("WINDOW_BLUR");
+    const onFocus = () => endEpisode();
+    const onFsChange = () => {
+      const fs = !!document.fullscreenElement;
+      if (!fs) {
+        beginEpisode("FULLSCREEN_EXIT");
+        setFsPrompt(true);
+      } else {
+        setFsPrompt(false);
+        endEpisode();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("fullscreenchange", onFsChange);
+    };
+  }, [lockdownActive, beginEpisode, endEpisode]);
+
+  // Kunci satu tab per kuis (BroadcastChannel berbasis shareToken)
+  useEffect(() => {
+    if (!lockdownActive) return;
+    if (typeof BroadcastChannel === "undefined") return;
+    tabIdRef.current = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel(`cbt-lock-${token}`);
+    } catch {
+      return;
+    }
+    bcRef.current = bc;
+    bc.onmessage = (ev: MessageEvent) => {
+      const msg = ev.data as { type?: string; tabId?: string } | null;
+      if (!msg || msg.tabId === tabIdRef.current) return;
+      if (msg.type === "hello") {
+        bc?.postMessage({ type: "ack", tabId: tabIdRef.current });
+      } else if (msg.type === "ack") {
+        setTabConflict(true);
+      }
+    };
+    bc.postMessage({ type: "hello", tabId: tabIdRef.current });
+    return () => {
+      bc?.close();
+      bcRef.current = null;
+    };
+  }, [lockdownActive, token]);
+
+  // Blokir clipboard / menu konteks / seleksi / shortcut umum saat mode aktif
+  useEffect(() => {
+    if (!lockdownActive || lockedBySystem) return;
+    const block = (e: Event) => e.preventDefault();
+    const onKeyDown = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      const mod = e.ctrlKey || e.metaKey;
+      if (
+        e.key === "F12" ||
+        (mod && e.shiftKey && ["i", "j", "c"].includes(k)) ||
+        (mod && ["t", "n", "w", "p", "c", "v", "x"].includes(k))
+      ) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("copy", block);
+    document.addEventListener("cut", block);
+    document.addEventListener("paste", block);
+    document.addEventListener("contextmenu", block);
+    document.addEventListener("selectstart", block);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("copy", block);
+      document.removeEventListener("cut", block);
+      document.removeEventListener("paste", block);
+      document.removeEventListener("contextmenu", block);
+      document.removeEventListener("selectstart", block);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [lockdownActive, lockedBySystem]);
+
+  // Kirim ulang pelanggaran yang tertunda saat kembali fokus / online
+  useEffect(() => {
+    if (!lockdownActive) return;
+    const flush = () => {
+      const queue = pendingViolationsRef.current;
+      if (!queue.length || lockedBySystem) return;
+      pendingViolationsRef.current = [];
+      queue.forEach((v) => void reportViolation(v.kind, v.awayMs));
+    };
+    window.addEventListener("focus", flush);
+    window.addEventListener("online", flush);
+    return () => {
+      window.removeEventListener("focus", flush);
+      window.removeEventListener("online", flush);
+    };
+  }, [lockdownActive, lockedBySystem, reportViolation]);
+
+  // Banner pelanggaran menghilang otomatis setelah 6 detik
+  useEffect(() => {
+    if (!banner) return;
+    const t = setTimeout(() => setBanner(null), 6000);
+    return () => clearTimeout(t);
+  }, [banner]);
+
+  const enterSecureMode = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setGateDismissed(true);
+    } catch {
+      toast.error("Browser menolak mode layar penuh. Klik ulang tombol di bawah.");
+    }
+  };
+
+  const reenterFullscreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch {
+      toast.error("Gagal kembali ke layar penuh. Coba lagi.");
+    }
+  };
 
   // --- AUTOSAVE DEBOUNCE (Temuan D4) ---
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -194,6 +371,10 @@ export function QuizRunnerClient({
 
   // --- SUBMIT ATTEMPT ---
   const executeSubmit = async () => {
+    if (lockedBySystem) {
+      toast.error("Ujian telah diakhiri sistem. Jawaban Anda sudah terkunci.");
+      return;
+    }
     setSubmitting(true);
     try {
       const answersArray = questions.map((q) => {
@@ -225,6 +406,42 @@ export function QuizRunnerClient({
     executeSubmit();
   };
 
+  // Calculate timer sync from wall-clock — dideklarasikan SETELAH handleAutoSubmitOnExpire
+  // agar tidak ada akses variabel sebelum dideklarasikan (lint react-hooks).
+  const syncTimer = useCallback(() => {
+    if (!durationMinutes) return;
+    const startMs = new Date(startedAt).getTime();
+    const endMs = startMs + durationMinutes * 60 * 1000;
+    const diffSec = Math.floor((endMs - Date.now()) / 1000);
+    const clamped = Math.max(0, diffSec);
+    setTimeLeftSec(clamped);
+
+    if (clamped <= 0) {
+      // Auto-submit when time expires (Temuan F7)
+      handleAutoSubmitOnExpire();
+    }
+  }, [durationMinutes, startedAt]);
+
+  useEffect(() => {
+    if (!durationMinutes) return;
+
+    // Interval tick every second
+    const interval = setInterval(syncTimer, 1000);
+
+    // Listener visibilitychange for instant sync when student wakes up phone
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncTimer();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [durationMinutes, syncTimer]);
+
   const currentQ = questions[currentIndex];
   const currentAnswer = currentQ ? answers[currentQ.id] : undefined;
   const answeredCount = questions.filter(
@@ -253,6 +470,23 @@ export function QuizRunnerClient({
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* Tahap 1: Badge Integritas */}
+          {lockdownActive && !lockedBySystem && (
+            <div
+              className={`hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-extrabold border uppercase tracking-wide ${
+                isStrict
+                  ? violationCount > 0
+                    ? "bg-rose-50 text-rose-700 border-rose-200 animate-pulse"
+                    : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                  : "bg-slate-50 text-slate-500 border-slate-200"
+              }`}
+              title="Mode ujian aman aktif"
+            >
+              <ShieldAlert className="w-3 h-3" />
+              {isStrict ? `Integritas ${violationCount}/${MAX_STRIKES}` : "Terpantau"}
+            </div>
+          )}
+
           {/* Timer Badge */}
           {timeLeftSec !== null && (
             <div
@@ -554,6 +788,122 @@ export function QuizRunnerClient({
                 {submitting ? "Mengirimkan..." : "Ya, Kumpulkan"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ TAHAP 1 CBT INTEGRITY — OVERLAYS ══════════ */}
+
+      {/* Banner pelanggaran (transien, 6 detik) */}
+      {lockdownActive && banner && !lockedBySystem && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[70] w-[92vw] max-w-md px-4 py-3 rounded-2xl bg-rose-600 text-white shadow-2xl flex items-center gap-2.5 animate-in fade-in slide-in-from-top-3 duration-300">
+          <ShieldAlert className="w-5 h-5 shrink-0" />
+          <div className="text-xs leading-snug">
+            {isStrict ? (
+              <span className="font-bold">
+                Pelanggaran {violationCount}/{MAX_STRIKES} — kamu terdeteksi keluar ujian ({banner.awaySec} dtk).
+                Setelah {MAX_STRIKES}x, ujian diakhiri otomatis & jawaban dikunci.
+              </span>
+            ) : (
+              <span className="font-bold">
+                Keluar ujian terdeteksi ({banner.awaySec} dtk) — kejadian ini tercatat untuk guru.
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Gerbang fullscreen sebelum mulai */}
+      {lockdownActive && awaitingFullscreen && !tabConflict && (
+        <div className="fixed inset-0 z-[80] bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+              <Maximize2 className="w-7 h-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-extrabold text-slate-900">Mode Ujian Aman</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Kuis ini dilindungi integritas:{isStrict ? " layar penuh wajib; keluar tab / layar penuh " + MAX_STRIKES + "x = ujian diakhiri otomatis & jawaban dikunci." : " aktivitas keluar ujian dicatat untuk guru."}{" "}
+                Salin-tempel dan menu klik kanan dimatikan.
+              </p>
+            </div>
+            <Button
+              onClick={enterSecureMode}
+              className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+            >
+              <Maximize2 className="w-3.5 h-3.5 mr-1.5" /> Masuk Layar Penuh & Mulai
+            </Button>
+            <p className="text-[10px] text-slate-400">Timer telah berjalan sejak halaman dibuka.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Konflik tab: ujian sudah berjalan di tab lain */}
+      {tabConflict && (
+        <div className="fixed inset-0 z-[90] bg-slate-950/95 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 text-center space-y-3 shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <h3 className="text-sm font-extrabold text-slate-900">Ujian Sudah Berjalan di Tab Lain</h3>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Tutup tab ini dan lanjutkan ujian pada tab yang sudah terbuka. Membuka ujian di lebih dari satu tab tidak diizinkan.
+            </p>
+            <Button variant="outline" onClick={() => window.close()} className="w-full rounded-xl text-xs font-bold">
+              Tutup Tab Ini
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Ajakan kembali ke fullscreen setelah keluar (belum terkunci) */}
+      {lockdownActive && fsPrompt && !lockedBySystem && !awaitingFullscreen && !tabConflict && (
+        <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-[2px] flex items-center justify-center p-4">
+          <div className="w-full max-w-xs bg-white rounded-3xl p-5 text-center space-y-3 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+              <Maximize2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">Kembali ke Mode Ujian</h3>
+            <p className="text-[11px] text-slate-500">Kamu keluar dari layar penuh. Pelanggaran telah tercatat — kembali sekarang untuk melanjutkan.</p>
+            <Button onClick={reenterFullscreen} className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold">
+              <Maximize2 className="w-3.5 h-3.5 mr-1.5" /> Kembali ke Layar Penuh
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Layar terkunci sistem: ujian diakhiri otomatis, jawaban read-only */}
+      {lockedBySystem && (
+        <div className="fixed inset-0 z-[95] bg-slate-950/95 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-2xl">
+            <div className="w-16 h-16 rounded-3xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Lock className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">Ujian Diakhiri Otomatis</h3>
+              <p className="text-xs text-slate-500 leading-relaxed max-w-xs mx-auto">
+                Sistem mendeteksi {MAX_STRIKES}x pelanggaran integritas (keluar tab / layar penuh).
+                Jawabanmu hingga saat ini <span className="font-bold text-slate-700">sudah dikirim & dikunci</span> — tidak dapat diubah.
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-4 py-2 px-4 rounded-2xl bg-slate-50 border border-slate-100 text-center">
+              <div>
+                <div className="text-lg font-black text-slate-900">{answeredCount}/{questions.length}</div>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Soal terjawab</div>
+              </div>
+              <div className="w-px h-8 bg-slate-200" />
+              <div>
+                <div className="text-lg font-black text-rose-600">{violationCount}</div>
+                <div className="text-[10px] text-slate-400 font-semibold uppercase">Pelanggaran</div>
+              </div>
+            </div>
+            <Button
+              onClick={() => router.push(`/siswa/portal/quiz/${token}/review`)}
+              className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Lihat Hasil & Pembahasan
+            </Button>
+            <p className="text-[10px] text-slate-400">Hubungi guru bila kamu merasa ini keliru — guru dapat memberi kesempatan remedial.</p>
           </div>
         </div>
       )}

@@ -58,6 +58,7 @@ export function NewQuizClient() {
   const [validFrom, setValidFrom] = useState<string>("");
   const [deadline, setDeadline] = useState<string>("");
   const [accessMode, setAccessMode] = useState<"CLASSROOM_PIN" | "INDIVIDUAL_PIN">("CLASSROOM_PIN");
+  const [lockdownMode, setLockdownMode] = useState<"OFF" | "MONITOR" | "STRICT">("STRICT");
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
   const [shuffleOptions, setShuffleOptions] = useState(true);
 
@@ -175,6 +176,7 @@ export function NewQuizClient() {
         validFrom: validFrom ? new Date(validFrom).toISOString() : undefined,
         deadline: deadline ? new Date(deadline).toISOString() : undefined,
         accessMode,
+        lockdownMode,
         shuffleQuestions,
         shuffleOptions,
         questions: questions.map((q) => ({
@@ -419,6 +421,52 @@ export function NewQuizClient() {
               placeholder="Petunjuk singkat untuk siswa"
             />
           </div>
+          {/* Tahap 1 CBT Integrity: Lockdown Mode Selector */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Proteksi Integritas Ujian (CBT Lockdown)</Label>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {([
+                {
+                  id: "STRICT" as const,
+                  title: "Ketat (3x = Terkunci)",
+                  desc: "Layar penuh wajib. Keluar tab/layar 3x → ujian diakhiri otomatis & jawaban dikunci.",
+                  badge: "Default",
+                  tone: "border-indigo-500 bg-indigo-50/40 ring-2 ring-indigo-500/20",
+                },
+                {
+                  id: "MONITOR" as const,
+                  title: "Terpantau",
+                  desc: "Keluar tab/layar dicatat & dilaporkan ke guru — tanpa penguncian otomatis.",
+                  badge: "Longgar",
+                  tone: "border-amber-500 bg-amber-50/40 ring-2 ring-amber-500/20",
+                },
+                {
+                  id: "OFF" as const,
+                  title: "Nonaktif",
+                  desc: "Tanpa deteksi — untuk latihan santai di rumah.",
+                  badge: "Latihan",
+                  tone: "border-slate-400 bg-slate-50 ring-2 ring-slate-400/20",
+                },
+              ]).map((opt) => (
+                <div
+                  key={opt.id}
+                  onClick={() => setLockdownMode(opt.id)}
+                  className={`cursor-pointer rounded-xl border p-3.5 transition-all ${
+                    lockdownMode === opt.id ? opt.tone : "hover:border-primary/40 bg-card"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold">{opt.title}</span>
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {opt.badge}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1">{opt.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Access Mode Selector (Sprint 2.3) */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Metode Akses Masuk Siswa</Label>

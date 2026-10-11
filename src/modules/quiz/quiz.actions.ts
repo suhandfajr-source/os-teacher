@@ -20,6 +20,8 @@ import {
   PublicQuizView,
   StudentQuizQuestionView,
   AttemptResultView,
+  QuizIntegrityReportView,
+  LOCKDOWN_MAX_STRIKES,
 } from "./quiz.types";
 import {
   gradeAttempt,
@@ -93,6 +95,7 @@ export async function createQuizAction(input: unknown): Promise<{
         shuffleQuestions: parsed.shuffleQuestions,
         shuffleOptions: parsed.shuffleOptions,
         standardScore: parsed.standardScore,
+        lockdownMode: parsed.lockdownMode,
         validFrom: parsed.validFrom ? new Date(parsed.validFrom) : undefined,
         deadline: parsed.deadline ? new Date(parsed.deadline) : undefined,
         accessMode: parsed.accessMode,
@@ -147,6 +150,7 @@ export async function updateQuizSettingsAction(input: unknown): Promise<{
         shuffleQuestions: parsed.shuffleQuestions,
         shuffleOptions: parsed.shuffleOptions,
         standardScore: parsed.standardScore,
+        lockdownMode: parsed.lockdownMode,
         validFrom: parsed.validFrom ? new Date(parsed.validFrom) : null,
         deadline: parsed.deadline ? new Date(parsed.deadline) : null,
         accessMode: parsed.accessMode,
@@ -468,6 +472,8 @@ export async function getQuizDetailAction(quizId: string) {
         isRemedial: attempt?.isRemedial ?? false,
         startedAt: attempt?.startedAt.toISOString(),
         submittedAt: attempt?.submittedAt?.toISOString(),
+        violationCount: attempt?.violationCount ?? 0,
+        lockedBySystem: !!attempt?.lockdownLockedAt,
       };
     });
 
@@ -496,6 +502,7 @@ export async function getQuizDetailAction(quizId: string) {
           deadline: quiz.deadline?.toISOString() ?? null,
           accessMode: quiz.accessMode,
           classroomPin: quiz.classroomPin,
+          lockdownMode: quiz.lockdownMode,
         },
         contextLabel: `${quiz.teachingContext.subject.name} · ${quiz.teachingContext.class.name} · ${quiz.teachingContext.academicPeriod.year}`,
         questions: quiz.questions.map((q) => ({
@@ -1054,6 +1061,7 @@ export async function getPublicQuizAction(token: string): Promise<{
         totalPoints: 0,
         pinRequired: true,
         accessMode: quiz.accessMode,
+        lockdownMode: quiz.lockdownMode,
         roster: rosterStudents,
       },
     };
@@ -1600,8 +1608,28 @@ export async function getStudentQuizListAction(): Promise<{
       ],
     });
 
-    const activeQuizzes: any[] = [];
-    const completedQuizzes: any[] = [];
+    type ActiveQuizItem = {
+      id: string;
+      title: string;
+      shareToken: string;
+      subjectName: string;
+      teacherName: string;
+      durationMinutes: number | null;
+      deadline: string | null;
+      attemptStatus: "IN_PROGRESS" | "SUBMITTED" | "NEEDS_GRADING" | null;
+      score: number | null;
+    };
+    type CompletedQuizItem = {
+      id: string;
+      title: string;
+      shareToken: string;
+      subjectName: string;
+      teacherName: string;
+      score: number | null;
+      submittedAt: string | null;
+    };
+    const activeQuizzes: ActiveQuizItem[] = [];
+    const completedQuizzes: CompletedQuizItem[] = [];
 
     for (const q of quizzes) {
       const attempt = q.attempts[0];
@@ -1658,6 +1686,8 @@ export async function startQuizAttemptFromSessionAction(token: string): Promise<
     durationMinutes: number | undefined;
     startedAt: string;
     isRemedial: boolean;
+    lockdownMode: "OFF" | "MONITOR" | "STRICT";
+    violationCount: number;
     questions: StudentQuizQuestionView[];
     savedAnswers: Array<{ questionId: string; selectedIndex: number | null; essayAnswer: string | null }>;
   };
@@ -1820,6 +1850,8 @@ export async function startQuizAttemptFromSessionAction(token: string): Promise<
         durationMinutes: effectiveDuration,
         startedAt: attempt.startedAt.toISOString(),
         isRemedial: attempt.isRemedial,
+        lockdownMode: quiz.lockdownMode,
+        violationCount: attempt.violationCount,
         questions: sanitizedQuestions,
         savedAnswers,
       },
@@ -1854,6 +1886,14 @@ export async function saveQuizAnswerFromSessionAction(
     if (!attempt) return { success: false, error: "Attempt tidak ditemukan." };
     if (attempt.studentId !== session.studentId) {
       return { success: false, error: "Akses tidak diizinkan." };
+    }
+
+    // Tahap 1 CBT Integrity: attempt terkunci sistem → tolak semua mutasi jawaban
+    if (attempt.lockdownLockedAt) {
+      return {
+        success: false,
+        error: "Ujian telah diakhiri sistem (3 pelanggaran integritas). Jawaban Anda sudah terkunci.",
+      };
     }
 
     if (attempt.status === "SUBMITTED" || attempt.status === "NEEDS_GRADING") {
@@ -1935,6 +1975,14 @@ export async function submitQuizAttemptFromSessionAction(
     if (!attempt) return { success: false, error: "Attempt tidak ditemukan." };
     if (attempt.studentId !== session.studentId) {
       return { success: false, error: "Akses ditolak." };
+    }
+
+    // Tahap 1 CBT Integrity: attempt terkunci sistem → tolak submit ulang dengan pesan eksplisit
+    if (attempt.lockdownLockedAt) {
+      return {
+        success: false,
+        error: "Ujian telah diakhiri sistem (3 pelanggaran integritas). Jawaban Anda sudah terkunci.",
+      };
     }
 
     if (attempt.status === "SUBMITTED" || attempt.status === "NEEDS_GRADING") {
@@ -2035,6 +2083,195 @@ export async function submitQuizAttemptFromSessionAction(
     };
   } catch (err: unknown) {
     return { success: false, error: formatActionError(err, "Gagal mengumpulkan kuis.") };
+  }
+}
+
+/**
+ * Tahap 1 CBT Integrity — mencatat pelanggaran "away episode" dari runner siswa.
+ * Server-authoritative: hitungan strike & keputusan lock hidup di server.
+ * Mode STRICT: pelanggaran ke-3 (LOCKDOWN_MAX_STRIKES) mengunci attempt dalam
+ * SATU transaksi — skor dihitung dari jawaban yang SUDAH tersimpan (autosave),
+ * status final SUBMITTED/NEEDS_GRADING + lockdownLockedAt terisi, dan seluruh
+ * endpoint jawaban menolak mutasi berikutnya.
+ */
+export async function recordQuizViolationFromSessionAction(
+  attemptId: string,
+  kind: "TAB_EXIT" | "FULLSCREEN_EXIT" | "WINDOW_BLUR",
+  awayMs: number
+): Promise<{
+  success: boolean;
+  violationCount?: number;
+  maxStrikes?: number;
+  locked?: boolean;
+  mode?: "OFF" | "MONITOR" | "STRICT";
+  error?: string;
+}> {
+  try {
+    const session = await verifyStudentSession();
+    if (!session) return { success: false, error: "Sesi tidak valid." };
+
+    const away = Number.isFinite(awayMs) ? Math.max(0, Math.min(3_600_000, Math.round(awayMs))) : 0;
+    const allowedKinds = ["TAB_EXIT", "FULLSCREEN_EXIT", "WINDOW_BLUR"] as const;
+    if (!allowedKinds.includes(kind as (typeof allowedKinds)[number])) {
+      return { success: false, error: "Jenis pelanggaran tidak valid." };
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const attempt = await tx.quizAttempt.findUnique({
+        where: { id: attemptId },
+        include: {
+          quiz: { select: { lockdownMode: true } },
+          answers: { select: { questionId: true, selectedIndex: true, essayAnswer: true } },
+        },
+      });
+
+      if (!attempt) return { code: "NOT_FOUND" as const };
+      if (attempt.studentId !== session.studentId) return { code: "FORBIDDEN" as const };
+
+      // Idempoten: attempt sudah selesai/terkunci → tidak ada state yang berubah
+      if (attempt.status !== "IN_PROGRESS" || attempt.lockdownLockedAt) {
+        return {
+          code: "OK" as const,
+          violationCount: attempt.violationCount,
+          locked: true,
+          mode: attempt.quiz.lockdownMode,
+        };
+      }
+
+      // Mode OFF tidak merekam apa pun (defensif; runner tidak memanggil)
+      if (attempt.quiz.lockdownMode === "OFF") {
+        return { code: "OK" as const, violationCount: 0, locked: false, mode: "OFF" };
+      }
+
+      await tx.quizViolation.create({
+        data: { attemptId: attempt.id, kind, awayMs: away },
+      });
+
+      const updated = await tx.quizAttempt.update({
+        where: { id: attempt.id },
+        data: { violationCount: { increment: 1 } },
+        select: { violationCount: true },
+      });
+
+      const shouldLock =
+        attempt.quiz.lockdownMode === "STRICT" && updated.violationCount >= LOCKDOWN_MAX_STRIKES;
+
+      if (shouldLock) {
+        // Skor dari jawaban tersimpan (bukan input klien) — identik dgn jalur submit
+        type StoredOrder = { questions?: AttemptQuestionSnapshot[] };
+        const stored = attempt.questionOrder as unknown as StoredOrder | null;
+        const snapshot = stored?.questions ?? [];
+        const { score, totalPoints, hasEssays } = gradeAttempt(
+          snapshot.map((q) => ({
+            id: q.id,
+            type: q.type,
+            correctIndex: q.correctIndex,
+            points: q.points,
+          })),
+          attempt.answers.map((a) => ({
+            questionId: a.questionId ?? "",
+            selectedIndex: a.selectedIndex ?? null,
+            essayAnswer: a.essayAnswer ?? null,
+          }))
+        );
+        const normalized = totalPoints > 0 ? normalizeScore(score, totalPoints) : 0;
+
+        await tx.quizAttempt.update({
+          where: { id: attempt.id },
+          data: {
+            status: hasEssays ? "NEEDS_GRADING" : "SUBMITTED",
+            submittedAt: new Date(),
+            score: normalized,
+            lockdownLockedAt: new Date(),
+          },
+        });
+
+        return {
+          code: "OK" as const,
+          violationCount: updated.violationCount,
+          locked: true,
+          mode: attempt.quiz.lockdownMode,
+        };
+      }
+
+      return {
+        code: "OK" as const,
+        violationCount: updated.violationCount,
+        locked: false,
+        mode: attempt.quiz.lockdownMode,
+      };
+    });
+
+    if (result.code === "NOT_FOUND") return { success: false, error: "Attempt tidak ditemukan." };
+    if (result.code === "FORBIDDEN") return { success: false, error: "Akses tidak diizinkan." };
+
+    return {
+      success: true,
+      violationCount: result.violationCount,
+      maxStrikes: LOCKDOWN_MAX_STRIKES,
+      locked: result.locked,
+      mode: result.mode as "OFF" | "MONITOR" | "STRICT" | undefined,
+    };
+  } catch (err: unknown) {
+    return { success: false, error: formatActionError(err, "Gagal mencatat pelanggaran.") };
+  }
+}
+
+/**
+ * Tahap 1 CBT Integrity — Laporan Integritas per kuis untuk guru:
+ * daftar attempt + pelanggaran (jenis/waktu/durasi away) + status kunci sistem.
+ */
+export async function getQuizIntegrityReportAction(quizId: string): Promise<{
+  success: boolean;
+  data?: QuizIntegrityReportView;
+  error?: string;
+}> {
+  try {
+    const quiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      select: { id: true, title: true, lockdownMode: true, teachingContextId: true },
+    });
+    if (!quiz) return { success: false, error: "Quiz tidak ditemukan." };
+
+    await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    const attempts = await prisma.quizAttempt.findMany({
+      where: { quizId },
+      include: {
+        student: { select: { id: true, fullName: true } },
+        violations: { orderBy: { occurredAt: "asc" } },
+      },
+      orderBy: { startedAt: "desc" },
+    });
+
+    return {
+      success: true,
+      data: {
+        quizId: quiz.id,
+        quizTitle: quiz.title,
+        lockdownMode: quiz.lockdownMode,
+        attempts: attempts.map((a) => ({
+          attemptId: a.id,
+          studentId: a.student.id,
+          studentName: a.student.fullName,
+          status: a.status,
+          violationCount: a.violationCount,
+          lockedBySystem: !!a.lockdownLockedAt,
+          lockedAt: a.lockdownLockedAt?.toISOString() ?? null,
+          submittedAt: a.submittedAt?.toISOString() ?? null,
+          startedAt: a.startedAt.toISOString(),
+          score: a.score === null ? null : Number(a.score),
+          violations: a.violations.map((v) => ({
+            id: v.id,
+            kind: v.kind,
+            awayMs: v.awayMs,
+            occurredAt: v.occurredAt.toISOString(),
+          })),
+        })),
+      },
+    };
+  } catch (error: unknown) {
+    return { success: false, error: formatActionError(error, "Gagal memuat laporan integritas.") };
   }
 }
 
