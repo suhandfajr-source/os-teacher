@@ -13,6 +13,7 @@ import {
   ClipboardList,
   UserCircle,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { logoutStudent } from "@/modules/student-auth/student-auth.actions";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ interface StudentHeaderProps {
 
 const desktopNavItems = [
   { href: "/siswa/portal", label: "Hari Ini", icon: Home, exact: true },
+  { href: "/siswa/portal/cbt", label: "CBT Live", icon: Sparkles },
   { href: "/siswa/portal/jadwal", label: "Jadwal", icon: CalendarDays },
   { href: "/siswa/portal/quiz", label: "Kuis", icon: CheckSquare },
   { href: "/siswa/portal/nilai", label: "Nilai", icon: TrendingUp },

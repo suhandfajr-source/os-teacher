@@ -30,7 +30,7 @@ import {
   QuestionListEditor,
   EditableQuestion,
 } from "@/modules/quiz/components/QuestionListEditor";
-import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw, Download, CircleAlert } from "lucide-react";
+import { Pencil, CheckCircle2, X, Plus, FileQuestion, Eye, KeyRound, BarChart3, Maximize2, RefreshCw, Download, CircleAlert, Sparkles } from "lucide-react";
 import { getQuizAnalyticsAction } from "@/modules/quiz/quiz.actions";
 import { exportQuizRecapToExcel } from "@/lib/export/quiz-recap-exporter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +45,7 @@ import {
   resetAllAttemptsAction,
   gradeStudentEssayAction,
 } from "@/modules/quiz/quiz.actions";
+import { createCbtSessionAction } from "@/modules/cbt-live/cbt-live.actions";
 
 interface QuizDetail {
   quiz: {
@@ -62,6 +63,7 @@ interface QuizDetail {
     accessMode: "CLASSROOM_PIN" | "INDIVIDUAL_PIN";
     lockdownMode: "OFF" | "MONITOR" | "STRICT";
     classroomPin?: string | null;
+    teachingContextId: string;
   };
   contextLabel: string;
   questions: Array<{
@@ -287,6 +289,24 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   };
 
+  const [isStartingLive, setIsStartingLive] = useState(false);
+
+  const handleStartLiveCbt = async () => {
+    if (!detail) return;
+    setIsStartingLive(true);
+    try {
+      const res = await createCbtSessionAction(detail.quiz.id, detail.quiz.teachingContextId);
+      if (res.success && res.sessionId) {
+        toast.success("Sesi CBT Live berhasil dibuat! Mengalihkan ke cockpit...");
+        router.push(`/quiz/live/${res.sessionId}`);
+      } else {
+        toast.error(res.error || "Gagal membuat sesi CBT Live.");
+      }
+    } finally {
+      setIsStartingLive(false);
+    }
+  };
+
   const handleOpenAnalytics = async () => {
     setAnalytics({ open: true, loading: true, data: null });
     const res = await getQuizAnalyticsAction(quizId);
@@ -419,6 +439,18 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 ? "Integritas Terpantau"
                 : "Integritas Nonaktif"}
             </Badge>
+
+            {quiz.status === "PUBLISHED" && (
+              <Button
+                size="sm"
+                onClick={handleStartLiveCbt}
+                disabled={isStartingLive}
+                className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg gap-1.5 shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {isStartingLive ? "Menyiapkan Sesi..." : "Buka Cockpit Live CBT"}
+              </Button>
+            )}
           </div>
           {quiz.validFrom && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 w-fit mt-1.5">

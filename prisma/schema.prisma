@@ -182,6 +182,7 @@ model User {
   approvedStudents  Student[]                  @relation("StudentApprover") // Story 5 — FK formal approvedById (OQ-5)
   notifications     Notification[]
   revocationReviews TeacherRevocationRequest[] @relation("RevocationReviewer")
+  cbtSessions       CbtSession[]
 
   @@unique([email])
   @@map("user")
@@ -473,6 +474,7 @@ model TeachingContext {
   importSessions         ImportSession[]
   quizzes                Quiz[]
   teachingSchedules      TeachingSchedule[]
+  cbtSessions            CbtSession[]
 
   @@unique([teacherProfileId, schoolId, academicPeriodId, subjectId, classId])
   @@map("teaching_context")
@@ -1134,6 +1136,7 @@ model Quiz {
   questions       QuizQuestion[]
   attempts        QuizAttempt[]
   studentAccesses QuizStudentAccess[]
+  cbtSessions     CbtSession[]
 
   @@index([teachingContextId, status])
   @@index([status, deadline])
@@ -1175,6 +1178,10 @@ model QuizAttempt {
   // Tahap 1 CBT Integrity — hitungan strike server-authoritative & tanda kunci
   violationCount   Int       @default(0)
   lockdownLockedAt DateTime?
+  // Tahap 2 CBT Live Classroom — tautan ke sesi live serentak
+  cbtSessionId     String?
+  cbtSession       CbtSession? @relation(fields: [cbtSessionId], references: [id], onDelete: SetNull)
+  currentQuestion  Int       @default(0)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
@@ -1233,6 +1240,38 @@ model QuizViolation {
 
   @@index([attemptId, occurredAt])
   @@map("quiz_violation")
+}
+
+// Tahap 2 CBT Live Classroom — Sesi ujian live serentak
+enum CbtSessionStatus {
+  WAITING
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model CbtSession {
+  id                String           @id @default(cuid())
+  quizId            String
+  quiz              Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  teachingContextId String
+  teachingContext   TeachingContext  @relation(fields: [teachingContextId], references: [id], onDelete: Cascade)
+  createdById       String
+  createdBy         User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  token             String           @unique
+  status            CbtSessionStatus @default(WAITING)
+  startedAt         DateTime?
+  pausedAt          DateTime?
+  endedAt           DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  attempts          QuizAttempt[]
+
+  @@index([quizId, status])
+  @@index([teachingContextId, status])
+  @@index([token, status])
+  @@map("cbt_session")
 }
 
 // ==========================================

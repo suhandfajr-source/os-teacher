@@ -17,10 +17,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { 
-  saveQuizAnswerFromSessionAction, 
+  saveQuizAnswerFromSessionAction,
   submitQuizAttemptFromSessionAction,
   recordQuizViolationFromSessionAction
 } from "@/modules/quiz/quiz.actions";
+import { recordStudentProgressAction } from "@/modules/cbt-live/cbt-live.actions";
 import type { StudentQuizQuestionView } from "@/modules/quiz/quiz.types";
 
 interface SavedAnswerItem {
@@ -58,6 +59,11 @@ export function QuizRunnerClient({
 
   // Current active question index (0-indexed)
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Lapor progress nomor soal aktif ke cockpit guru secara berkala
+  useEffect(() => {
+    void recordStudentProgressAction(attemptId, currentIndex);
+  }, [attemptId, currentIndex]);
 
   // Map of answers: { [questionId]: { selectedIndex, essayAnswer } }
   const [answers, setAnswers] = useState<

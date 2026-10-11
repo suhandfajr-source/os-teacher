@@ -503,6 +503,7 @@ export async function getQuizDetailAction(quizId: string) {
           accessMode: quiz.accessMode,
           classroomPin: quiz.classroomPin,
           lockdownMode: quiz.lockdownMode,
+          teachingContextId: quiz.teachingContextId,
         },
         contextLabel: `${quiz.teachingContext.subject.name} · ${quiz.teachingContext.class.name} · ${quiz.teachingContext.academicPeriod.year}`,
         questions: quiz.questions.map((q) => ({
