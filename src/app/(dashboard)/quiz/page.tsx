@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Plus, FileQuestion, ArrowRight, CheckCircle2, Clock, Users } from "lucide-react";
+import { QuizDeleteButton } from "./QuizDeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -54,10 +55,10 @@ export default async function QuizDashboardPage() {
       ) : (
         <div className="grid gap-4">
           {quizzes.map((quiz) => (
-            <Link key={quiz.id} href={`/quiz/${quiz.id}`} className="group">
-              <Card className="transition-all group-hover:border-primary/40 group-hover:shadow-md">
-                <CardContent className="flex items-center justify-between gap-4 py-4">
-                  <div className="min-w-0 flex-1">
+            <Card key={quiz.id} className="transition-all hover:border-primary/40 hover:shadow-md">
+              <CardContent className="flex items-center justify-between gap-4 py-4">
+                <Link href={`/quiz/${quiz.id}`} className="group min-w-0 flex-1">
+                  <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold truncate">{quiz.title}</h3>
                       <Badge
@@ -93,10 +94,13 @@ export default async function QuizDashboardPage() {
                       )}
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
-                </CardContent>
-              </Card>
-            </Link>
+                </Link>
+                <div className="flex items-center gap-1 shrink-0">
+                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <QuizDeleteButton quiz={quiz} />
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

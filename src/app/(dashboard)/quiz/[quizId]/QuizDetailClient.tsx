@@ -105,6 +105,7 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [essayScores, setEssayScores] = useState<Record<string, number>>({});
   const [essayFeedbacks, setEssayFeedbacks] = useState<Record<string, string>>({});
   const [isSavingGrades, setIsSavingGrades] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [answerSheet, setAnswerSheet] = useState<{
     open: boolean;
     loading: boolean;
@@ -1044,20 +1045,61 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           size="sm"
           className="text-destructive"
           disabled={busy}
-          onClick={async () => {
-            if (!confirm("Hapus quiz ini beserta semua jawaban siswa?")) return;
-            const res = await deleteQuizAction(quiz.id);
-            if (res.success) {
-              toast.success("Quiz dihapus");
-              router.push("/quiz");
-            } else {
-              toast.error(res.error ?? "Gagal menghapus");
-            }
-          }}
+          onClick={() => setDeleteConfirm(true)}
         >
           Hapus Quiz
         </Button>
       </div>
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Hapus Quiz?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              Quiz{" "}
+              <span className="font-semibold">{detail.quiz.title}</span> akan dihapus permanen
+              berserta:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+              <li>{detail.questions.length} soal</li>
+              <li>
+                {detail.roster.filter((r) => r.attemptStatus !== "NOT_STARTED").length} jawaban &
+                skor siswa
+              </li>
+              <li>Riwayat sesi CBT dan analitik per soal</li>
+            </ul>
+            <p className="font-medium text-destructive">
+              Tindakan ini tidak bisa dibatalkan. Nilai yang sudah dipublish ke Assessment tetap
+              aman.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm(false)} disabled={busy}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                const res = await deleteQuizAction(detail.quiz.id);
+                setBusy(false);
+                if (res.success) {
+                  toast.success("Quiz dihapus");
+                  router.push("/quiz");
+                } else {
+                  toast.error(res.error ?? "Gagal menghapus");
+                  setDeleteConfirm(false);
+                }
+              }}
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ya, Hapus Permanen"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Analytics dialog */}
       <Dialog open={analytics.open} onOpenChange={(open) => setAnalytics((s) => ({ ...s, open }))}>
         <DialogContent className="max-w-2xl flex flex-col" style={{ maxHeight: "85vh" }}>

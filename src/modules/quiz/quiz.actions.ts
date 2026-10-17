@@ -253,6 +253,29 @@ export async function deleteQuizAction(quizId: string) {
     if (!quiz) return { success: false, error: "Quiz tidak ditemukan" };
 
     await verifyTeachingContextAccess(quiz.teachingContextId);
+
+    // Guard: tolak hapus jika masih ada sesi CBT live berjalan.
+    const activeCbtSessions = await prisma.cbtSession.count({
+      where: { quizId, status: { in: ["WAITING", "ACTIVE", "PAUSED"] } },
+    });
+    if (activeCbtSessions > 0) {
+      return {
+        success: false,
+        error: `Tidak bisa menghapus: masih ada ${activeCbtSessions} sesi CBT yang sedang berjalan. Akhiri sesi terlebih dahulu.`,
+      };
+    }
+
+    // Guard: tolak hapus jika masih ada siswa yang sedang mengerjakan.
+    const inProgressAttempts = await prisma.quizAttempt.count({
+      where: { quizId, status: "IN_PROGRESS" },
+    });
+    if (inProgressAttempts > 0) {
+      return {
+        success: false,
+        error: `Tidak bisa menghapus: ${inProgressAttempts} siswa sedang mengerjakan quiz ini.`,
+      };
+    }
+
     await prisma.quiz.delete({ where: { id: quizId } });
     return { success: true };
   } catch (error: unknown) {
