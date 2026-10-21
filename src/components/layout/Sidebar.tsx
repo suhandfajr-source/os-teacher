@@ -46,13 +46,21 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
+  const handleNavClick = (href: string) => {
+    if (href === "/") {
+      fetch("http://localhost:9876/start", { method: "POST" }).catch(() => {});
+    } else if (href.startsWith("/pengaturan")) {
+      fetch("http://localhost:9876/stop", { method: "POST" }).catch(() => {});
+    }
+  };
+
   return (
     <aside className="hidden md:flex w-64 flex-col bg-white h-full select-none shrink-0 border-r border-slate-200/70">
       {/* ─────────────────────────────────────────────────────────────
           1. SIDEBAR BRAND HEADER
       ───────────────────────────────────────────────────────────── */}
       <div className="flex h-16 items-center px-5 border-b border-slate-100">
-        <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+        <Link href="/" onClick={() => handleNavClick("/")} className="flex items-center hover:opacity-90 transition-opacity">
           <KlassaLogo variant="horizontal" size="sm" priority />
         </Link>
       </div>
@@ -74,6 +82,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => handleNavClick(item.href)}
                 className={cn(
                   "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                   active
@@ -126,6 +135,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => handleNavClick(item.href)}
                 className={cn(
                   "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                   active
