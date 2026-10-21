@@ -6,7 +6,7 @@ import { NavigationProgressBar } from "@/components/layout/NavigationProgressBar
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "KLASSA — Naik Kelas Bersama",
+  title: "KLASSA — Naikkan Kelasmu!",
   description: "Personal Workspace & AI Co-Pilot Guru Indonesia: Administrasi Tuntas, Mengajar Jadi Berkelas.",
   icons: {
     icon: "/favicon.svg",

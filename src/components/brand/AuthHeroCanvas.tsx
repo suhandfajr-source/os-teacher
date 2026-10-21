@@ -35,7 +35,7 @@ export function AuthHeroCanvas({
     "🖨️ Raport Siap Cetak",
   ],
   footnote = "Satu sistem untuk seluruh kebutuhan administrasi guru Indonesia",
-  copyrightText = `© ${new Date().getFullYear()} KLASSA • Naik Kelas Bersama`,
+  copyrightText = `© ${new Date().getFullYear()} KLASSA • Naikkan Kelasmu!`,
   badgeLabel,
   theme = "teal",
 }: AuthHeroCanvasProps) {

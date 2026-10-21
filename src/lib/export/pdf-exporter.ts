@@ -343,7 +343,7 @@ export async function exportToPdf(options: ExportPdfOptions): Promise<void> {
     doc.setFontSize(8);
     doc.setTextColor(148, 163, 184); // Slate 400
     doc.text(
-      `Halaman ${i} dari ${totalPages}  •  KLASSA (Naik Kelas Bersama)`,
+      `Halaman ${i} dari ${totalPages}  •  KLASSA (Naikkan Kelasmu!)`,
       pageWidth / 2,
       pageHeight - 8,
       { align: "center" }

@@ -67,7 +67,7 @@ export const KlassaLogo: React.FC<KlassaLogoProps> = ({
   const dims = currentSize[variant] || currentSize.horizontal;
 
   let src = '/brand/klassa-logo-horizontal.svg';
-  let alt = 'KLASSA — Naik Kelas Bersama';
+  let alt = 'KLASSA — Naikkan Kelasmu!';
 
   if (variant === 'vertical') {
     src = '/brand/klassa-logo-vertical.svg';
