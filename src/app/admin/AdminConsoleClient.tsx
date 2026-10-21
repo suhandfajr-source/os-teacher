@@ -46,6 +46,7 @@ import {
   Activity,
 } from "lucide-react";
 import { KlassaPulseTab } from "@/components/admin/KlassaPulseTab";
+import { KlassaLlmSettingsTab } from "@/components/admin/KlassaLlmSettingsTab";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -223,7 +224,7 @@ export function AdminConsoleClient({
   initialClasses,
   initialRevocationRequests = [],
 }: AdminConsoleClientProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "klassa-pulse" | "ai-usage" | "schools" | "teachers" | "students" | "classes">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "klassa-pulse" | "ai-usage" | "llm-settings" | "schools" | "teachers" | "students" | "classes">("overview");
   const [selectedSchoolFilter, setSelectedSchoolFilter] = useState<string>("ALL");
   const [isPending, startTransition] = useTransition();
 
@@ -714,6 +715,7 @@ export function AdminConsoleClient({
     { id: "overview", label: "Ringkasan & Analitik", icon: BarChart2, badge: null },
     { id: "klassa-pulse", label: "Klassa Pulse", icon: Activity, badge: "AI Insights" },
     { id: "ai-usage", label: "Token & AI Studio", icon: Bot, badge: aiStats?.summary.totalDrafts ?? null },
+    { id: "llm-settings", label: "Konfigurasi LLM", icon: KeyRound, badge: "Vault" },
     { id: "schools", label: "Sekolah", icon: Building2, badge: stats.schools.total },
     { id: "teachers", label: "Guru & Staf", icon: Users, badge: stats.teachers.total },
     { id: "students", label: "Siswa", icon: GraduationCap, badge: stats.students.total },
@@ -1313,6 +1315,11 @@ export function AdminConsoleClient({
           )}
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* TAB: KONFIGURASI LLM & API VAULT                                         */}
+      {/* ========================================================================= */}
+      {activeTab === "llm-settings" && <KlassaLlmSettingsTab />}
 
       {/* ========================================================================= */}
       {/* TAB 3: SEKOLAH                                                           */}

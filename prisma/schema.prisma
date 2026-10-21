@@ -1381,3 +1381,18 @@ model AgentActionProposal {
   @@map("agent_action_proposal")
 }
 
+// -------------------------------------------------
+// SYSTEM SETTINGS & RUNTIME CONFIGURATION
+// -------------------------------------------------
+
+model SystemSetting {
+  key         String   @id
+  value       String   @db.Text
+  description String?
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_setting")
+}
+
+

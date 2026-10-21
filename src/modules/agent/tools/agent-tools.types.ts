@@ -18,6 +18,11 @@ export const getStudentAcademicSummarySchema = z.object({
   studentId: z.string().optional(),
 });
 
+export const getClassDigestSchema = z.object({
+  classId: z.string().min(1, "ID Kelas wajib diisi"),
+  kkm: z.number().min(0).max(100).optional().default(75),
+});
+
 export const analyzeClassPerformanceSchema = z.object({
   classId: z.string().min(1, "ID Kelas wajib diisi"),
   kkm: z.number().min(0).max(100).optional().default(75),
@@ -27,4 +32,5 @@ export type GetTeacherClassesInput = z.infer<typeof getTeacherClassesSchema>;
 export type GetClassStudentsInput = z.infer<typeof getClassStudentsSchema>;
 export type GetStudentAttendanceSummaryInput = z.infer<typeof getStudentAttendanceSummarySchema>;
 export type GetStudentAcademicSummaryInput = z.infer<typeof getStudentAcademicSummarySchema>;
+export type GetClassDigestInput = z.infer<typeof getClassDigestSchema>;
 export type AnalyzeClassPerformanceInput = z.infer<typeof analyzeClassPerformanceSchema>;

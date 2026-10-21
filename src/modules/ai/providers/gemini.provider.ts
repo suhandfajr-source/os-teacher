@@ -45,7 +45,7 @@ export class GeminiAiContentProvider implements AiContentProvider {
   async generate(request: AiProviderGenerateRequest): Promise<AiProviderResult> {
     const prompt = constructGenerationPrompt(request);
     const systemInstruction =
-      "Anda adalah asisten AI guru profesional untuk KLASSA (Naik Kelas Bersama) di Indonesia. " +
+      "Anda adalah asisten AI guru profesional untuk KLASSA (Naikkan Kelasmu!) di Indonesia. " +
       "Tugas Anda adalah membuat draf materi/rencana/instruksi/rubrik pembelajaran yang praktis, aplikatif, dan terstruktur. " +
       "Gunakan Bahasa Indonesia yang baik dan ramah guru. " +
       "Draf Anda harus memiliki judul yang jelas di baris pertama (contoh: # Judul) dan isi terstruktur dengan format Markdown. " +

@@ -41,7 +41,7 @@ export function AgentSettingsModal({
     initialMemory?.communicationTone || "RAMAH_SOPAN"
   );
   const [model, setModel] = useState<AllowedAgentModelId>(
-    (initialMemory?.preferredModel as AllowedAgentModelId) || "gemini-3.5-flash"
+    (initialMemory?.preferredModel as AllowedAgentModelId) || "glm-4-plus"
   );
   const [curriculum, setCurriculum] = useState<string>(
     initialMemory?.pedagogyDefaults?.curriculumFocus || "Kurikulum Merdeka"

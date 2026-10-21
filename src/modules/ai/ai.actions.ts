@@ -23,7 +23,7 @@ import {
   TransientAiPreview,
 } from "./ai.types";
 import { buildSafeContextPack, formatContextSummary } from "./ai.service";
-import { getAiContentProvider } from "./providers/ai-provider.factory";
+import { getDynamicAiContentProvider } from "./providers/ai-provider.factory";
 
 function formatActionError(error: unknown, fallback: string): string {
   if (error instanceof z.ZodError) {
@@ -89,7 +89,7 @@ export async function generateAiContentAction(
       }
     }
 
-    const provider = getAiContentProvider();
+    const provider = await getDynamicAiContentProvider();
     const result = await provider.generate({
       contentType: input.contentType,
       topic: input.topic,
@@ -147,7 +147,7 @@ export async function refineAiContentAction(
       }
     }
 
-    const provider = getAiContentProvider();
+    const provider = await getDynamicAiContentProvider();
     const result = await provider.refine({
       contentType: input.contentType,
       currentTitle: input.currentTitle,

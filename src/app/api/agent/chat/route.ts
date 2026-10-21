@@ -2,11 +2,12 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { streamText, isStepCount } from "ai";
 import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership, verifyClassRosterAccess } from "@/lib/authorization";
-import { getAgentLanguageModel } from "@/modules/agent/agent.router";
+import { getDynamicAgentLanguageModel } from "@/modules/agent/agent.router";
 import { buildAgentSystemPrompt, DEFAULT_AGENT_MODEL } from "@/modules/agent/agent.config";
 import type { TeacherMemoryDTO } from "@/modules/agent/memory/agent-memory.types";
 import {
   getTeacherClassesTool,
+  getClassDigestTool,
   getClassStudentsTool,
   getStudentAttendanceSummaryTool,
   getStudentAcademicSummaryTool,
@@ -121,11 +122,12 @@ export async function POST(req: NextRequest) {
 
     // 5. Select Model
     const selectedModel = modelId || memory?.preferredModel || DEFAULT_AGENT_MODEL;
-    const languageModel = getAgentLanguageModel(selectedModel);
+    const languageModel = await getDynamicAgentLanguageModel(selectedModel);
 
     // 6. Tools registry
     const tools = {
       getTeacherClasses: getTeacherClassesTool,
+      getClassDigest: getClassDigestTool,
       getClassStudents: getClassStudentsTool,
       getStudentAttendanceSummary: getStudentAttendanceSummaryTool,
       getStudentAcademicSummary: getStudentAcademicSummaryTool,

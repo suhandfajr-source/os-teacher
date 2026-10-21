@@ -16,6 +16,8 @@ export const PedagogyDefaultsSchema = z.object({
 export type PedagogyDefaults = z.infer<typeof PedagogyDefaultsSchema>;
 
 export const ALLOWED_AGENT_MODEL_IDS = [
+  "glm-4-plus",
+  "glm-4.5",
   "gemini-3.5-flash",
   "gemini-3.6-flash",
   "gemini-3.7-flash",

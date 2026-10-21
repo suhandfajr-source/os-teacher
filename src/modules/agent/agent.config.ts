@@ -1,16 +1,33 @@
 import { ModelProviderOption } from "./agent.types";
 import { TeacherMemoryDTO } from "./memory/agent-memory.types";
 
-export const DEFAULT_AGENT_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+export const DEFAULT_AGENT_MODEL =
+  process.env.AGENT_DEFAULT_MODEL ||
+  process.env.GLM_MODEL ||
+  "glm-4-plus";
 
 export const AVAILABLE_AGENT_MODELS: ModelProviderOption[] = [
   {
+    id: "glm-4-plus",
+    name: "GLM-4 Plus (Default)",
+    provider: "openai-compatible",
+    description:
+      "Model unggulan Zhipu GLM performa tinggi untuk analisis data kelas, kurikulum, dan administrasi.",
+    isDefault: true,
+  },
+  {
+    id: "glm-4.5",
+    name: "GLM-4.5 (Penalaran)",
+    provider: "openai-compatible",
+    description:
+      "Generasi baru GLM dengan penalaran mendalam dan pemahaman konteks panjang.",
+  },
+  {
     id: "gemini-3.5-flash",
-    name: "Gemini 3.5 Flash (Default)",
+    name: "Gemini 3.5 Flash",
     provider: "google",
     description:
       "Cepat, hemat kuota token, dan ideal untuk administrasi & query data kelas harian.",
-    isDefault: true,
   },
   {
     id: "gemini-3.7-flash",

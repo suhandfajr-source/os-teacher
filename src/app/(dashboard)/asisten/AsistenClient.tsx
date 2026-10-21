@@ -57,7 +57,7 @@ export default function AsistenClient({
   const [inputMessage, setInputMessage] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AllowedAgentModelId>(
-    (initialMemory.preferredModel as AllowedAgentModelId) || "gemini-3.5-flash"
+    (initialMemory.preferredModel as AllowedAgentModelId) || "glm-4-plus"
   );
   const [memory, setMemory] = useState<TeacherMemoryDTO>(initialMemory);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

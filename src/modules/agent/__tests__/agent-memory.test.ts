@@ -122,7 +122,7 @@ describe("Klassa Agent Teacher Memory & Personalization Engine (Stage 12 Story 4
       expect(result.success).toBe(true);
       expect(result.data.teacherProfileId).toBe("teacher-mem-123");
       expect(result.data.communicationTone).toBe("RAMAH_SOPAN");
-      expect(result.data.preferredModel).toBe("gemini-3.5-flash");
+      expect(result.data.preferredModel).toBe("glm-4-plus");
       expect(result.data.customContext).toBeNull();
     });
 

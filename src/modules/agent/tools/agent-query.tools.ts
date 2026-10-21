@@ -8,13 +8,16 @@ import {
   getClassStudentsSchema,
   getStudentAttendanceSummarySchema,
   getStudentAcademicSummarySchema,
+  getClassDigestSchema,
   analyzeClassPerformanceSchema,
   getTeacherClassesSchema,
   GetClassStudentsInput,
   GetStudentAttendanceSummaryInput,
   GetStudentAcademicSummaryInput,
+  GetClassDigestInput,
   AnalyzeClassPerformanceInput,
 } from "./agent-tools.types";
+import { getClassDigest } from "../digest/agent-digest.service";
 import {
   calculateAttendanceStats,
   calculateAcademicGradeStats,
@@ -33,6 +36,30 @@ function formatToolError(error: unknown): string {
 /**
  * 1. Tool: Mengambil daftar rombel dan mata pelajaran yang diampu oleh guru
  */
+
+/**
+ * 1b. Tool: Rangkuman Kelas (Class Digest) — jalur utama agent.
+ * Satu panggilan = ringkasan presensi + akademik + siswa risiko (top 5).
+ * Dilayani dari cache server 15 menit sehingga ringan dan hemat context.
+ */
+export const getClassDigestTool = tool({
+  description:
+    "Mengambil RANGKUMAN SATU LEMBAR sebuah kelas: statistik presensi, rerata nilai & ketuntasan, daftar siswa yang sering absen, dan siswa yang butuh perhatian (top 5). PAKAI TOOL INI DULU untuk pertanyaan umum tentang kondisi kelas; tool lain hanya untuk detail spesifik.",
+  inputSchema: getClassDigestSchema,
+  execute: async ({ classId, kkm = 75 }: GetClassDigestInput) => {
+    try {
+      // Guard Otorisasi Scope Rombel B2
+      await verifyClassRosterAccess(classId);
+      const digest = await getClassDigest(classId, kkm);
+      return { success: true, ...digest };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        error: formatToolError(error),
+      };
+    }
+  },
+});
 export const getTeacherClassesTool = tool({
   description:
     "Mengambil daftar kelas/rombel dan mata pelajaran yang diampu oleh guru yang sedang aktif di sekolah ini.",
@@ -158,6 +185,7 @@ export const getStudentAttendanceSummaryTool = tool({
         hadir: number;
         persentaseKehadiran: number;
       }> = [];
+      let totalSiswaSeringAbsen = 0;
 
       if (!studentId) {
         const classStudents = await prisma.classStudent.findMany({
@@ -187,10 +215,13 @@ export const getStudentAttendanceSummaryTool = tool({
         });
 
         // Filter siswa yang memiliki ketidakhadiran (alpa > 0 atau sakit/izin > 0)
-        // diurutkan dari alpa terbanyak, lalu total ketidakhadiran
-        daftarSiswaSeringAbsen = perStudentMap
+        // diurutkan dari alpa terbanyak — dibatasi TOP 5 untuk hemat context;
+        // sisa daftar lengkap cukup disebut jumlahnya.
+        const semuaSeringAbsen = perStudentMap
           .filter((s) => s.alpa > 0 || s.sakit > 0 || s.izin > 0)
           .sort((a, b) => b.alpa - a.alpa || (b.sakit + b.izin) - (a.sakit + a.izin));
+        daftarSiswaSeringAbsen = semuaSeringAbsen.slice(0, 5);
+        totalSiswaSeringAbsen = semuaSeringAbsen.length;
       }
 
       return {
@@ -198,7 +229,12 @@ export const getStudentAttendanceSummaryTool = tool({
         classId,
         studentId: studentId || "SELURUH_KELAS",
         statistik: stats,
+        totalSiswaSeringAbsen,
         daftarSiswaSeringAbsen,
+        catatan:
+          totalSiswaSeringAbsen > 5
+            ? `Hanya 5 teratas ditampilkan dari ${totalSiswaSeringAbsen} siswa.`
+            : undefined,
       };
     } catch (error: unknown) {
       return {
@@ -353,7 +389,9 @@ export const analyzeClassPerformanceTool = tool({
         .filter((score): score is number => score !== null);
 
       const classStats = calculateAcademicGradeStats(allScores, kkm);
-      const siswaBermasalah = studentAnalyses.filter((s) => s.butuhPerhatian);
+      const siswaBermasalah = studentAnalyses
+        .filter((s) => s.butuhPerhatian)
+        .slice(0, 5); // TOP 5 untuk hemat context; total tetap dilaporkan
 
       return {
         success: true,
@@ -361,8 +399,12 @@ export const analyzeClassPerformanceTool = tool({
         kkm,
         totalSiswa: classStudents.length,
         statistikKelas: classStats,
-        jumlahSiswaPerluPerhatian: siswaBermasalah.length,
+        jumlahSiswaPerluPerhatian: siswaBermasalah.length === 5 ? ">=5" : siswaBermasalah.length,
         daftarSiswaPerluPerhatian: siswaBermasalah,
+        catatan:
+          siswaBermasalah.length === 5
+            ? "Hanya 5 teratas ditampilkan. Gunakan getClassStudents untuk daftar lengkap."
+            : undefined,
       };
     } catch (error: unknown) {
       return {

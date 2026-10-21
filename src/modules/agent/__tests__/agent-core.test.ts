@@ -19,10 +19,10 @@ describe("Klassa Agent Core Runtime & Schema (BMad Build Story 1)", () => {
   });
 
   describe("Agent Configuration & Safety Rules", () => {
-    it("has Gemini Flash as the default lightweight model", () => {
-      expect(DEFAULT_AGENT_MODEL).toBe("gemini-3.5-flash");
+    it("has GLM-4 Plus as the default lightweight model", () => {
+      expect(DEFAULT_AGENT_MODEL).toBe("glm-4-plus");
       const defaultOption = AVAILABLE_AGENT_MODELS.find((m) => m.isDefault);
-      expect(defaultOption?.id).toBe("gemini-3.5-flash");
+      expect(defaultOption?.id).toBe("glm-4-plus");
     });
 
     it("includes open-weights Hermes option for on-premise deployments", () => {
@@ -54,6 +54,21 @@ describe("Klassa Agent Core Runtime & Schema (BMad Build Story 1)", () => {
   });
 
   describe("Universal Model Router Dispatcher", () => {
+    it("throws a descriptive error when GLM_API_KEY is not configured", () => {
+      delete process.env.GLM_API_KEY;
+
+      expect(() => getAgentLanguageModel("glm-4-plus")).toThrowError(
+        /GLM_API_KEY belum dikonfigurasi/
+      );
+    });
+
+    it("successfully creates a GLM model when key is present", () => {
+      process.env.GLM_API_KEY = "test-fake-key-for-glm";
+      const model = getAgentLanguageModel("glm-4-plus");
+      expect(model).toBeDefined();
+      expect((model as any).modelId).toBe("glm-4-plus");
+    });
+
     it("throws a descriptive error when GEMINI_API_KEY is not configured", () => {
       delete process.env.GEMINI_API_KEY;
       delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -69,9 +84,9 @@ describe("Klassa Agent Core Runtime & Schema (BMad Build Story 1)", () => {
       expect(model).toBeDefined();
       expect((model as any).modelId).toBe("gemini-3.5-flash");
 
-      // Remap legacy model automatically
+      // Remap legacy model automatically (mengikuti GEMINI_MODEL di .env — kini gemini-3.8-flash)
       const legacyModel = getAgentLanguageModel("gemini-1.5-flash");
-      expect((legacyModel as any).modelId).toBe("gemini-3.5-flash");
+      expect((legacyModel as any).modelId).toBe(process.env.GEMINI_MODEL || "gemini-3.5-flash");
     });
 
     it("dispatches to OpenAI-compatible endpoint when hermes model is requested", () => {

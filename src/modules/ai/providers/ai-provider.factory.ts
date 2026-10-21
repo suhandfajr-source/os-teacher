@@ -1,6 +1,11 @@
 import { AiContentProvider } from "./ai-provider.interface";
 import { GeminiAiContentProvider } from "./gemini.provider";
+import { OpenAiCompatibleAiContentProvider } from "./openai-compatible.provider";
 import { MockAiContentProvider, MockProviderOptions } from "./mock.provider";
+import {
+  getEffectiveAiStudioConfig,
+  getEffectiveGlmBaseUrl,
+} from "@/modules/system-settings/system-settings.service";
 
 let customProviderInstance: AiContentProvider | null = null;
 
@@ -12,14 +17,7 @@ export function setAiContentProviderForTest(provider: AiContentProvider | null) 
 }
 
 /**
- * Creates and returns the active AI Content Provider based on runtime environment.
- * 
- * Rules:
- * - If a test provider is injected, returns the test provider.
- * - If explicit AI_PROVIDER=mock or NODE_ENV=test (and no live key requested), returns MockAiContentProvider.
- * - Otherwise (in production/pilot/live dev mode), returns GeminiAiContentProvider.
- * - If Gemini credentials are missing in production mode, GeminiAiContentProvider throws an explicit configuration error.
- *   Mock provider MUST NEVER silently replace Gemini in production use.
+ * Synchronous resolver for tests/mock environments.
  */
 export function getAiContentProvider(mockOptions?: MockProviderOptions): AiContentProvider {
   if (customProviderInstance) {
@@ -30,7 +28,6 @@ export function getAiContentProvider(mockOptions?: MockProviderOptions): AiConte
   const isExplicitMock = process.env.AI_PROVIDER === "mock";
   const isTestEnv = process.env.NODE_ENV === "test" && !process.env.USE_LIVE_GEMINI;
 
-  // HARD GUARD: Production must NEVER serve MockAiContentProvider under any circumstances
   if (isProduction && isExplicitMock) {
     throw new Error("Mock AI provider is strictly prohibited in production environment.");
   }
@@ -40,4 +37,33 @@ export function getAiContentProvider(mockOptions?: MockProviderOptions): AiConte
   }
 
   return new GeminiAiContentProvider();
+}
+
+/**
+ * Dynamic asynchronous resolver that respects database runtime settings configured by Super Admin.
+ */
+export async function getDynamicAiContentProvider(mockOptions?: MockProviderOptions): Promise<AiContentProvider> {
+  if (customProviderInstance) {
+    return customProviderInstance;
+  }
+
+  const isProduction = process.env.NODE_ENV === "production";
+  const isExplicitMock = process.env.AI_PROVIDER === "mock";
+  const isTestEnv = process.env.NODE_ENV === "test" && !process.env.USE_LIVE_GEMINI;
+
+  if (isProduction && isExplicitMock) {
+    throw new Error("Mock AI provider is strictly prohibited in production environment.");
+  }
+
+  if (isExplicitMock || isTestEnv) {
+    return new MockAiContentProvider(mockOptions);
+  }
+
+  const config = await getEffectiveAiStudioConfig();
+  if (config.provider === "openai-compatible") {
+    const baseUrl = await getEffectiveGlmBaseUrl();
+    return new OpenAiCompatibleAiContentProvider(config.apiKey, config.model, baseUrl);
+  }
+
+  return new GeminiAiContentProvider(config.apiKey, config.model);
 }
