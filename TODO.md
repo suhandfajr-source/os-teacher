@@ -39,7 +39,7 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
     - ✅ Story 1 — Responsive Shell & Dual-Mode Navigation (commit `3e5efc4`)
     - ✅ Story 2 — Bento Grid Dashboard & Jadwal Mingguan (commit `6a667ac`, spec: `spec-student-portal-bento-dashboard-and-weekly-schedule.md`)
     - ✅ Story 3 — Card Grid Tugas & Layar Pengerjaan Kuis CBT (commit `e5d3499`, spec: `spec-student-portal-dual-mode-tugas-quiz-cbt.md`)
-  - 📋 **Portal Guru** (Dashboard, Manajemen Kelas, KBM, Penilaian, Jadwal, dsb.) — BELUM dimulai, cerita belum dirinci
+  - ✅ **Portal Guru** — dianggap selesai oleh owner (perubahan responsif sudah dilakukan sebelumnya; story kelas-mobile dibatalkan 2026-10-21 karena tidak diperlukan lagi)
   - 📋 **Portal Orang Tua / Wali** — belum dimulai
   - 📋 **Portal Superadmin** — belum dimulai
 
