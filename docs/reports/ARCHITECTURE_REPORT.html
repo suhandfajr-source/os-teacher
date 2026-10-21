@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan Arsitektur — AI Teacher Assistant</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --ink: #1a2233;
+    --muted: #5b6473;
+    --line: #e3e7ee;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --green: #059669;
+    --green-soft: #ecfdf5;
+    --amber: #b45309;
+    --amber-soft: #fffbeb;
+    --red: #b91c1c;
+    --red-soft: #fef2f2;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink);
+    line-height: 1.65; font-size: 15px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #0f1b3d 0%, #1d3a8f 60%, #2563eb 100%);
+    color: #fff; border-radius: 16px; padding: 40px 36px; margin-bottom: 28px;
+  }
+  .hero .tag {
+    display: inline-block; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25);
+    padding: 3px 12px; border-radius: 999px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .hero h1 { font-size: 30px; margin: 14px 0 6px; font-weight: 700; }
+  .hero p { color: #c9d6f5; max-width: 640px; }
+  .hero .meta { display: flex; gap: 24px; margin-top: 22px; flex-wrap: wrap; }
+  .hero .meta div { font-size: 13px; }
+  .hero .meta b { display: block; font-size: 20px; font-weight: 700; color: #fff; }
+
+  /* Sections */
+  section { margin-bottom: 28px; }
+  h2 {
+    font-size: 19px; margin-bottom: 14px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--line); display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    background: var(--accent); color: #fff; width: 28px; height: 28px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px; flex: none;
+  }
+  h3 { font-size: 15px; margin: 18px 0 8px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 14px;
+  }
+  .grid { display: grid; gap: 14px; }
+  .grid.c2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .grid.c3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+  /* Stats */
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .stat b { display: block; font-size: 26px; color: var(--accent); font-weight: 700; }
+  .stat span { font-size: 13px; color: var(--muted); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 10px; overflow: hidden; font-size: 14px; }
+  th { background: #eef1f6; text-align: left; padding: 9px 14px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  td { padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  /* Badges & pills */
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.blue { background: var(--accent-soft); color: var(--accent); }
+  .pill.green { background: var(--green-soft); color: var(--green); }
+  .pill.amber { background: var(--amber-soft); color: var(--amber); }
+  .pill.red { background: var(--red-soft); color: var(--red); }
+  .pill.gray { background: #eef1f6; color: var(--muted); }
+
+  /* Diagrams */
+  .flow { background: #0e1526; border-radius: 12px; padding: 22px 24px; color: #cdd8ee; font-family: var(--mono); font-size: 12.5px; line-height: 1.9; overflow-x: auto; white-space: pre; }
+  .flow .hi { color: #7fb2ff; font-weight: 700; }
+  .flow .dim { color: #6b7a99; }
+
+  .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--accent-soft); color: var(--accent); border: 1px solid #c9dbff; padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+  .chip.dark { background: #eef1f6; color: var(--ink); border-color: var(--line); }
+
+  /* Callouts */
+  .note { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+  .note.warn { border-color: var(--amber); background: var(--amber-soft); }
+  .note.good { border-color: var(--green); background: var(--green-soft); }
+
+  ul.clean { padding-left: 20px; }
+  ul.clean li { margin-bottom: 5px; }
+  code { font-family: var(--mono); background: #eef1f6; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 40px; }
+  @media print { body { background: #fff; } .hero { border-radius: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <div class="hero">
+    <span class="tag">Laporan Arsitektur</span>
+    <h1>AI Teacher Assistant</h1>
+    <p>Platform asisten mengajar berbasis AI untuk guru Indonesia — manajemen kelas, penilaian, absensi, bank soal, ujian online, dan pembuatan dokumen akademik dalam satu aplikasi web.</p>
+    <div class="meta">
+      <div><b>Modular Monolith</b>Gaya Arsitektur</div>
+      <div><b>Next.js 16</b>Framework</div>
+      <div><b>PostgreSQL</b>Database</div>
+      <div><b>7 Bahasa Layanan</b>AI Multi-Provider</div>
+    </div>
+  </div>
+
+  <!-- ============ 1. RINGKASAN ============ -->
+  <section>
+    <h2><span class="num">1</span>Ringkasan Eksekutif</h2>
+    <div class="grid c3" style="margin-bottom:14px">
+      <div class="stat"><b>384</b><span>File TypeScript (src/)</span></div>
+      <div class="stat"><b>54</b><span>Halaman aplikasi</span></div>
+      <div class="stat"><b>25</b><span>Modul domain</span></div>
+      <div class="stat"><b>55</b><span>Model database</span></div>
+      <div class="stat"><b>33</b><span>Migrasi Prisma ter-apply</span></div>
+      <div class="stat"><b>82</b><span>File unit/integration test</span></div>
+    </div>
+    <div class="card">
+      <p>Aplikasi ini adalah <b>monolit modular</b>: satu codebase Next.js dengan batas modul internal yang tegas, satu database relasional (PostgreSQL) sebagai <i>single source of truth</i>, dan integrasi AI yang selalu lewat lapisan abstraksi <code>AI Service</code> — tidak pernah dipanggil langsung dari komponen UI. Prinsip utamanya:</p>
+      <p style="margin-top:10px; font-size:16px"><b>AI Assists, Teacher Decides</b> — AI men-generate dan menjelaskan, guru yang memutuskan.</p>
+    </div>
+  </section>
+
+  <!-- ============ 2. GAYA ARSITEKTUR ============ -->
+  <section>
+    <h2><span class="num">2</span>Gaya Arsitektur — Modular Monolith</h2>
+    <div class="card">
+      <p style="margin-bottom:10px">Satu aplikasi, satu database relasional, satu codebase — dengan <b>batas modul yang kuat</b> secara internal. Tidak ada microservices; infrastruktur kompleks (Kafka, Redis cluster, Kubernetes, vector DB) sengaja <u>tidak</u> dipakai di V1 dan hanya ditambahkan bila ada kebutuhan produksi nyata.</p>
+      <div class="flow">AI TEACHER ASSISTANT
+├── <span class="hi">auth</span> / student-auth          ├── <span class="hi">quiz</span> + cbt-live (ujian online)
+├── <span class="hi">teachers</span> / schools            ├── <span class="hi">reporting</span> / templates
+├── <span class="hi">classes</span> / students            ├── <span class="hi">agent</span> (AI chat streaming)
+├── <span class="hi">teaching</span> / schedule           ├── <span class="hi">ai</span> (AI Service abstraction)
+├── <span class="hi">attendance</span>                    ├── <span class="hi">imports</span> / exports
+├── <span class="hi">assignments</span> / assessment      ├── <span class="hi">storage</span> (S3-compatible)
+├── <span class="hi">scores</span> / monitoring           ├── <span class="hi">notifications</span>
+└── <span class="hi">approvals</span> / admin / system-settings / student-portal</div>
+      <h3>Aturan batas modul</h3>
+      <ul class="clean">
+        <li>Logika bisnis tidak boleh menempel langsung di komponen UI.</li>
+        <li>Modul yang tidak berhubungan tidak boleh saling <i>couple</i> langsung.</li>
+        <li>Operasi lintas modul harus lewat <i>service</i> eksplisit; helper bersama di lapisan <code>lib</code>.</li>
+        <li>Tidak boleh ada sumber kebenaran ganda (<i>duplicate source of truth</i>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 3. TECH STACK ============ -->
+  <section>
+    <h2><span class="num">3</span>Teknologi Inti</h2>
+    <table>
+      <tr><th>Lapisan</th><th>Teknologi</th><th>Catatan</th></tr>
+      <tr><td>Bahasa</td><td>TypeScript</td><td>Strict, end-to-end</td></tr>
+      <tr><td>Web Framework</td><td>Next.js 16 (App Router)</td><td>Server Components + Server Actions + Route Handlers</td></tr>
+      <tr><td>Styling</td><td>Tailwind CSS</td><td>+ design tokens, tema terang/gelap</td></tr>
+      <tr><td>UI Components</td><td>Base UI / pola shadcn</td><td>Komponen reusable, ikon Lucide</td></tr>
+      <tr><td>Editor rich-text</td><td>Milkdown (Crepe)</td><td>Untuk konten materi &amp; dokumen</td></tr>
+      <tr><td>Database</td><td>PostgreSQL</td><td>Single source of truth</td></tr>
+      <tr><td>ORM</td><td>Prisma 7 + driver adapter <code>pg</code></td><td>Wajib lewat migrasi; 33 migrasi applied</td></tr>
+      <tr><td>Autentikasi</td><td>Better Auth</td><td>Guru (email/password) + siswa (PIN + session cookie)</td></tr>
+      <tr><td>Validasi</td><td>Zod</td><td>Form, server action, API, impor Excel, output AI</td></tr>
+      <tr><td>AI SDK</td><td>Vercel AI SDK</td><td>Streaming chat (<code>/api/agent/chat</code>)</td></tr>
+      <tr><td>Provider AI</td><td>Gemini + GLM (OpenAI-compatible)</td><td>Multi-provider di balik abstraksi AI Service</td></tr>
+      <tr><td>File storage</td><td>S3-compatible (AWS SDK v3)</td><td>Cloudflare R2 / S3; presigned upload</td></tr>
+      <tr><td>Excel</td><td>ExcelJS + SheetJS</td><td>Ekspor terformat &amp; impor dengan preview</td></tr>
+      <tr><td>DOCX</td><td>docx + docxtemplater + PizZip</td><td>Dokumen administratif &amp; template</td></tr>
+      <tr><td>PDF</td><td>jsPDF + autotable</td><td>Format final cetak</td></tr>
+      <tr><td>Testing</td><td>Vitest + Playwright</td><td>82 file test unit/integrasi</td></tr>
+      <tr><td>Runtime</td><td>Node.js ≥ 20.12</td><td>—</td></tr>
+      <tr><td>Deploy target</td><td>VPS (Nginx + PM2)</td><td>Alternatif: Hostinger VPS / Vercel + Neon</td></tr>
+    </table>
+  </section>
+
+  <!-- ============ 4. ARSITEKTUR UTAMA ============ -->
+  <section>
+    <h2><span class="num">4</span>Arsitektur Utama</h2>
+    <div class="flow">Browser (Guru / Siswa / Superadmin)
+   │
+   ▼
+<span class="hi">Next.js Application</span>  <span class="dim">— App Router, proxy middleware (session siswa)</span>
+   │
+   ├── UI / Server Components          <span class="dim">(54 halaman: dashboard, portal-siswa, q, admin, laporan)</span>
+   ├── Server Actions / Route Handlers <span class="dim">(14 API routes)</span>
+   ├── Domain Modules                  <span class="dim">(25 modul src/modules/*)</span>
+   ├── Application Services            <span class="dim">(auth, authorization, audit)</span>
+   ├── AI Service                      <span class="dim">(abstraksi multi-provider)</span>
+   ├── Import / Export Service         <span class="dim">(ExcelJS / SheetJS / docx / jsPDF)</span>
+   └── Storage Service                 <span class="dim">(S3-compatible, presigned URL)</span>
+   │
+   ▼
+<span class="hi">Prisma 7</span> (driver adapter pg)
+   │
+   ▼
+<span class="hi">PostgreSQL</span>  <span class="dim">— 55 model, 27 enum, 1.398 baris schema</span>
+
+Layanan eksternal:
+Next.js ├── Gemini API  <span class="dim">(AI)</span>
+        ├── GLM API     <span class="dim">(AI alternatif, OpenAI-compatible)</span>
+        └── File Storage <span class="dim">(S3 / Cloudflare R2)</span></div>
+    <div class="note">Struktur route pakai <b>route groups</b>: <code>(auth)</code>, <code>(dashboard)</code>, <code>(onboarding)</code>, <code>admin</code>, <code>portal-siswa</code> (portal siswa + Mode Keluarga), <code>q</code> (ujian online), dan <code>api</code>.</div>
+  </section>
+
+  <!-- ============ 5. DATABASE ============ -->
+  <section>
+    <h2><span class="num">5</span>Arsitektur Database</h2>
+    <div class="card">
+      <p style="margin-bottom:12px">PostgreSQL adalah sumber kebenaran. Hierarki intinya berbasis <b>School Workspace</b> (multi-sekolah):</p>
+      <div class="flow">School Workspace
+   │
+   ├── AcademicPeriod ── Subject ── Class
+   │                          │
+   └── Student ──── ClassStudent Membership
+                        │
+Teacher ── TeacherSchoolMembership
+                        │
+              TeachingContext (sesi mengajar)
+                        │
+                     Assessment
+                        │
+                       Score
+                        │
+                    Remedial</div>
+      <h3>Prinsip data</h3>
+      <ul class="clean">
+        <li>Data relasional dulu; data aktivitas mentah sebelum ringkasan; statistik bersifat <i>derived</i>.</li>
+        <li>Rencana mengajar ≠ pelaksanaan mengajar (dipisah).</li>
+        <li>Laporan adalah <i>output</i>, bukan sumber kebenaran.</li>
+        <li>Konteks akademik opsional — tidak boleh menghalangi alur kerja harian.</li>
+        <li>Riwayat record penting dipertahankan.</li>
+        <li><b>Semua</b> perubahan schema lewat Prisma migrations (33 sudah ter-apply, terverifikasi <code>verify:migrations</code>).</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 6. AUTH ============ -->
+  <section>
+    <h2><span class="num">6</span>Autentikasi &amp; Otorisasi</h2>
+    <table>
+      <tr><th>Aktor</th><th>Mekanisme</th><th>Catatan</th></tr>
+      <tr><td>Guru <span class="pill blue">user utama</span></td><td>Email/password via Better Auth</td><td>Session-based; bergabung/buat sekolah langsung ACTIVE (onboarding tanpa gesekan)</td></tr>
+      <tr><td>Siswa</td><td>PIN + session cookie ter-sign</td><td>Diverifikasi di <code>proxy.ts</code> (middleware); pepper rahasia <code>PIN_PEPPER</code>; NIS kanonik</td></tr>
+      <tr><td>Superadmin</td><td>Email allowlist</td><td>Seeder khusus <code>seed:superadmin</code>; akses lintas sekolah untuk operasional</td></tr>
+      <tr><td>Orang tua <span class="pill gray">sekunder</span></td><td>2-langkah approval</td><td><code>ParentStudentRelation</code> → <code>ParentTeachingAccess</code> (disetujui guru pemilik TeachingContext). Portal ortu kini digabung ke <b>Portal Siswa (Mode Keluarga)</b></td></tr>
+    </table>
+    <div class="note warn"><b>Batas penting:</b> approval keanggotaan sekolah dan approval akses data orang tua adalah <b>sistem terpisah</b>. Catatan guru bersifat PRIVATE vs PARENT_VISIBLE — orang tua hanya melihat data yang dihadapkan ke mereka.</div>
+  </section>
+
+  <!-- ============ 7. AI ============ -->
+  <section>
+    <h2><span class="num">7</span>Arsitektur AI</h2>
+    <div class="card">
+      <p style="margin-bottom:10px">AI tidak pernah dipanggil langsung dari komponen UI. Semua lewat abstraksi:</p>
+      <div class="flow">UI ──► <span class="hi">AI Service</span> ──► AI Provider ──► Gemini / GLM
+
+Kemampuan: generateLessonPlan · generateMaterial · generateQuestions ·
+generateAnswerKey · generateWorksheet · generateRPP · generateSummary ·
+generateNarrativeInsight · streaming chat (/api/agent/chat)</div>
+      <p style="margin-top:10px">Alur output AI selalu:</p>
+      <div class="chip-list">
+        <span class="chip">Generate</span><span class="chip">Validasi (Zod)</span><span class="chip">Preview</span><span class="chip">Review Guru</span><span class="chip">Edit</span><span class="chip dark">Simpan / Pakai / Unduh</span>
+      </div>
+    </div>
+    <div class="grid c2">
+      <div class="card">
+        <h3 style="margin-top:0"><span class="pill green">AI BOLEH</span></h3>
+        <ul class="clean">
+          <li>Generate konten (materi, soal, RPP, presentasi)</li>
+          <li>Ringkas &amp; menjelaskan</li>
+          <li>Rekomendasi &amp; insight naratif</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0"><span class="pill red">AI TIDAK BOLEH (V1)</span></h3>
+        <ul class="clean">
+          <li>Mengoreksi lembar jawaban siswa / OCR grading</li>
+          <li>Menentukan nilai esai atau nilai akhir siswa</li>
+          <li>Menggantikan penilaian akademik guru</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note good"><b>Mesin analisis deterministik:</b> rata-rata, nilai tertinggi/terendah, tingkat penguasaan, kehadiran, tugas terlewat, tren nilai — dihitung oleh logika aplikasi/database, <u>bukan</u> AI. AI hanya menjelaskan angkanya dalam bahasa natural.</div>
+  </section>
+
+  <!-- ============ 8. IMPORT/EXPORT ============ -->
+  <section>
+    <h2><span class="num">8</span>Excel, Impor &amp; Mesin Dokumen</h2>
+    <div class="card">
+      <p><b>Excel adalah format kelas satu</b> — input maupun output yang bisa diedit.</p>
+      <div class="flow" style="margin:12px 0">Impor:  Upload → Read → <span class="hi">Preview</span> → Map Kolom → <span class="hi">Validasi</span> → Konfirmasi → Update DB
+Ekspor: DB → ExcelJS → XLSX terformat (header, freeze panes, filter, border, formula)</div>
+      <p>Tidak pernah impor langsung ke data produksi tanpa preview &amp; validasi. File Excel yang diedit turunan <u>tidak</u> otomatis mengubah database — harus lewat siklus impor + konfirmasi guru.</p>
+    </div>
+    <table>
+      <tr><th>Format</th><th>Library</th><th>Peruntukan</th></tr>
+      <tr><td>XLSX</td><td>ExcelJS / SheetJS</td><td>Data akademik &amp; administratif yang bisa diedit (rekap nilai, absensi, remedial, jurnal)</td></tr>
+      <tr><td>DOCX</td><td>docx + docxtemplater</td><td>Dokumen administratif &amp; template (RPP, surat)</td></tr>
+      <tr><td>PDF</td><td>jsPDF + autotable</td><td>Format final cetak/pengumpulan</td></tr>
+      <tr><td>PPTX</td><td>—</td><td>Backlog (prioritas V1: Excel → DOCX → PDF → PPTX)</td></tr>
+    </table>
+    <div class="note">Desain template selalu dipisahkan dari data inti — template bukan sumber kebenaran.</div>
+  </section>
+
+  <!-- ============ 9. STORAGE ============ -->
+  <section>
+    <h2><span class="num">9</span>File Storage</h2>
+    <div class="card">
+      <p>File biner besar <b>tidak</b> disimpan di PostgreSQL. Database menyimpan <i>metadata</i>, penyedia storage menyimpan file fisik — lewat abstraksi <code>StorageService</code>:</p>
+      <div class="chip-list">
+        <span class="chip">upload()</span><span class="chip">download()</span><span class="chip">delete()</span><span class="chip">getUrl() (presigned)</span>
+      </div>
+      <p style="margin-top:12px">Implementasi produksi: S3-compatible (AWS SDK v3 + presigned post). Development bisa pakai implementasi sederhana; provider bisa diganti tanpa menulis ulang modul bisnis.</p>
+    </div>
+  </section>
+
+  <!-- ============ 10. UI ============ -->
+  <section>
+    <h2><span class="num">10</span>Arsitektur UI &amp; Responsivitas</h2>
+    <div class="grid c2">
+      <div class="card">
+        <h3 style="margin-top:0">💻 Desktop dioptimalkan untuk</h3>
+        <ul class="clean">
+          <li>Entri nilai massal &amp; impor/ekspor spreadsheet</li>
+          <li>Pelaporan, editing dokumen, analitik</li>
+          <li>Setup akademik</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">📱 Mobile dioptimalkan untuk</h3>
+        <ul class="clean">
+          <li>Absensi &amp; "today view"</li>
+          <li>Catatan guru &amp; aksi cepat</li>
+          <li>Monitoring sederhana &amp; portal siswa</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note">Layout desktop dan mobile sengaja <u>tidak</u> dipaksa identik. Prinsip UX: pekerjaan harian dulu, klik minimum, context-aware, progressive disclosure.</div>
+  </section>
+
+  <!-- ============ 11. TESTING ============ -->
+  <section>
+    <h2><span class="num">11</span>Strategi Testing</h2>
+    <div class="card">
+      <div class="chip-list" style="margin-bottom:12px">
+        <span class="chip">Unit Tests (Vitest)</span><span class="chip">Integration Tests</span><span class="chip">E2E Playwright</span><span class="chip dark">82 file test</span>
+      </div>
+      <p>Alur E2E kritis: Login → Buka/Buat Kelas → Sesi Mengajar → Absensi → Penilaian → Input Nilai → Analisis → Laporan/Ekspor Excel. <b>Setiap stage development wajib lolos test-nya sendiri sebelum lanjut</b> — stage yang sudah lulus tidak boleh dirusak oleh stage berikutnya.</p>
+    </div>
+  </section>
+
+  <!-- ============ 12. DEPLOYMENT ============ -->
+  <section>
+    <h2><span class="num">12</span>Arsitektur Produksi &amp; Deployment</h2>
+    <div class="flow">Internet
+   ↓
+Nginx / Reverse Proxy (SSL)
+   ↓
+Next.js / Node.js (PM2)
+   │
+   ├── PostgreSQL (VPS) / Neon (serverless)
+   ├── File Storage (S3 / Cloudflare R2)
+   └── Gemini API + GLM API</div>
+    <h3>Opsi deployment yang sudah dianalisis</h3>
+    <table>
+      <tr><th>Opsi</th><th>Biaya/bulan</th><th>Karakter</th></tr>
+      <tr><td>Hostinger VPS KVM 2</td><td>~Rp 85–250rb</td><td>Full control, tanpa limit function/bandwidth; ops manual (backup, update, SSL)</td></tr>
+      <tr><td>Vercel Hobby + Neon Free + Cloudflare</td><td>Rp 0</td><td>Zero-ops saat validasi; batas: non-komersial, function 60 dtk, DB 0,5GB</td></tr>
+      <tr><td>Vercel Pro + Neon (bayar)</td><td>~Rp 320–620rb</td><td>Zero-ops saat sudah jualan; preview deployment, auto-scale</td></tr>
+      <tr><td>Railway (app + Postgres)</td><td>~Rp 160–240rb</td><td>Jalan terus (tanpa limit durasi), setup mudah</td></tr>
+    </table>
+    <div class="note warn"><b>Catatan serverless:</b> dengan Prisma 7 + driver <code>pg</code> di Vercel, wajib pakai Neon <i>pooled connection string</i> agar koneksi DB tidak bocor saat ujian serentak. Env wajib di server: <code>DATABASE_URL</code>, <code>BETTER_AUTH_SECRET</code>, <code>BETTER_AUTH_URL</code> (harus = domain produksi), <code>PIN_PEPPER</code> (harus konsisten, kalau beda semua PIN siswa invalid), kunci AI, kunci storage.</div>
+  </section>
+
+  <!-- ============ 13. PRINSIP ============ -->
+  <section>
+    <h2><span class="num">13</span>Prinsip Arsitektur Non-Negotiable (V1)</h2>
+    <div class="card">
+      <ol style="padding-left:20px">
+        <li style="margin-bottom:6px"><b>Modular Monolith</b> — tidak ada microservices.</li>
+        <li style="margin-bottom:6px"><b>PostgreSQL</b> adalah sumber kebenaran inti.</li>
+        <li style="margin-bottom:6px">Perubahan database <b>wajib</b> lewat Prisma migrations.</li>
+        <li style="margin-bottom:6px">Konteks akademik bersifat opsional.</li>
+        <li style="margin-bottom:6px">Rencana mengajar ≠ pelaksanaan mengajar.</li>
+        <li style="margin-bottom:6px">Aktivitas menghasilkan data; laporan di-generate dari data inti.</li>
+        <li style="margin-bottom:6px">Excel adalah format impor/ekspor kelas satu.</li>
+        <li style="margin-bottom:6px">AI selalu di balik abstraksi AI Service.</li>
+        <li style="margin-bottom:6px">Perhitungan deterministik tidak bergantung pada AI.</li>
+        <li style="margin-bottom:6px">AI tidak pernah menentukan nilai siswa di V1.</li>
+        <li style="margin-bottom:6px">Komponen reusable di atas UI duplikat.</li>
+        <li style="margin-bottom:6px">Stage yang sudah lulus tidak boleh dirusak stage berikutnya.</li>
+        <li style="margin-bottom:6px">Keep V1 simple — infrastruktur tambahan hanya saat ada kebutuhan nyata.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    Sumber: <code>docs/architecture/TECHNICAL_ARCHITECTURE.md</code> (baseline v1) + audit kode aktual ·
+    Di-generate otomatis dari repository · AI Teacher Assistant
+  </footer>
+</div>
+</body>
+</html>

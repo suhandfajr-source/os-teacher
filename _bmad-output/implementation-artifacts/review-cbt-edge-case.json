@@ -1,0 +1,32 @@
+[
+  {
+    "location": "src/modules/quiz/quiz.actions.ts:1725",
+    "trigger_condition": "Lockdown 3 strikes auto-lock finalizes attempt without setting submittedAt timestamp",
+    "guard_snippet": "data: { status: 'SUBMITTED', lockdownLockedAt: new Date(), submittedAt: new Date(), score: computedScore }",
+    "potential_consequence": "Locked attempt lacks submittedAt, breaking completed quiz filters and duration calculations"
+  },
+  {
+    "location": "src/modules/quiz/quiz.actions.ts:1680",
+    "trigger_condition": "Client sends arbitrary string for violation kind parameter bypasses enum validation",
+    "guard_snippet": "const VALID_KINDS = ['TAB_EXIT', 'FULLSCREEN_EXIT', 'BLUR_AWAY', 'DEVTOOLS_OPEN', 'OTHER']; if (!VALID_KINDS.includes(kind)) return { success: false, error: 'Jenis pelanggaran tidak valid' };",
+    "potential_consequence": "Prisma throws unhandled database enum error causing 500 instead of clean failure response"
+  },
+  {
+    "location": "src/modules/student-portal/components/QuizRunnerClient.tsx:185",
+    "trigger_condition": "Focus lost to browser chrome or native select triggers away episode while visible",
+    "guard_snippet": "if (document.visibilityState === 'visible' && document.hasFocus()) return;",
+    "potential_consequence": "Student clicking native select or browser prompt triggers spurious strike counting"
+  },
+  {
+    "location": "src/modules/student-portal/components/QuizRunnerClient.tsx:288",
+    "trigger_condition": "Offline violation queue flush fails on network blip without persistent queue retry",
+    "guard_snippet": "if (!res.success) { pendingViolationsRef.current.unshift(...itemsToFlush); }",
+    "potential_consequence": "Violations occurring while device reconnects are silently dropped without reaching server"
+  },
+  {
+    "location": "src/modules/quiz/quiz.actions.ts:1580",
+    "trigger_condition": "Lockdown mode parameter missing from client payload during quiz creation defaults incorrectly",
+    "guard_snippet": "lockdownMode: input.lockdownMode ?? 'STRICT'",
+    "potential_consequence": "Null or undefined lockdownMode defaults to database default or schema error"
+  }
+]

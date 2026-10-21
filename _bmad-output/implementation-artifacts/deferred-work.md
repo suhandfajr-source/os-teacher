@@ -100,3 +100,13 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-assignment-file-submission.md`
   summary: Infra component-test React (jsdom/@testing-library) untuk UI upload SubmitAssignmentForm & tampilan grading
   evidence: Review pass 1 (VG5): repo belum punya satu pun *.test.tsx maupun dependency DOM-testing; adopsi infra = keputusan project-level, bukan bagian story ini
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-cbt-integrity-lockdown.md`
+  summary: Retry antrean offline violation menggunakan persistent storage (IndexedDB) jika tab di-refresh saat offline
+  evidence: Diidentifikasi pada review pass 1 (F-BH-05/F-EC-04); saat ini antrean tersimpan di memori ref dan di-flush saat window focus/online.
+- source_spec: `_bmad-output/implementation-artifacts/spec-cbt-integrity-lockdown.md`
+  summary: Pengaturan toggle darurat mode lockdown pasca-publikasi kuis pada halaman QuizDetailClient
+  evidence: Diidentifikasi pada review pass 1 (F-BH-07); saat ini mode dipilih saat pembuatan kuis di NewQuizClient; backend sudah siap lewat updateQuizSettingsAction.
+- source_spec: `_bmad-output/implementation-artifacts/spec-cbt-integrity-lockdown.md`
+  summary: Paginasi dan agregasi komputasi laporan integritas untuk cohort kuis skala besar (>500 siswa)
+  evidence: Diidentifikasi pada review pass 1 (F-BH-08); getQuizIntegrityReportAction memuat semua attempt rombel normal (30-120 siswa), perlu paginasi untuk skala sekolah.
