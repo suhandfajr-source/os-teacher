@@ -712,7 +712,7 @@ export function StudentMonitoringDetailClient({ initialData }: DetailProps) {
                   Belum ada data penilaian pada kelas ini.
                 </div>
               ) : (
-                <div className="border rounded-md overflow-hidden">
+                <div className="border rounded-md overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 border-b font-semibold text-slate-700">
                       <tr>
@@ -830,7 +830,7 @@ export function StudentMonitoringDetailClient({ initialData }: DetailProps) {
                 Belum ada data presensi tercatat untuk siswa ini.
               </div>
             ) : (
-              <div className="border rounded-md overflow-hidden">
+              <div className="border rounded-md overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 border-b font-semibold text-slate-700">
                     <tr>

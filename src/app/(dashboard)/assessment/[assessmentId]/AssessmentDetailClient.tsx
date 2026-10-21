@@ -436,8 +436,8 @@ export default function AssessmentDetailClient({ assessment, results, stats }: P
             </div>
           </div>
 
-          {/* Scoring Table (Desktop Spreadsheet Grid) */}
-          <div className="border rounded-lg overflow-hidden bg-white">
+          {/* Scoring Table (Spreadsheet Grid — scrollable di mobile via overflow-x-auto) */}
+          <div className="border rounded-lg overflow-x-auto bg-white">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b">
                 <tr>

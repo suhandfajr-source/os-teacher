@@ -230,7 +230,7 @@ export default function HistoricalAssessmentImportFlow({
 
         {step === 2 && (
           <div className="space-y-4">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-emerald-50 text-emerald-800 p-3 rounded-lg border border-emerald-200">
                 <div className="text-xs font-medium">Siap Diimpor</div>
                 <div className="text-2xl font-bold">{validCount}</div>

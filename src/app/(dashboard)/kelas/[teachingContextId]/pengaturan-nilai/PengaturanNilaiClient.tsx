@@ -444,7 +444,7 @@ export default function PengaturanNilaiClient({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="border rounded-md overflow-hidden">
+          <div className="border rounded-md overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b">
                 <tr>
