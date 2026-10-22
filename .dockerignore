@@ -1,0 +1,27 @@
+node_modules
+.next
+.open-next
+.wrangler
+.git
+.env
+.env.*
+.dev.vars
+*.local
+coverage
+test-results
+playwright-report
+blob-report
+_ppt_sample
+problem
+_tmp*
+.agents
+.claude
+_bmad
+_bmad-output
+.pi
+Video Generator
+docs
+*.md
+Dockerfile
+.dockerignore
+src/generated
