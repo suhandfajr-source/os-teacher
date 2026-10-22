@@ -9,7 +9,7 @@ import ImportHub from "./ImportHub";
 export default async function ImportSiswaPage({
   params,
 }: {
-  params: Promise<{ teachingContextId: string }> | { teachingContextId: string };
+  params: Promise<{ teachingContextId: string }>;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),

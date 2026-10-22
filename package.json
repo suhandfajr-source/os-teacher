@@ -6,8 +6,9 @@
     "node": ">=20.12"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && next build --webpack",
+    "dev": "next dev --webpack",
+    "dev:turbo": "next dev",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",
@@ -16,7 +17,11 @@
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "backfill:schools": "tsx --env-file-if-exists=.env scripts/backfill-school-normalized-names.ts",
     "audit:nis": "tsx --env-file-if-exists=.env scripts/backfill-student-canonical-nis.ts",
-    "seed:teacher-bambang": "tsx --env-file-if-exists=.env scripts/seed-teacher-bambang.ts"
+    "seed:teacher-bambang": "tsx --env-file-if-exists=.env scripts/seed-teacher-bambang.ts",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.87",
@@ -30,6 +35,7 @@
     "@milkdown/kit": "^7.22.2",
     "@milkdown/react": "^7.22.2",
     "@milkdown/theme-nord": "^7.22.2",
+    "@opennextjs/cloudflare": "^1.20.13",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "ai": "^7.0.127",
@@ -44,11 +50,12 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.31.0",
-    "next": "^16.3.3",
+    "next": "^16.4.2",
     "next-themes": "^0.4.6",
     "pg": "^8.23.0",
     "pizzip": "^3.2.0",
-    "pptxgenjs": "^4.0.1",
+    "pptxgenjs": "^3.12.0",
+    "rclone.js": "^0.6.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.18.0",
@@ -75,6 +82,12 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.151.3"
+  },
+  "allowScripts": {
+    "workerd@1.20261019.1": true,
+    "rclone.js@0.6.6": true,
+    "unrs-resolver@1.12.2": true
   }
 }
