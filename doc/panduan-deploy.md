@@ -27,7 +27,25 @@ Server AlmaLinux 8.10 (Tailscale: 100.123.122.20)
 - Database tetap di **Neon** (jangan pindah ke MariaDB/Laragon di server — schema kita PostgreSQL).
 - Aplikasi jalan di **port 2001** (konsisten dengan dev lokal).
 
-## 2. Info Server & Komponen
+## 2. Kredensial & Akses Server
+
+> Repo ini **private**, sehingga kredensial berikut aman disimpan di sini. Jika repo pernah dibuat public, segera rotasi semua kredensial di bawah.
+
+| Jenis | Nilai |
+|---|---|
+| SSH server | `root@100.123.122.20` |
+| Password root | `UserSuhandi#` |
+| Jaringan | Tailscale tailnet `tailb5c6a2.ts.net` (akun `suhandfajr@`), koneksi via relay `sin` |
+| Cloudflare (DNS/Tunnel) | `admin@klassa-edutech.com` (login OAuth, akun ID `c5b81d10a83430e54990a84bc2d35ad0`) |
+| Tunnel produksi | Token-based, hostname `klassa-edutech.com` → `http://localhost:2001`, dikelola dari dashboard Cloudflare Zero Trust → Tunnels |
+| GitHub repo | `https://github.com/suhandfajr-source/os-teacher.git` (private, branch deploy: `main`) |
+
+Contoh koneksi cepat dari PC Windows:
+```bash
+plink -ssh -batch -no-antispoof root@100.123.122.20 -pw "UserSuhandi#" "docker ps"
+```
+
+## 3. Info Server & Komponen
 
 | Komponen | Nilai |
 |---|---|
@@ -40,7 +58,7 @@ Server AlmaLinux 8.10 (Tailscale: 100.123.122.20)
 | Container | `klassa` (image `klassa`, `--restart unless-stopped`) |
 | Env file server | `/opt/os-teacher/.env` (chmod 600, JANGAN di-commit) |
 
-## 3. Deploy Update (alur harian — paling sering dipakai)
+## 4. Deploy Update (alur harian — paling sering dipakai)
 
 ### Langkah 1 — Commit & push dari PC lokal
 ```bash
@@ -70,7 +88,7 @@ curl -s -o /dev/null -w "%{http_code}" https://klassa-edutech.com/api/auth/get-s
 docker logs klassa --tail 20
 ```
 
-## 4. Deploy dari Nol (server baru / ulang total)
+## 5. Deploy dari Nol (server baru / ulang total)
 
 1. **Siapkan tunnel & DNS** (sudah ada): hostname `klassa-edutech.com` → `http://localhost:2001` lewat dashboard Cloudflare Zero Trust → Tunnels.
 2. **Clone & env:**
@@ -87,7 +105,7 @@ docker logs klassa --tail 20
 4. **Build & run** (sama seperti Langkah 2 di atas).
 5. **Verifikasi** (sama seperti Langkah 3).
 
-## 5. Environment Variables (`.env` di server)
+## 6. Environment Variables (`.env` di server)
 
 Nilai yang HARUS ada di server (contoh dari PC lokal `.env`, disesuaikan):
 
@@ -119,7 +137,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
      --env-file /opt/os-teacher/.env -p 127.0.0.1:2001:2001 klassa
    ```
 
-## 6. Masalah yang Pernah Terjadi & Solusinya
+## 7. Masalah yang Pernah Terjadi & Solusinya
 
 | Gejala | Penyebab | Solusi |
 |---|---|---|
@@ -130,7 +148,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | Publik 502 Bad Gateway | Tunnel OK tapi tidak ada yang listen di 2001 | Cek `docker ps` — container harus `Up` dan binding `127.0.0.1:2001->2001` |
 | SSH/plink timeout | Server sibuk build, jalur Tailscale relay drop | Tunggu 1–2 menit lalu retry; build `nohup` tetap jalan di server |
 
-## 7. Perintah Operasional (di server)
+## 8. Perintah Operasional (di server)
 
 ```bash
 docker ps --filter name=klassa              # status container
@@ -145,7 +163,7 @@ df -h / && free -h                          # cek disk & RAM server
 ss -tlnp | grep 2001                        # pastikan port 2001 listen
 ```
 
-## 8. Checklist Keamanan
+## 9. Checklist Keamanan
 
 - [ ] **Ganti password root server** (password lama pernah dibagikan lewat chat — wajib rotasi).
 - [ ] Pertimbangkan disable SSH password login, pakai SSH key (`PermitRootLogin prohibit-password`).
@@ -154,7 +172,7 @@ ss -tlnp | grep 2001                        # pastikan port 2001 listen
 - [ ] Container jalan sebagai user non-root `klassa` (sudah default dari Dockerfile).
 - [ ] Backup database: Neon autosuspend + periodic branch/fork (cek dashboard Neon).
 
-## 9. Port 2000/2001 (konvensi lokal)
+## 10. Port 2000/2001 (konvensi lokal)
 
 - Dev lokal: `npm run dev` → otomatis `http://localhost:2001` (sudah di-script `package.json`).
 - Trusted origins Better Auth sudah mencakup `localhost:2000–2005`.
