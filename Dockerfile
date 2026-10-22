@@ -5,6 +5,12 @@ FROM node:22-bookworm AS builder
 WORKDIR /app
 ENV NODE_OPTIONS=--max-old-space-size=2048
 
+# Build-time placeholder only. Route modules are evaluated during `next build`
+# (page-data collection) and betterAuth() fail-fasts in production without a
+# secret. The REAL secret is injected at runtime via --env-file.
+ARG BETTER_AUTH_SECRET=build-time-placeholder-not-a-real-secret-32ch
+ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
