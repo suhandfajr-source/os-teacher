@@ -20,6 +20,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import { prisma } from "@/lib/auth";
+import * as pureTokens from "../student-session-token";
 import {
   signStudentSessionToken,
   verifyStudentSessionToken,
@@ -34,6 +35,14 @@ import {
 describe("Student Session Engine (B4 & F3)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("keeps the existing session exports compatible with the pure token module", () => {
+    expect(signStudentSessionToken).toBe(pureTokens.signStudentSessionToken);
+    expect(verifyStudentSessionToken).toBe(pureTokens.verifyStudentSessionToken);
+    expect(getStudentSessionSecret).toBe(pureTokens.getStudentSessionSecret);
+    expect(STUDENT_SESSION_COOKIE_NAME).toBe(pureTokens.STUDENT_SESSION_COOKIE_NAME);
+    expect(DEV_ONLY_STUDENT_SESSION_SECRET).toBe(pureTokens.DEV_ONLY_STUDENT_SESSION_SECRET);
   });
 
   describe("getStudentSessionSecret", () => {

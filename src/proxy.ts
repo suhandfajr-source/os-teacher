@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { STUDENT_SESSION_COOKIE_NAME, verifyStudentSessionToken } from "@/modules/student-auth/student-session";
+import { STUDENT_SESSION_COOKIE_NAME, verifyStudentSessionToken } from "@/modules/student-auth/student-session-token";
 
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 0. Proteksi optimistic area superadmin: /admin/* (Story 5 F3/G-9).
-  //    Proxy TIDAK menulis DB (edge runtime) — audit denial lahir dari
+  //    Proxy TIDAK mengakses DB — audit denial lahir dari
   //    requireSuperAdmin() di layout/handler. Validasi role nyata di server.
   if (pathname.startsWith("/admin")) {
     const adminSessionCookie =

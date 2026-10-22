@@ -10,7 +10,7 @@ export async function register() {
     // Fail-fast checks in production
     try {
       const { resolvePinPepper } = await import("@/lib/student-pin");
-      const { getStudentSessionSecret } = await import("@/modules/student-auth/student-session");
+      const { getStudentSessionSecret } = await import("@/modules/student-auth/student-session-token");
       resolvePinPepper();
       getStudentSessionSecret();
     } catch (err: unknown) {
