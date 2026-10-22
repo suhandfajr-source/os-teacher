@@ -5,11 +5,16 @@ FROM node:22-bookworm AS builder
 WORKDIR /app
 ENV NODE_OPTIONS=--max-old-space-size=2048
 
-# Build-time placeholder only. Route modules are evaluated during `next build`
-# (page-data collection) and betterAuth() fail-fasts in production without a
-# secret. The REAL secret is injected at runtime via --env-file.
+# Build-time placeholders only. Route modules are evaluated during `next build`
+# (page-data collection) and fail-fast checks (betterAuth, PIN_PEPPER module-scope
+# resolve) require these to be present. REAL secrets are injected at runtime
+# via --env-file and override these values.
 ARG BETTER_AUTH_SECRET=build-time-placeholder-not-a-real-secret-32ch
-ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+ARG PIN_PEPPER=build-time-placeholder-pepper-32chars-minimum-ok
+ARG STUDENT_SESSION_SECRET=build-time-placeholder-session-32chars-minimum
+ENV BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET} \
+    PIN_PEPPER=${PIN_PEPPER} \
+    STUDENT_SESSION_SECRET=${STUDENT_SESSION_SECRET}
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
