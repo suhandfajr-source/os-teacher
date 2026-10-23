@@ -18,6 +18,15 @@ interface DispatchableLanguageModel {
   doStream(options: unknown): Promise<unknown>;
 }
 
+/** Tag penyedia untuk logika failover cross-provider (GLM ⇄ Gemini). */
+type ProviderTag = "glm" | "google" | "local";
+
+export interface ChainEntry {
+  readonly modelId: string;
+  readonly provider: ProviderTag;
+  readonly model: LanguageModel;
+}
+
 const GOOGLE_FALLBACK_CHAIN = ["gemini-3.7-flash", "gemini-flash-latest"];
 const GLM_FALLBACK_CHAIN = ["glm-4.5", "glm-4-plus"];
 
@@ -64,35 +73,82 @@ function isRetryableProviderError(err: unknown): boolean {
   return RETRYABLE_ERROR_PATTERNS.some((re) => re.test(msg));
 }
 
-function createFallbackModelChain(models: LanguageModel[]): LanguageModel {
-  if (models.length === 1) return models[0];
-  const chain = models.map((m) => m as unknown as DispatchableLanguageModel);
+/**
+ * Error kredensial/otorisasi PROVIDER tertentu. Bukan error prompt/param —
+ * sehingga layak dicoba ke PROVIDER BERBEDA (kunci GLM invalid ≠ kunci Gemini invalid).
+ */
+function isAuthLikeProviderError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /api key|permission|unauthorized|forbidden/i.test(msg);
+}
+
+/**
+ * Rantai failover antar-model DAN antar-provider (Story #5a).
+ *
+ - Error retryable (503/429/network/deadline) → lanjut entri berikutnya.
+ - Error auth-like (api key/permission) → lompat HANYA jika entri berikutnya
+   berbeda provider (mencoba model lain di provider yang rusak percuma).
+ - Error non-retryable lain (invalid request/not found/unsupported) → gagal cepat.
+ */
+export function createFallbackModelChain(entries: ChainEntry[]): LanguageModel {
+  if (entries.length === 1) return entries[0].model;
+  const chain = entries.map((e) => ({
+    modelId: e.modelId,
+    provider: e.provider,
+    dlm: e.model as unknown as DispatchableLanguageModel,
+  }));
   let idx = 0;
   const active = () => chain[Math.min(idx, chain.length - 1)];
   const attempt = async <T>(op: (m: DispatchableLanguageModel) => Promise<T>): Promise<T> => {
     let lastErr: unknown;
     while (idx < chain.length) {
-      const m = chain[idx];
+      const entry = chain[idx];
       try {
-        return await op(m);
+        return await op(entry.dlm);
       } catch (err) {
         lastErr = err;
         const msg = err instanceof Error ? err.message : String(err);
-        if (!isRetryableProviderError(err) || idx === chain.length - 1) throw err;
-        console.warn(
-          `[agent-router] Model "${m.modelId}" tidak merespons (${msg.slice(0, 120)}…) — beralih ke "${chain[idx + 1].modelId}"`
-        );
-        idx++;
+        const fail = (reason: string): never => {
+          console.warn(
+            `[agent-router] Model "${entry.modelId}" gagal (${msg.slice(0, 120)}…) — ${reason}`
+          );
+          throw err;
+        };
+
+        // 1) Error retryable (503/429/network/deadline) → entri berikutnya apa adanya.
+        if (isRetryableProviderError(err)) {
+          if (idx + 1 >= chain.length) return fail("tidak ada fallback tersisa");
+          console.warn(
+            `[agent-router] Model "${entry.modelId}" gagal (${msg.slice(0, 120)}…) — beralih ke "${chain[idx + 1].modelId}"${chain[idx + 1].provider !== entry.provider ? " [cross-provider]" : ""}`
+          );
+          idx++;
+          continue;
+        }
+
+        // 2) Error auth-like (api key/permission provider) → skip SEMUA sisa model
+        //    provider yang sama (percuma), lompat ke provider berbeda terdekat.
+        if (isAuthLikeProviderError(err)) {
+          const jumpIdx = chain.findIndex((e, i) => i > idx && e.provider !== entry.provider);
+          if (jumpIdx === -1) return fail("tidak ada provider cadangan tersedia");
+          console.warn(
+            `[agent-router] Kredensial provider "${entry.provider}" bermasalah — lompat ke "${chain[jumpIdx].modelId}" [cross-provider]`
+          );
+          idx = jumpIdx;
+          continue;
+        }
+
+        // 3) Non-retryable lain (invalid request/not found/unsupported) → gagal cepat.
+        throw err;
       }
     }
     throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
   };
   const wrapper: DispatchableLanguageModel = {
     get specificationVersion() {
-      return active().specificationVersion;
+      return active().dlm.specificationVersion;
     },
     get provider() {
-      return active().provider;
+      return active().dlm.provider;
     },
     get modelId() {
       return active().modelId;
@@ -103,6 +159,30 @@ function createFallbackModelChain(models: LanguageModel[]): LanguageModel {
       attempt((m) => withDeadline(m.doStream(options), STREAM_START_DEADLINE_MS, m.modelId) as Promise<unknown>),
   };
   return wrapper as unknown as LanguageModel;
+}
+
+function dedupeChain(entries: ChainEntry[]): ChainEntry[] {
+  const seen = new Set<string>();
+  const out: ChainEntry[] = [];
+  for (const e of entries) {
+    if (!seen.has(e.modelId)) {
+      seen.add(e.modelId);
+      out.push(e);
+    }
+  }
+  return out;
+}
+
+function buildGlmEntries(apiKey: string, baseURL: string, modelIds: string[]): ChainEntry[] {
+  if (!apiKey) return [];
+  const glmClient = createOpenAICompatible({ name: "glm", baseURL, apiKey });
+  return modelIds.map((id) => ({ modelId: id, provider: "glm" as const, model: glmClient(id) }));
+}
+
+function buildGoogleEntries(apiKey: string, modelIds: string[]): ChainEntry[] {
+  if (!apiKey) return [];
+  const google = createGoogleGenerativeAI({ apiKey });
+  return modelIds.map((id) => ({ modelId: id, provider: "google" as const, model: google(id) }));
 }
 
 function remapDeprecated(modelId: string): string {
@@ -116,30 +196,35 @@ function remapDeprecated(modelId: string): string {
 }
 
 /**
- * Synchronous resolver for backwards compatibility & tests
+ * Synchronous resolver for backwards compatibility & tests.
+ * Rantai cross-provider: GLM mati total → Gemini (dan sebaliknya), selama key penyedia cadangan tersedia.
  */
 export function getAgentLanguageModel(modelId?: string): LanguageModel {
   const targetModel = remapDeprecated(modelId || DEFAULT_AGENT_MODEL);
+  const glmKey = process.env.GLM_API_KEY || "";
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
+  const glmBaseUrl = process.env.GLM_BASE_URL || "https://open.bigmodel.cn/api/paas/v4/";
 
   if (targetModel.startsWith("glm-")) {
-    const apiKey = process.env.GLM_API_KEY;
-    if (!apiKey) {
+    const entries = dedupeChain([
+      ...buildGlmEntries(glmKey, glmBaseUrl, [targetModel, ...GLM_FALLBACK_CHAIN]),
+      ...buildGoogleEntries(geminiKey, GOOGLE_FALLBACK_CHAIN),
+    ]);
+    if (entries.length === 0) {
       throw new Error("GLM_API_KEY belum dikonfigurasi di environment variable.");
     }
-    const baseURL = process.env.GLM_BASE_URL || "https://open.bigmodel.cn/api/paas/v4/";
-    const glmClient = createOpenAICompatible({ name: "glm", baseURL, apiKey });
-    const chain = [targetModel, ...GLM_FALLBACK_CHAIN.filter((m) => m !== targetModel)];
-    return createFallbackModelChain([...new Set(chain)].map((m) => glmClient(m)));
+    return createFallbackModelChain(entries);
   }
 
   if (targetModel.startsWith("gemini")) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
+    const entries = dedupeChain([
+      ...buildGoogleEntries(geminiKey, [targetModel, ...GOOGLE_FALLBACK_CHAIN]),
+      ...buildGlmEntries(glmKey, glmBaseUrl, GLM_FALLBACK_CHAIN),
+    ]);
+    if (entries.length === 0) {
       throw new Error("GEMINI_API_KEY belum dikonfigurasi di environment variable.");
     }
-    const google = createGoogleGenerativeAI({ apiKey });
-    const chain = [targetModel, ...GOOGLE_FALLBACK_CHAIN.filter((m) => m !== targetModel), targetModel];
-    return createFallbackModelChain([...new Set(chain)].map((m) => google(m)));
+    return createFallbackModelChain(entries);
   }
 
   if (
@@ -154,25 +239,20 @@ export function getAgentLanguageModel(modelId?: string): LanguageModel {
     return openaiCompatible(targetModel);
   }
 
-  if (process.env.GLM_API_KEY) {
-    const baseURL = process.env.GLM_BASE_URL || "https://open.bigmodel.cn/api/paas/v4/";
-    const glmClient = createOpenAICompatible({ name: "glm", baseURL, apiKey: process.env.GLM_API_KEY });
-    const fallbackModel = "glm-4-plus";
-    const chain = [fallbackModel, ...GLM_FALLBACK_CHAIN.filter((m) => m !== fallbackModel)];
-    return createFallbackModelChain(chain.map((m) => glmClient(m)));
-  }
-
-  const fallbackKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!fallbackKey) {
+  // Default: GLM utama, Gemini cadangan (cross-provider).
+  const entries = dedupeChain([
+    ...buildGlmEntries(glmKey, glmBaseUrl, ["glm-4-plus", ...GLM_FALLBACK_CHAIN]),
+    ...buildGoogleEntries(geminiKey, ["gemini-3.5-flash", ...GOOGLE_FALLBACK_CHAIN]),
+  ]);
+  if (entries.length === 0) {
     throw new Error("API Key untuk model agen belum dikonfigurasi.");
   }
-  const google = createGoogleGenerativeAI({ apiKey: fallbackKey });
-  const chain = ["gemini-3.5-flash", ...GOOGLE_FALLBACK_CHAIN.filter((m) => m !== "gemini-3.5-flash")];
-  return createFallbackModelChain(chain.map((m) => google(m)));
+  return createFallbackModelChain(entries);
 }
 
 /**
  * Dynamic asynchronous resolver that respects database runtime settings & encrypted API keys.
+ * Failover cross-provider: target GLM → jatuh ke Gemini (jika key Gemini tersedia), dan sebaliknya.
  */
 export async function getDynamicAgentLanguageModel(modelId?: string): Promise<LanguageModel> {
   const agentConfig = await getEffectiveAgentConfig();
@@ -184,25 +264,25 @@ export async function getDynamicAgentLanguageModel(modelId?: string): Promise<La
   const targetModel = remapDeprecated(chosenModel);
 
   if (targetModel.startsWith("glm-")) {
-    if (!effectiveGlmKey) {
+    const entries = dedupeChain([
+      ...buildGlmEntries(effectiveGlmKey, effectiveGlmBaseUrl, [targetModel, ...GLM_FALLBACK_CHAIN]),
+      ...buildGoogleEntries(effectiveGeminiKey, GOOGLE_FALLBACK_CHAIN),
+    ]);
+    if (entries.length === 0) {
       throw new Error("GLM API Key belum dikonfigurasi di pengaturan Super Admin / environment.");
     }
-    const glmClient = createOpenAICompatible({
-      name: "glm",
-      baseURL: effectiveGlmBaseUrl,
-      apiKey: effectiveGlmKey,
-    });
-    const chain = [targetModel, ...GLM_FALLBACK_CHAIN.filter((m) => m !== targetModel)];
-    return createFallbackModelChain([...new Set(chain)].map((m) => glmClient(m)));
+    return createFallbackModelChain(entries);
   }
 
   if (targetModel.startsWith("gemini")) {
-    if (!effectiveGeminiKey) {
+    const entries = dedupeChain([
+      ...buildGoogleEntries(effectiveGeminiKey, [targetModel, ...GOOGLE_FALLBACK_CHAIN]),
+      ...buildGlmEntries(effectiveGlmKey, effectiveGlmBaseUrl, GLM_FALLBACK_CHAIN),
+    ]);
+    if (entries.length === 0) {
       throw new Error("Gemini API Key belum dikonfigurasi di pengaturan Super Admin / environment.");
     }
-    const google = createGoogleGenerativeAI({ apiKey: effectiveGeminiKey });
-    const chain = [targetModel, ...GOOGLE_FALLBACK_CHAIN.filter((m) => m !== targetModel), targetModel];
-    return createFallbackModelChain([...new Set(chain)].map((m) => google(m)));
+    return createFallbackModelChain(entries);
   }
 
   if (
@@ -217,22 +297,13 @@ export async function getDynamicAgentLanguageModel(modelId?: string): Promise<La
     return openaiCompatible(targetModel);
   }
 
-  if (effectiveGlmKey) {
-    const glmClient = createOpenAICompatible({
-      name: "glm",
-      baseURL: effectiveGlmBaseUrl,
-      apiKey: effectiveGlmKey,
-    });
-    const fallbackModel = "glm-4-plus";
-    const chain = [fallbackModel, ...GLM_FALLBACK_CHAIN.filter((m) => m !== fallbackModel)];
-    return createFallbackModelChain(chain.map((m) => glmClient(m)));
+  // Default: GLM utama, Gemini cadangan (cross-provider).
+  const entries = dedupeChain([
+    ...buildGlmEntries(effectiveGlmKey, effectiveGlmBaseUrl, ["glm-4-plus", ...GLM_FALLBACK_CHAIN]),
+    ...buildGoogleEntries(effectiveGeminiKey, ["gemini-3.5-flash", ...GOOGLE_FALLBACK_CHAIN]),
+  ]);
+  if (entries.length === 0) {
+    throw new Error("API Key untuk model agen belum dikonfigurasi.");
   }
-
-  if (effectiveGeminiKey) {
-    const google = createGoogleGenerativeAI({ apiKey: effectiveGeminiKey });
-    const chain = ["gemini-3.5-flash", ...GOOGLE_FALLBACK_CHAIN.filter((m) => m !== "gemini-3.5-flash")];
-    return createFallbackModelChain(chain.map((m) => google(m)));
-  }
-
-  throw new Error("API Key untuk model agen belum dikonfigurasi.");
+  return createFallbackModelChain(entries);
 }

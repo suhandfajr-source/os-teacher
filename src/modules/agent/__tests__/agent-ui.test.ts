@@ -38,6 +38,14 @@ vi.mock("@/lib/auth", () => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
+    // Story #5b — kuota AI harian (undefined-safe di ai-usage.service)
+    teacherProfile: {
+      findUnique: vi.fn(),
+    },
+    aiUsageCounter: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
     $transaction: vi.fn((callback: any) => callback(prisma)),
   },
 }));

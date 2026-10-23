@@ -27,6 +27,45 @@ export async function getLlmSettingsAdminAction(): Promise<{
 }
 
 /**
+ * Update batas pemakaian AI harian per guru (gabungan Agent + AI Studio + Quiz AI).
+ * null = hapus override DB (kembali ke env/default). 0 = AI nonaktif untuk non-superadmin.
+ */
+export async function updateAiUsageLimitAdminAction(payload: {
+  dailyLimit: number | null;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { userId } = await requireSuperAdmin();
+
+    if (
+      payload.dailyLimit !== null &&
+      (!Number.isInteger(payload.dailyLimit) || payload.dailyLimit < 0)
+    ) {
+      return { success: false, error: "Batas harus berupa angka bulat >= 0." };
+    }
+
+    if (payload.dailyLimit === null) {
+      await prisma.systemSetting.deleteMany({ where: { key: "ai_daily_limit" } });
+    } else {
+      await prisma.systemSetting.upsert({
+        where: { key: "ai_daily_limit" },
+        update: { value: String(payload.dailyLimit), updatedBy: userId },
+        create: {
+          key: "ai_daily_limit",
+          value: String(payload.dailyLimit),
+          description: "Batas pemakaian AI per guru per hari (WIB). 0 = nonaktif.",
+          updatedBy: userId,
+        },
+      });
+    }
+
+    invalidateLlmSettingsCache();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal menyimpan batas." };
+  }
+}
+
+/**
  * Updates API Keys with encryption. If empty string is passed, existing key is kept.
  */
 export async function updateApiKeysAdminAction(payload: {

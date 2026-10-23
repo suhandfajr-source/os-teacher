@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { verifyActiveSchoolMembership } from "@/lib/authorization";
 import { getAiContentProvider } from "@/modules/ai/providers/ai-provider.factory";
+import { consumeAiUsage, AiQuotaExceededError } from "@/modules/ai/ai-usage.service";
 import {
   ExtractedQuestion,
   buildGenerateQuestionsPrompt,
@@ -40,7 +41,15 @@ export async function generateQuizQuestionsAction(input: unknown): Promise<{
 }> {
   try {
     const params = generateInputSchema.parse(input);
-    await verifyActiveSchoolMembership();
+    const { profile } = await verifyActiveSchoolMembership();
+
+    // Kuota AI harian (superadmin bebas limit).
+    try {
+      await consumeAiUsage(profile.id);
+    } catch (err) {
+      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
+      throw err;
+    }
 
     const provider = getAiContentProvider();
     const prompt = buildGenerateQuestionsPrompt(params);
@@ -79,13 +88,21 @@ export async function convertDocumentToQuizAction(input: unknown): Promise<{
 }> {
   try {
     const params = convertInputSchema.parse(input);
-    await verifyActiveSchoolMembership();
+    const { profile } = await verifyActiveSchoolMembership();
 
     // Fast path: if the pasted document is already structured text (e.g. 1. Soal... A. B. C. D. Kunci: A),
     // parse it directly without waiting for an AI roundtrip.
     const preParsed = parseMarkdownOrTextQuestions(params.documentText);
     if (preParsed.length >= 2) {
       return { success: true, data: { questions: preParsed } };
+    }
+
+    // Kuota AI harian — SETELAH fast-path (parse langsung tidak memakai AI).
+    try {
+      await consumeAiUsage(profile.id);
+    } catch (err) {
+      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
+      throw err;
     }
 
     const provider = getAiContentProvider();

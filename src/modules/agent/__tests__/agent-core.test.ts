@@ -54,12 +54,26 @@ describe("Klassa Agent Core Runtime & Schema (BMad Build Story 1)", () => {
   });
 
   describe("Universal Model Router Dispatcher", () => {
-    it("throws a descriptive error when GLM_API_KEY is not configured", () => {
+    it("throws a descriptive error when NO provider key is configured (GLM target)", () => {
+      // Perilaku baru (Story #5a): rantai cross-provider — GLM key hilang tapi Gemini key
+      // ada → tetap jalan via Gemini. Throw hanya jika TIDAK ADA key sama sekali.
       delete process.env.GLM_API_KEY;
+      delete process.env.GEMINI_API_KEY;
+      delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
       expect(() => getAgentLanguageModel("glm-4-plus")).toThrowError(
         /GLM_API_KEY belum dikonfigurasi/
       );
+    });
+
+    it("falls back to Gemini-only chain when GLM key is missing but Gemini key is present", () => {
+      delete process.env.GLM_API_KEY;
+      process.env.GEMINI_API_KEY = "test-fake-key-for-gemini";
+
+      const model = getAgentLanguageModel("glm-4-plus");
+      expect(model).toBeDefined();
+      // Entri pertama yang tersisa = fallback Gemini pertama.
+      expect((model as any).modelId).toBe("gemini-3.7-flash");
     });
 
     it("successfully creates a GLM model when key is present", () => {
@@ -69,9 +83,10 @@ describe("Klassa Agent Core Runtime & Schema (BMad Build Story 1)", () => {
       expect((model as any).modelId).toBe("glm-4-plus");
     });
 
-    it("throws a descriptive error when GEMINI_API_KEY is not configured", () => {
+    it("throws a descriptive error when NO provider key is configured (Gemini target)", () => {
       delete process.env.GEMINI_API_KEY;
       delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+      delete process.env.GLM_API_KEY;
 
       expect(() => getAgentLanguageModel("gemini-1.5-flash")).toThrowError(
         /GEMINI_API_KEY belum dikonfigurasi/

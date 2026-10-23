@@ -1385,6 +1385,19 @@ model AgentActionProposal {
 // SYSTEM SETTINGS & RUNTIME CONFIGURATION
 // -------------------------------------------------
 
+model AiUsageCounter {
+  id               String   @id @default(cuid())
+  teacherProfileId String
+  usageDate        String // YYYY-MM-DD kalender WIB (Asia/Jakarta)
+  count            Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  @@unique([teacherProfileId, usageDate])
+  @@index([usageDate])
+  @@map("ai_usage_counter")
+}
+
+
 model SystemSetting {
   key         String   @id
   value       String   @db.Text

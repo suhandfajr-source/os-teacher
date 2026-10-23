@@ -24,6 +24,7 @@ import {
 } from "./ai.types";
 import { buildSafeContextPack, formatContextSummary } from "./ai.service";
 import { getDynamicAiContentProvider } from "./providers/ai-provider.factory";
+import { consumeAiUsage, AiQuotaExceededError } from "./ai-usage.service";
 
 function formatActionError(error: unknown, fallback: string): string {
   if (error instanceof z.ZodError) {
@@ -41,7 +42,7 @@ export async function generateAiContentAction(
 ): Promise<{ success: boolean; data?: TransientAiPreview; error?: string }> {
   try {
     const input = generateAiContentSchema.parse(rawInput);
-    await verifyActiveSchoolMembership();
+    const { profile } = await verifyActiveSchoolMembership();
 
     let safeContextPack = undefined;
 
@@ -89,6 +90,14 @@ export async function generateAiContentAction(
       }
     }
 
+    // Kuota AI harian (superadmin bebas limit).
+    try {
+      await consumeAiUsage(profile.id);
+    } catch (err) {
+      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
+      throw err;
+    }
+
     const provider = await getDynamicAiContentProvider();
     const result = await provider.generate({
       contentType: input.contentType,
@@ -123,7 +132,7 @@ export async function refineAiContentAction(
 ): Promise<{ success: boolean; data?: TransientAiPreview; error?: string }> {
   try {
     const input = refineAiContentSchema.parse(rawInput);
-    await verifyActiveSchoolMembership();
+    const { profile } = await verifyActiveSchoolMembership();
 
     let safeContextPack = undefined;
 
@@ -145,6 +154,14 @@ export async function refineAiContentAction(
           academicPeriod: fullContext.academicPeriod,
         });
       }
+    }
+
+    // Kuota AI harian (superadmin bebas limit).
+    try {
+      await consumeAiUsage(profile.id);
+    } catch (err) {
+      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
+      throw err;
     }
 
     const provider = await getDynamicAiContentProvider();

@@ -3,6 +3,7 @@ import { streamText, isStepCount } from "ai";
 import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership, verifyClassRosterAccess } from "@/lib/authorization";
 import { getDynamicAgentLanguageModel } from "@/modules/agent/agent.router";
+import { consumeAiUsage, AiQuotaExceededError } from "@/modules/ai/ai-usage.service";
 import { buildAgentSystemPrompt, DEFAULT_AGENT_MODEL } from "@/modules/agent/agent.config";
 import type { TeacherMemoryDTO } from "@/modules/agent/memory/agent-memory.types";
 import {
@@ -42,6 +43,24 @@ export async function POST(req: NextRequest) {
         { error: "Pesan terlalu panjang (maksimum 4000 karakter)." },
         { status: 400 }
       );
+    }
+
+    // 0. Kuota AI harian (gabungan semua fitur AI; superadmin bebas limit).
+    try {
+      await consumeAiUsage(profile.id);
+    } catch (err) {
+      if (err instanceof AiQuotaExceededError) {
+        return NextResponse.json(
+          {
+            error: err.message,
+            code: "AI_LIMIT_EXCEEDED",
+            used: err.used,
+            limit: err.limit,
+          },
+          { status: 429 }
+        );
+      }
+      throw err;
     }
 
     // Validasi wewenang kelas jika classContextId disertakan

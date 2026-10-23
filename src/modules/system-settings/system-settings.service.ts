@@ -40,6 +40,9 @@ export interface SystemLlmConfig {
     allowedModels: string[];
     allowTeacherCustomModel: boolean;
   };
+  aiUsage: {
+    dailyLimit: number;
+  };
 }
 
 // In-memory cache to prevent DB overhead on high-frequency generation/chat requests
@@ -178,6 +181,19 @@ export async function getEffectiveAgentConfig(): Promise<{
 }
 
 /**
+ * Returns effective daily AI usage limit per teacher (gabungan: Agent Chat + AI Studio + Quiz AI).
+ * Prioritas: DB setting "ai_daily_limit" > env AI_DAILY_LIMIT > default 20.
+ * 0 = AI nonaktif untuk non-superadmin. Angka negatif/invalid diabaikan (pakai default).
+ */
+export async function getEffectiveAiDailyLimit(): Promise<number> {
+  const map = await getRawSettingsMap();
+  const raw = map["ai_daily_limit"] ?? process.env.AI_DAILY_LIMIT ?? "";
+  const parsed = parseInt(String(raw).trim(), 10);
+  if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  return 20;
+}
+
+/**
  * Gets redacted safe configuration for Super Admin UI
  */
 export async function getAdminLlmConfigView(): Promise<SystemLlmConfig> {
@@ -202,6 +218,7 @@ export async function getAdminLlmConfigView(): Promise<SystemLlmConfig> {
   const aiStudio = await getEffectiveAiStudioConfig();
   const agent = await getEffectiveAgentConfig();
   const glmBaseUrl = await getEffectiveGlmBaseUrl();
+  const aiDailyLimit = await getEffectiveAiDailyLimit();
 
   return {
     gemini: {
@@ -222,6 +239,9 @@ export async function getAdminLlmConfigView(): Promise<SystemLlmConfig> {
       defaultModel: agent.defaultModel,
       allowedModels: agent.allowedModels,
       allowTeacherCustomModel: agent.allowTeacherCustomModel,
+    },
+    aiUsage: {
+      dailyLimit: aiDailyLimit,
     },
   };
 }

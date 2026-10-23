@@ -24,9 +24,11 @@ import {
   EyeOff,
   Zap,
   Check,
+  Gauge,
 } from "lucide-react";
 import {
   getLlmSettingsAdminAction,
+  updateAiUsageLimitAdminAction,
   updateApiKeysAdminAction,
   updateLlmModelsAdminAction,
   testLlmConnectionAdminAction,
@@ -51,6 +53,7 @@ export function KlassaLlmSettingsTab() {
   const [geminiKeyInput, setGeminiKeyInput] = useState("");
   const [glmKeyInput, setGlmKeyInput] = useState("");
   const [glmBaseUrlInput, setGlmBaseUrlInput] = useState("");
+  const [dailyLimitInput, setDailyLimitInput] = useState("20");
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showGlmKey, setShowGlmKey] = useState(false);
 
@@ -73,6 +76,7 @@ export function KlassaLlmSettingsTab() {
     if (res.success && res.data) {
       setConfig(res.data);
       setGlmBaseUrlInput(res.data.glm.baseURL || "");
+      setDailyLimitInput(String(res.data.aiUsage?.dailyLimit ?? 20));
       setAiStudioProvider(res.data.aiStudio.provider);
       setAiStudioModel(res.data.aiStudio.model);
       setAiStudioTemperature(res.data.aiStudio.temperature);
@@ -105,6 +109,22 @@ export function KlassaLlmSettingsTab() {
         await loadSettings();
       } else {
         toast.error(res.error || "Gagal menyimpan API Key.");
+      }
+    });
+  };
+
+  const handleSaveDailyLimit = () => {
+    startTransition(async () => {
+      const parsed = parseInt(dailyLimitInput, 10);
+      const res = await updateAiUsageLimitAdminAction({
+        dailyLimit: Number.isFinite(parsed) && parsed >= 0 ? parsed : null,
+      });
+
+      if (res.success) {
+        toast.success("Batas AI harian berhasil diperbarui!");
+        await loadSettings();
+      } else {
+        toast.error(res.error || "Gagal menyimpan batas AI.");
       }
     });
   };
@@ -347,6 +367,40 @@ export function KlassaLlmSettingsTab() {
               disabled={isPending || (!geminiKeyInput.trim() && !glmKeyInput.trim() && glmBaseUrlInput === config?.glm.baseURL)}
             >
               Simpan & Terapkan Kunci Baru
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* CARD 1b: BATAS AI HARIAN */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader className="pb-3 border-b border-slate-100 bg-slate-50/50">
+            <div className="flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-orange-600" />
+              <CardTitle className="text-base font-bold text-slate-900">Batas AI Harian</CardTitle>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Jatah gabungan per guru per hari (chat AI, modul ajar, asesmen, generate soal).
+              Reset otomatis pukul 00:00 WIB. Superadmin bebas limit. Isi 0 untuk menonaktifkan AI bagi non-superadmin.
+            </p>
+          </CardHeader>
+          <CardContent className="pt-4 space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-800">Jatah per guru per hari</label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="20"
+                value={dailyLimitInput}
+                onChange={(e) => setDailyLimitInput(e.target.value)}
+                className="text-xs h-8 w-32"
+              />
+            </div>
+            <Button
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs h-9"
+              onClick={handleSaveDailyLimit}
+              disabled={isPending || dailyLimitInput === String(config?.aiUsage?.dailyLimit ?? 20)}
+            >
+              Simpan Batas AI
             </Button>
           </CardContent>
         </Card>
