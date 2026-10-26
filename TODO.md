@@ -85,7 +85,12 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 
 ## 6. Ticketing Bug
 - **Deskripsi:** Sistem tiket bug untuk user melaporkan masalah setelah app live. Loop quality sebelum monetisasi.
-- **Status:** ⏳ PRIORITAS #3 — setelah deployment stabil
+- **Status:** ✅ Selesai (commit `84236ac`)
+  - Skema Prisma: model `BugReport`, enum `BugReportCategory`, `BugReportStatus`, `BugReportPriority`, nomor tiket berurutan `TICK-YYMM-XXXX`.
+  - Frontend User: Floating trigger & modal pelaporan `BugReportWidget` di root layout (auto-capture URL & device info).
+  - Superadmin Console: Halaman `/admin/bugs` dengan filter status, filter kategori, search bar, dan modal resolusi/update tiket.
+  - Test Suite: 3/3 unit tests passing. Migration `20261026071203_add_bug_report_model` applied.
+
 
 ---
 
