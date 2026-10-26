@@ -6,6 +6,7 @@ import { NavigationProgressBar } from "@/components/layout/NavigationProgressBar
 import { ThemeProvider } from "@/components/theme-provider";
 import { PostHogProvider } from "@/components/providers/PostHogProvider";
 import { PostHogPageView } from "@/components/providers/PostHogPageView";
+import { BugReportWidget } from "@/components/bug-reports/BugReportWidget";
 
 export const metadata: Metadata = {
   title: "KLASSA — Naikkan Kelasmu!",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <NavigationProgressBar />
             </Suspense>
             {children}
+            <BugReportWidget />
             <Toaster position="top-right" />
           </ThemeProvider>
         </PostHogProvider>

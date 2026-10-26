@@ -50,6 +50,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <ThemeToggle />
 
             <Link
+              href="/admin/bugs"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-800 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 bg-rose-50/50 dark:bg-slate-900 border border-rose-200/60 dark:border-slate-800 transition-colors flex items-center gap-1.5"
+            >
+              <span className="h-2 w-2 rounded-full bg-rose-500" />
+              Tiket Bug
+            </Link>
+
+            <Link
               href="/admin/audit"
               className="px-3 py-1.5 rounded-xl text-xs font-bold text-teal-800 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/60 bg-teal-50/50 dark:bg-slate-900 border border-teal-200/60 dark:border-slate-800 transition-colors flex items-center gap-1.5"
             >
