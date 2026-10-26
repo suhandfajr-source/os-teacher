@@ -121,7 +121,6 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              autoFocus
               required 
               className="w-full h-11 pl-11 pr-4 bg-white/90 hover:bg-white focus:bg-white dark:bg-slate-800/90 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-xs font-semibold text-slate-800 rounded-2xl border border-slate-200/80 shadow-xs focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
             />

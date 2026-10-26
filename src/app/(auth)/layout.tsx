@@ -22,17 +22,20 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 animate-gradient-pan text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row relative overflow-x-hidden font-sans selection:bg-teal-500 selection:text-white">
+    <div className="min-h-svh w-full bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 animate-gradient-pan text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row relative overflow-x-clip font-sans selection:bg-teal-500 selection:text-white">
       
       {/* Dynamic Animated Ambient Background Blobs (Shift, Float, Orbit) */}
-      <div className="absolute -top-28 -left-28 w-[420px] h-[420px] bg-teal-300/25 dark:bg-teal-800/15 rounded-full blur-3xl pointer-events-none animate-mesh-shift" />
-      <div className="absolute top-1/3 -left-16 w-80 h-80 bg-emerald-300/20 dark:bg-emerald-800/15 rounded-full blur-3xl pointer-events-none animate-mesh-shift-reverse" />
-      <div className="absolute -bottom-24 left-1/4 w-[460px] h-[460px] bg-cyan-300/20 dark:bg-cyan-800/15 rounded-full blur-3xl pointer-events-none animate-mesh-shift" />
+      {/* Clip decoration only: forms must remain vertically scrollable on short screens. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-28 -left-28 w-[420px] h-[420px] bg-teal-300/25 dark:bg-teal-800/15 rounded-full blur-3xl animate-mesh-shift" />
+        <div className="absolute top-1/3 -left-16 w-80 h-80 bg-emerald-300/20 dark:bg-emerald-800/15 rounded-full blur-3xl animate-mesh-shift-reverse" />
+        <div className="absolute -bottom-24 left-1/4 w-[460px] h-[460px] bg-cyan-300/20 dark:bg-cyan-800/15 rounded-full blur-3xl animate-mesh-shift" />
+      </div>
 
       {/* ─────────────────────────────────────────────────────────────
           SISI KIRI: FORM & BRANDING (PADA PC) / FULL-SCREEN UNIFIED (MOBILE)
       ───────────────────────────────────────────────────────────── */}
-      <div className="w-full lg:w-1/2 p-6 sm:p-10 lg:p-12 xl:p-16 flex flex-col justify-between z-10 bg-transparent min-h-screen relative">
+      <div className="w-full lg:w-1/2 p-6 sm:p-10 lg:p-12 xl:p-16 flex flex-col justify-between z-10 bg-transparent min-h-svh relative">
         
         {/* Top Brand Logo */}
         <div className="w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto pt-2">

@@ -83,7 +83,6 @@ export default function RegisterPage() {
               placeholder="Nama Lengkap & Gelar (cth: Rahmawati, S.Pd)" 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
               required 
               className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs font-semibold text-slate-800 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none"
             />
