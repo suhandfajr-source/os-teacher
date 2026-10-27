@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { KlassaLogo } from "@/components/brand";
 import { NotificationBell } from "./NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BugReportWidget } from "@/components/bug-reports/BugReportWidget";
 
 const mainNavItems = [
   { href: "/", label: "Beranda", icon: Home, exact: true },
@@ -51,13 +52,13 @@ export function Topbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-100 bg-white/90 backdrop-blur-md px-4 md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-4 md:px-6 transition-colors">
         {/* Mobile Left Menu & Brand Title */}
         <div className="flex items-center gap-3 md:hidden">
           <button
             onClick={() => setMobileDrawerOpen(true)}
             aria-label="Buka Menu Navigasi"
-            className="h-9 w-9 rounded-2xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-teal-50 hover:text-teal-800 shadow-2xs transition-colors"
+            className="h-9 w-9 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-800 dark:hover:text-teal-300 shadow-2xs transition-colors"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -67,7 +68,7 @@ export function Topbar() {
         </div>
 
         {/* Desktop Search / Quick Context Placeholder */}
-        <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-600 bg-teal-50/70 border border-teal-100/80 px-3 py-1.5 rounded-full shadow-2xs">
+        <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-teal-300 bg-teal-50/70 dark:bg-teal-950/40 border border-teal-100/80 dark:border-teal-900/50 px-3 py-1.5 rounded-full shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
           <span>Ruang Kerja Guru Indonesia</span>
         </div>
@@ -78,7 +79,7 @@ export function Topbar() {
             href="/ai-studio"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "hidden sm:flex items-center gap-1.5 text-xs font-semibold text-indigo-700 border-indigo-200 bg-gradient-to-r from-teal-50/60 to-indigo-50/80 hover:from-teal-100/60 hover:to-indigo-100/80 shadow-2xs rounded-full transition-all"
+              "hidden sm:flex items-center gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 bg-gradient-to-r from-teal-50/60 to-indigo-50/80 dark:from-teal-950/30 dark:to-indigo-950/40 hover:from-teal-100/60 hover:to-indigo-100/80 dark:hover:from-teal-900/40 dark:hover:to-indigo-900/50 shadow-2xs rounded-full transition-all"
             )}
           >
             <Sparkles className="h-3.5 w-3.5 text-indigo-600 animate-pulse" />
@@ -86,12 +87,13 @@ export function Topbar() {
           </Link>
           <NotificationBell />
           <ThemeToggle />
+          <BugReportWidget />
           <Link
             href="/pengaturan/setup"
             aria-label="Pengaturan Akun dan Sekolah"
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon" }),
-              "rounded-full h-9 w-9 text-slate-500 hover:text-teal-800 hover:bg-teal-50 transition-colors"
+              "rounded-full h-9 w-9 text-slate-500 dark:text-slate-400 hover:text-teal-800 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-slate-800 transition-colors"
             )}
           >
             <Settings className="h-4 w-4" />
@@ -112,16 +114,16 @@ export function Topbar() {
           />
 
           {/* Drawer Panel */}
-          <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[#F6F8F8] border-r border-slate-200 shadow-2xl flex flex-col z-50 animate-in slide-in-from-left duration-250">
+          <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[#F6F8F8] dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col z-50 animate-in slide-in-from-left duration-250">
             {/* Drawer Header */}
-            <div className="flex h-16 items-center justify-between border-b border-slate-200/80 px-5">
+            <div className="flex h-16 items-center justify-between border-b border-slate-200/80 dark:border-slate-800 px-5">
               <Link href="/" onClick={() => setMobileDrawerOpen(false)} className="flex items-center">
                 <KlassaLogo variant="horizontal" size="sm" priority />
               </Link>
               <button
                 onClick={() => setMobileDrawerOpen(false)}
                 aria-label="Tutup Menu"
-                className="h-8 w-8 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center"
+                className="h-8 w-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 flex items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -131,7 +133,7 @@ export function Topbar() {
             <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
               {/* Menu Utama */}
               <div className="space-y-1">
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Menu Utama
                 </div>
                 {mainNavItems.map((item) => {
@@ -150,8 +152,8 @@ export function Topbar() {
                             ? "bg-indigo-600 text-white font-bold shadow-md rounded-full"
                             : "bg-teal-700 text-white font-bold shadow-pill-glow rounded-full"
                           : item.isAi
-                          ? "text-indigo-600 hover:bg-indigo-50 rounded-2xl"
-                          : "text-slate-600 hover:text-teal-800 hover:bg-teal-50/50 rounded-2xl"
+                          ? "text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-2xl"
+                          : "text-slate-600 dark:text-slate-300 hover:text-teal-800 dark:hover:text-teal-200 hover:bg-teal-50/50 dark:hover:bg-slate-800/60 rounded-2xl"
                       )}
                     >
                       <Icon
@@ -160,8 +162,8 @@ export function Topbar() {
                           active
                             ? "text-white"
                             : item.isAi
-                            ? "text-indigo-500"
-                            : "text-slate-400"
+                            ? "text-indigo-500 dark:text-indigo-400"
+                            : "text-slate-400 dark:text-slate-500"
                         )}
                       />
                       <span className="truncate">{item.label}</span>
@@ -183,8 +185,8 @@ export function Topbar() {
               </div>
 
               {/* Perencanaan & Sistem */}
-              <div className="space-y-1 pt-2 border-t border-slate-200/60">
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="space-y-1 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Perencanaan & Sistem
                 </div>
                 {secondaryNavItems.map((item) => {
@@ -200,27 +202,31 @@ export function Topbar() {
                         "flex items-center gap-3 px-3.5 py-2.5 text-xs font-medium transition-all",
                         active
                           ? "bg-teal-700 text-white font-bold shadow-pill-glow rounded-full"
-                          : "text-slate-600 hover:text-teal-900 hover:bg-teal-50/60 rounded-2xl"
+                          : "text-slate-600 dark:text-slate-300 hover:text-teal-900 dark:hover:text-teal-200 hover:bg-teal-50/60 dark:hover:bg-slate-800/60 rounded-2xl"
                       )}
                     >
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          active ? "text-white" : "text-slate-400"
+                          active ? "text-white" : "text-slate-400 dark:text-slate-500"
                         )}
                       />
                       <span className="truncate">{item.label}</span>
                     </Link>
                   );
                 })}
+                <BugReportWidget
+                  variant="drawer-item"
+                  onTriggerClick={() => setMobileDrawerOpen(false)}
+                />
               </div>
             </div>
 
             {/* Drawer Footer */}
-            <div className="p-3 border-t border-slate-200/80 bg-white/50">
-              <div className="p-2.5 rounded-xl bg-teal-50/60 border border-teal-100 flex items-center gap-2.5">
+            <div className="p-3 border-t border-slate-200/80 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50">
+              <div className="p-2.5 rounded-xl bg-teal-50/60 dark:bg-teal-950/40 border border-teal-100 dark:border-teal-900/60 flex items-center gap-2.5">
                 <div className="w-2 h-2 rounded-full bg-teal-600 animate-pulse shrink-0" />
-                <div className="text-[11px] text-teal-900 leading-tight">
+                <div className="text-[11px] text-teal-900 dark:text-teal-200 leading-tight">
                   <span className="font-bold">Mode Aktif:</span> Kurikulum Merdeka
                 </div>
               </div>

@@ -8,6 +8,7 @@ vi.mock("@/lib/auth-client", () => ({ authClient: {} }));
 vi.mock("@/components/brand", () => ({
   KlassaLogo: () => "KLASSA",
   ModularCockpitArtwork: () => "Artwork",
+  AtomicEcosystemHero: () => "Hero",
 }));
 
 import AuthLayout from "../layout";

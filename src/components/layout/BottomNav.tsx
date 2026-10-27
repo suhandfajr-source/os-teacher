@@ -25,7 +25,7 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-[#F6F8F8]/95 backdrop-blur-md flex justify-around items-center px-1 pb-safe shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 dark:border-slate-800 bg-[#F6F8F8]/95 dark:bg-slate-900/95 backdrop-blur-md flex justify-around items-center px-1 pb-safe shadow-lg transition-colors">
       {mobileNavItems.map((item) => {
         const active = isLinkActive(item.href, item.exact);
         const Icon = item.icon;
@@ -38,18 +38,18 @@ export function BottomNav() {
               "flex flex-col items-center justify-center w-full py-2.5 transition-all relative",
               active
                 ? item.isAi
-                  ? "text-indigo-600 font-bold"
-                  : "text-teal-700 font-bold"
+                  ? "text-indigo-600 dark:text-indigo-400 font-bold"
+                  : "text-teal-700 dark:text-teal-400 font-bold"
                 : item.isAi
-                ? "text-indigo-500/80"
-                : "text-slate-500 hover:text-teal-700"
+                ? "text-indigo-500/80 dark:text-indigo-400/70"
+                : "text-slate-500 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-300"
             )}
           >
             {active && (
               <div
                 className={cn(
                   "absolute top-0 w-8 h-0.5 rounded-full",
-                  item.isAi ? "bg-indigo-600" : "bg-teal-700"
+                  item.isAi ? "bg-indigo-600 dark:bg-indigo-400" : "bg-teal-700 dark:bg-teal-400"
                 )}
               />
             )}

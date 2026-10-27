@@ -3,3 +3,4 @@ export * from './KlassaLogo';
 export * from './AgentMark';
 export * from './AuthHeroCanvas';
 export * from './ModularCockpitArtwork';
+export * from './AtomicEcosystemHero';

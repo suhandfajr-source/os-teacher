@@ -23,8 +23,21 @@ import {
 } from "@/components/ui/select";
 import { submitBugReportAction } from "@/modules/bug-reports/bug-report.actions";
 import { BugReportCategory } from "@prisma/client";
+import { cn } from "@/lib/utils";
 
-export function BugReportWidget() {
+export interface BugReportWidgetProps {
+  variant?: "navbar" | "floating" | "drawer-item";
+  trigger?: React.ReactNode;
+  onTriggerClick?: () => void;
+  className?: string;
+}
+
+export function BugReportWidget({
+  variant = "navbar",
+  trigger,
+  onTriggerClick,
+  className,
+}: BugReportWidgetProps = {}) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<string | null>(null);
@@ -95,15 +108,50 @@ export function BugReportWidget() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="fixed bottom-4 right-4 z-40 shadow-lg rounded-full px-3.5 py-2 gap-2 bg-background/90 backdrop-blur border-border/80 hover:bg-muted text-xs font-medium text-foreground transition-all hover:scale-105 active:scale-95"
-            aria-label="Laporkan Masalah atau Bug"
-          >
-            <Bug className="w-4 h-4 text-rose-500" />
-            <span>Lapor Masalah</span>
-          </Button>
+          trigger ? (
+            (trigger as any)
+          ) : variant === "drawer-item" ? (
+            <button
+              type="button"
+              onClick={onTriggerClick}
+              className={cn(
+                "flex w-full items-center gap-3 px-3.5 py-2.5 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50/60 rounded-2xl transition-all text-left",
+                className
+              )}
+            >
+              <Bug className="h-4 w-4 shrink-0 text-rose-500" />
+              <span>Lapor Masalah</span>
+            </button>
+          ) : variant === "floating" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onTriggerClick}
+              className={cn(
+                "fixed bottom-4 right-4 z-40 shadow-lg rounded-full px-3.5 py-2 gap-2 bg-background/90 backdrop-blur border-border/80 hover:bg-muted text-xs font-medium text-foreground transition-all hover:scale-105 active:scale-95",
+                className
+              )}
+              aria-label="Laporkan Masalah atau Bug"
+            >
+              <Bug className="w-4 h-4 text-rose-500" />
+              <span>Lapor Masalah</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onTriggerClick}
+              className={cn(
+                "rounded-full h-9 w-9 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition-colors",
+                className
+              )}
+              aria-label="Laporkan Masalah atau Bug"
+              title="Laporkan Masalah atau Bug"
+            >
+              <Bug className="h-4 w-4 text-rose-500" />
+              <span className="sr-only">Laporkan Masalah atau Bug</span>
+            </Button>
+          )
         }
       />
 

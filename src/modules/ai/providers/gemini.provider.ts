@@ -28,13 +28,13 @@ export class GeminiAiContentProvider implements AiContentProvider {
     this.apiKey = key;
     this.primaryModel = model || process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
-    // Deduplicated fallback list with verified active Gemini 3.x models
+    // Deduplicated fallback list with verified active Gemini 3.x / 2.5 models
     this.candidateModels = Array.from(
       new Set([
         this.primaryModel,
         "gemini-3.6-flash",
-        "gemini-3.7-flash",
         "gemini-3.5-flash",
+        "gemini-2.5-flash",
         "gemini-flash-latest",
       ])
     );
@@ -88,14 +88,14 @@ export class GeminiAiContentProvider implements AiContentProvider {
   private async callGeminiWithFallback(
     prompt: string,
     systemInstruction: string,
-    timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 120000,
+    timeoutMs = Number(process.env.GEMINI_TIMEOUT_MS) || 45000,
     responseMimeType?: string
   ): Promise<AiProviderResult> {
     let lastError: unknown;
 
     for (let mIdx = 0; mIdx < this.candidateModels.length; mIdx++) {
       const currentModel = this.candidateModels[mIdx];
-      const maxRetriesForModel = 1;
+      const maxRetriesForModel = 0; // Langsung fallback bila model spike/timeout
 
       for (let attempt = 0; attempt <= maxRetriesForModel; attempt++) {
         if (attempt > 0) {

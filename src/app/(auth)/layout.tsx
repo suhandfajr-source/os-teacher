@@ -1,6 +1,6 @@
 import { getRscAuthContext } from "@/lib/rsc-auth-context";
 import { redirect } from "next/navigation";
-import { KlassaLogo, ModularCockpitArtwork } from "@/components/brand";
+import { KlassaLogo, AtomicEcosystemHero } from "@/components/brand";
 import Link from "next/link";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -22,10 +22,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <div className="min-h-svh w-full bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 animate-gradient-pan text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row relative overflow-x-clip font-sans selection:bg-teal-500 selection:text-white">
+    <div className="min-h-svh lg:h-svh w-full bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row relative overflow-x-clip font-sans selection:bg-teal-500 selection:text-white">
       
-      {/* Dynamic Animated Ambient Background Blobs (Shift, Float, Orbit) */}
-      {/* Clip decoration only: forms must remain vertically scrollable on short screens. */}
+      {/* Dynamic Animated Ambient Background Blobs */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-28 -left-28 w-[420px] h-[420px] bg-teal-300/25 dark:bg-teal-800/15 rounded-full blur-3xl animate-mesh-shift" />
         <div className="absolute top-1/3 -left-16 w-80 h-80 bg-emerald-300/20 dark:bg-emerald-800/15 rounded-full blur-3xl animate-mesh-shift-reverse" />
@@ -33,12 +32,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SISI KIRI: FORM & BRANDING (PADA PC) / FULL-SCREEN UNIFIED (MOBILE)
+          SISI KIRI: FORM & BRANDING (FULLSCREEN, CLEAN NO OVERFLOW)
       ───────────────────────────────────────────────────────────── */}
-      <div className="w-full lg:w-1/2 p-6 sm:p-10 lg:p-12 xl:p-16 flex flex-col justify-between z-10 bg-transparent min-h-svh relative">
+      <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-10 flex flex-col justify-between z-10 bg-transparent min-h-svh lg:min-h-0 lg:h-full relative overflow-y-auto">
         
         {/* Top Brand Logo */}
-        <div className="w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto pt-2">
+        <div className="w-full max-w-[400px] mx-auto pt-1">
           <div className="flex items-center justify-between">
             <Link 
               href="/" 
@@ -55,13 +54,13 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           </div>
         </div>
 
-        {/* Form Content Area (Centering with max-w-[380px] to avoid edge crowd) */}
-        <div className="my-auto py-5 w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto">
+        {/* Form Content Area */}
+        <div className="my-auto py-4 w-full max-w-[400px] mx-auto">
           {children}
         </div>
 
-        {/* Bottom Micro Switcher & Copyright (Aligned with Form) */}
-        <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto pb-2">
+        {/* Bottom Micro Switcher & Copyright */}
+        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 w-full max-w-[400px] mx-auto pb-1">
           <span>&copy; {new Date().getFullYear()} KLASSA &bull; Guru</span>
           <Link
             href="/portal-siswa"
@@ -74,9 +73,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SISI KANAN: S-CURVE WAVE + 3D MODULAR COCKPIT (DESKTOP SAJA)
+          SISI KANAN: KLASSA ATOMIC ECOSYSTEM HERO (DESKTOP)
       ───────────────────────────────────────────────────────────── */}
-      <ModularCockpitArtwork theme="teal" portalType="teacher" className="hidden lg:flex" />
+      <AtomicEcosystemHero className="hidden lg:flex" />
 
     </div>
   );
