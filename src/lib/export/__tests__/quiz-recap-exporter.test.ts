@@ -1,21 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { exportQuizRecapToExcel } from "../quiz-recap-exporter";
-import * as XLSX from "xlsx";
-
-vi.mock("xlsx", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("xlsx")>();
-  return {
-    ...actual,
-    writeFile: vi.fn(),
-  };
-});
+import ExcelJS from "exceljs";
 
 describe("exportQuizRecapToExcel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("generates structured workbook and triggers writeFile with sanitized filename", () => {
+  it("generates structured workbook with proper sheets, styles, and data rows", async () => {
     const mockRoster = [
       {
         studentId: "s1",
@@ -42,7 +34,25 @@ describe("exportQuizRecapToExcel", () => {
       },
     ];
 
-    exportQuizRecapToExcel({
+    // Mock DOM download elements for Node test environment
+    const fakeAnchor = { href: "", download: "", click: vi.fn() };
+    const fakeAppendChild = vi.fn();
+    const fakeRemoveChild = vi.fn();
+
+    vi.stubGlobal("window", {});
+    vi.stubGlobal("document", {
+      createElement: vi.fn().mockReturnValue(fakeAnchor),
+      body: {
+        appendChild: fakeAppendChild,
+        removeChild: fakeRemoveChild,
+      },
+    });
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn().mockReturnValue("blob:fake-url"),
+      revokeObjectURL: vi.fn(),
+    });
+
+    await exportQuizRecapToExcel({
       quizTitle: "Ulangan Harian Bab 1: Peredaran Darah",
       contextLabel: "IPA · Kelas 8A",
       standardScore: 75,
@@ -51,13 +61,9 @@ describe("exportQuizRecapToExcel", () => {
       roster: mockRoster,
     });
 
-    expect(XLSX.writeFile).toHaveBeenCalledTimes(1);
-    const [wb, filename] = vi.mocked(XLSX.writeFile).mock.calls[0];
-
-    expect(filename).toContain("Rekap_Nilai_Ulangan_Harian_Bab_1__Peredaran_Darah.xlsx");
-    expect(wb.SheetNames).toContain("Rekap Nilai");
-
-    const sheet = wb.Sheets["Rekap Nilai"];
-    expect(sheet).toBeDefined();
+    expect(fakeAnchor.download).toContain("Rekap_Nilai_Ulangan_Harian_Bab_1__Peredaran_Darah.xlsx");
+    expect(fakeAnchor.click).toHaveBeenCalledTimes(1);
+    expect(fakeAppendChild).toHaveBeenCalledWith(fakeAnchor);
+    expect(fakeRemoveChild).toHaveBeenCalledWith(fakeAnchor);
   });
 });

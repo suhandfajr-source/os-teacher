@@ -41,7 +41,7 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
     - ✅ Story 3 — Card Grid Tugas & Layar Pengerjaan Kuis CBT (commit `e5d3499`, spec: `spec-student-portal-dual-mode-tugas-quiz-cbt.md`)
   - ✅ **Portal Guru** — dianggap selesai oleh owner (perubahan responsif sudah dilakukan sebelumnya; story kelas-mobile dibatalkan 2026-10-21 karena tidak diperlukan lagi)
   - 📋 **Portal Orang Tua / Wali** — belum dimulai
-  - 📋 **Portal Superadmin** — belum dimulai
+  - ⛔ **Portal Superadmin** — ditiadakan/skip (desktop-only use case, permintaan owner)
 
 ---
 
@@ -78,8 +78,10 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 
 ## 5. Fix Klassa Agent Router + Persempit Scope
 - **Deskripsi:** Akar masalah error "⚠️ seluruh jalur model AI sedang sibuk": failover router hanya dalam 1 provider (GLM→GLM semua) + endpoint bigmodel.cn lambat dari Indonesia. Fix: cross-provider failover (GLM mati → Gemini). Sekalian persempit scope Klassa Agent jadi **teman diskusi + tutorial** via prompt & feature flag (kode admin-ber-data/operasional ditidurkan, TIDAK dihapus).
-- **Status:** 🟡 PRIORITAS #2 — bisa dikerjakan SEKARANG (tanpa credential)
-- **File kunci:** `src/modules/agent/agent.router.ts`, `src/app/api/agent/chat/route.ts`
+- **Status:** ✅ Selesai (commit `417be8d`)
+  - Cross-provider failover router aktif (`GLM <-> Gemini`).
+  - Unified AI daily quota counter (`ai_usage_counters`).
+  - Router failover tests passing.
 
 ---
 
@@ -115,6 +117,6 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 
 ## Urutan Eksekusi Disepakati
 1. **#4 Deployment** (fondasi semua — BLOCKED: nunggu credential owner)
-2. **#5 Fix Router Klassa** (tidak butuh credential — bisa jalan paralel sambil nunggu)
-3. **#6 Ticketing Bug** → 4. **#7 Payment** → 5. **#8 Video Tutorial**
-- #3 Perapihan Responsive (sedang berjalan) & **#9 Perapihan Output Download** boleh dikerjakan kapan saja, idealnya selesai sebelum #7 (user bayar = UX harus rapi).
+2. **#3 Perapihan Mode PC & Mobile** (Portal Orang Tua saja; Superadmin di-skip) / **#9 Perapihan Output Download** (bisa jalan sambil nunggu)
+3. **#7 Payment** → 4. **#8 Video Tutorial**
+- Catatan: #1 (File tugas), #2 (Klassa Agent), #5 (Fix router AI), #6 (Ticketing bug) sudah selesai.

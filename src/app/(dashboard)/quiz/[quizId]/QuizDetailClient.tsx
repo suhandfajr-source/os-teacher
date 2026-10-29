@@ -334,10 +334,10 @@ export function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!detail) return;
     try {
-      exportQuizRecapToExcel({
+      await exportQuizRecapToExcel({
         quizTitle: detail.quiz.title,
         contextLabel: detail.contextLabel,
         standardScore: detail.quiz.standardScore,

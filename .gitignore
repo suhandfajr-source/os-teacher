@@ -69,3 +69,10 @@ _bmad/render/
 .dev.vars
 .wrangler/
 .env.backup*
+
+# Local experiments and media generator
+/Video Generator/
+nul
+.pi/
+_bmad-output/
+

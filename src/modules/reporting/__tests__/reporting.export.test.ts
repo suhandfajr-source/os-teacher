@@ -27,7 +27,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
     schoolName: "SMA Negeri 1",
   };
 
-  it("1. exports Teaching Journal and parses workbook cleanly with sanitized formula text", () => {
+  it("1. exports Teaching Journal and parses workbook cleanly with sanitized formula text", async () => {
     const mockJournal: TeachingJournalReportData = {
       contextInfo: baseContextInfo,
       totalSessions: 1,
@@ -49,7 +49,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
       ],
     };
 
-    const buf = exportTeachingJournalToXlsx(mockJournal);
+    const buf = await exportTeachingJournalToXlsx(mockJournal);
     expect(buf).toBeInstanceOf(Buffer);
     expect(buf.length).toBeGreaterThan(1000);
 
@@ -62,7 +62,8 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
 
     // Header checks
     expect(rows[0][0]).toContain("JURNAL MENGAJAR GURU");
-    expect(rows[2][0]).toContain("X-MIPA-1");
+    expect(rows[1][0]).toContain("SMA NEGERI 1");
+    // Table header is at row 8 (0-indexed: index 7)
     expect(rows[7]).toEqual([
       "No",
       "Tanggal",
@@ -85,7 +86,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
     expect(dataRow[8]).toContain("[TP 1.1]");
   });
 
-  it("2. exports Attendance Recap workbook and parses tabular layout", () => {
+  it("2. exports Attendance Recap workbook and parses tabular layout", async () => {
     const mockAttendance: AttendanceRecapReportData = {
       contextInfo: baseContextInfo,
       sessions: [
@@ -119,7 +120,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
       ],
     };
 
-    const buf = exportAttendanceRecapToXlsx(mockAttendance);
+    const buf = await exportAttendanceRecapToXlsx(mockAttendance);
     const wb = XLSX.read(buf, { type: "buffer" });
     expect(wb.SheetNames).toContain("Rekap Presensi");
 
@@ -139,7 +140,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
     expect(student2Row[3]).toBe("Tidak di roster saat ini");
   });
 
-  it("3. exports Score Recap, Monitoring, and Coverage reports", () => {
+  it("3. exports Score Recap, Monitoring, and Coverage reports", async () => {
     // Score Recap
     const mockScore: ScoreRecapReportData = {
       contextInfo: baseContextInfo,
@@ -176,7 +177,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
         },
       ],
     };
-    const bufScore = exportScoreRecapToXlsx(mockScore);
+    const bufScore = await exportScoreRecapToXlsx(mockScore);
     expect(bufScore.length).toBeGreaterThan(500);
 
     // Monitoring Report
@@ -205,7 +206,7 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
         },
       ],
     };
-    const bufMonitoring = exportMonitoringReportToXlsx(mockMonitoring);
+    const bufMonitoring = await exportMonitoringReportToXlsx(mockMonitoring);
     expect(bufMonitoring.length).toBeGreaterThan(500);
 
     const wbMonitoring = XLSX.read(bufMonitoring, { type: "buffer" });
@@ -260,11 +261,10 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
         },
       ],
     };
-    const bufCoverage = exportAcademicCoverageToXlsx(mockCoverage);
+    const bufCoverage = await exportAcademicCoverageToXlsx(mockCoverage);
     expect(bufCoverage.length).toBeGreaterThan(500);
 
     const wbCoverage = XLSX.read(bufCoverage, { type: "buffer" });
-    // Factual naming: "Cakupan Akademik", NOT "Ketercapaian Kurikulum"
     expect(wbCoverage.SheetNames).toContain("Cakupan Akademik");
     expect(wbCoverage.SheetNames).not.toContain("Ketercapaian TP");
     expect(wbCoverage.SheetNames).not.toContain("Ketercapaian Kurikulum");
@@ -272,7 +272,8 @@ describe("Stage 07: XLSX Artifact & Export Verification", () => {
     const wsCoverage = wbCoverage.Sheets["Cakupan Akademik"];
     const coverageRows = XLSX.utils.sheet_to_json<Array<string | number | boolean | null>>(wsCoverage, { header: 1 });
     expect(coverageRows[0][0]).toBe("LAPORAN CAKUPAN AKADEMIK (TUJUAN PEMBELAJARAN)");
-    expect(coverageRows[9]).toEqual([
+    // Since curriculumName & phase are present, table header starts at row 9 (index 8)
+    expect(coverageRows[8]).toEqual([
       "No",
       "Kode TP",
       "Deskripsi Tujuan Pembelajaran",

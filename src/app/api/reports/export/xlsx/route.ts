@@ -38,31 +38,31 @@ export async function GET(request: NextRequest) {
     switch (type.toUpperCase()) {
       case "JOURNAL": {
         const data = await getTeachingJournalReport(context.id, { startDate, endDate });
-        buffer = exportTeachingJournalToXlsx(data);
+        buffer = await exportTeachingJournalToXlsx(data);
         filename = generateSafeExportFilename("jurnal_mengajar", `${data.contextInfo.className}_${data.contextInfo.subjectName}`);
         break;
       }
       case "ATTENDANCE": {
         const data = await getAttendanceRecapReport(context.id, { startDate, endDate, studentSearch });
-        buffer = exportAttendanceRecapToXlsx(data);
+        buffer = await exportAttendanceRecapToXlsx(data);
         filename = generateSafeExportFilename("rekap_presensi", `${data.contextInfo.className}_${data.contextInfo.subjectName}`);
         break;
       }
       case "SCORE": {
         const data = await getScoreRecapReport(context.id, { studentSearch });
-        buffer = exportScoreRecapToXlsx(data);
+        buffer = await exportScoreRecapToXlsx(data);
         filename = generateSafeExportFilename("rekap_nilai", `${data.contextInfo.className}_${data.contextInfo.subjectName}`);
         break;
       }
       case "MONITORING": {
         const data = await getMonitoringReport(context.id, { studentSearch });
-        buffer = exportMonitoringReportToXlsx(data);
+        buffer = await exportMonitoringReportToXlsx(data);
         filename = generateSafeExportFilename("rekap_monitoring", `${data.contextInfo.className}_${data.contextInfo.subjectName}`);
         break;
       }
       case "COVERAGE": {
         const data = await getAcademicCoverageReport(context.id);
-        buffer = exportAcademicCoverageToXlsx(data);
+        buffer = await exportAcademicCoverageToXlsx(data);
         filename = generateSafeExportFilename("cakupan_akademik", `${data.contextInfo.className}_${data.contextInfo.subjectName}`);
         break;
       }
