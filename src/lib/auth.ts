@@ -97,7 +97,11 @@ export const auth = betterAuth({
     secret: getAuthSecret(),
     emailAndPassword: {
         enabled: true,
-        autoSignIn: true
+        autoSignIn: true,
+        async sendResetPassword({ user, url }) {
+            const { sendPasswordResetEmail } = await import("./email");
+            await sendPasswordResetEmail({ to: user.email, url });
+        },
     },
     // Story 5 (F6): plugin admin untuk siklus hidup sesi (banUser/setUserPassword/
     // revokeUserSessions). Kolom `user.role` dikelola plugin dengan konvensi

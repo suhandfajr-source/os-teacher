@@ -392,6 +392,9 @@ model TeacherProfile {
   agentConversations            AgentConversation[]
   agentMemory                   TeacherAgentMemory?
   agentActionProposals          AgentActionProposal[]
+  aiKey                         TeacherAiKey?
+  credit                        TeacherCredit?
+  creditLedgers                 TeacherCreditLedger[]
 
   @@map("teacher_profile")
 }
@@ -1398,6 +1401,53 @@ model AiUsageCounter {
   @@map("ai_usage_counter")
 }
 
+model TeacherAiKey {
+  id               String   @id @default(cuid())
+  teacherProfileId String   @unique
+  provider         String   // "google" | "openai-compatible"
+  encryptedApiKey  String   @db.Text
+  customModel      String?
+  baseURL          String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@map("teacher_ai_key")
+}
+
+model TeacherCredit {
+  id               String   @id @default(cuid())
+  teacherProfileId String   @unique
+  balance          Int      @default(50000) // 50.000 token = 50 kredit
+  dailyAllowance   Int      @default(50000) // reset harian default 50 kredit
+  lastResetDate    String?  // YYYY-MM-DD (Asia/Jakarta)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@map("teacher_credit")
+}
+
+model TeacherCreditLedger {
+  id               String   @id @default(cuid())
+  teacherProfileId String
+  feature          String   // "AGENT" | "AI_STUDIO" | "QUIZ_GEN" | "TOPUP"
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  creditCost       Float    @default(0) // totalTokens / 1000
+  modelUsed        String?
+  isByok           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  teacherProfile   TeacherProfile @relation(fields: [teacherProfileId], references: [id], onDelete: Cascade)
+
+  @@index([teacherProfileId, createdAt])
+  @@map("teacher_credit_ledger")
+}
 
 model SystemSetting {
   key         String   @id

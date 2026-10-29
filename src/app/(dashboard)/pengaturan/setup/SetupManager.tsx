@@ -18,8 +18,9 @@ import { createClassAction } from "@/modules/classes/classes.actions";
 import { requestRevokeTeacherMembership, cancelRevokeTeacherMembershipRequest } from "@/modules/schools/schools.actions";
 import { switchActiveSchool } from "@/modules/teachers/teachers.actions";
 import { toast } from "sonner";
-import { Plus, GraduationCap, Users, School as SchoolIcon, ShieldAlert, ArrowLeftRight, Clock, AlertTriangle } from "lucide-react";
+import { Plus, GraduationCap, Users, School as SchoolIcon, ShieldAlert, ArrowLeftRight, Clock, AlertTriangle, Coins } from "lucide-react";
 import { ScheduleConfigDialog } from "@/modules/schedule/components/ScheduleConfigDialog";
+import { TeacherAiCreditSettingsTab } from "@/components/teacher/TeacherAiCreditSettingsTab";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   TeacherProfile,
@@ -189,6 +190,14 @@ export default function SetupManager({
             Kelas
           </Button>
           <Button
+            variant={activeTab === "ai-credit" ? "default" : "ghost"}
+            onClick={() => setActiveTab("ai-credit")}
+            className="flex items-center gap-1.5 text-teal-700 dark:text-teal-400 font-bold"
+          >
+            <Coins className="h-4 w-4" />
+            Integrasi AI & Kuota
+          </Button>
+          <Button
             variant={activeTab === "teachers" ? "default" : "ghost"}
             onClick={() => setActiveTab("teachers")}
             className="flex items-center gap-1.5"
@@ -211,7 +220,10 @@ export default function SetupManager({
         </div>
       </div>
 
-      <Card>
+      {activeTab === "ai-credit" ? (
+        <TeacherAiCreditSettingsTab />
+      ) : (
+        <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>
@@ -444,6 +456,7 @@ export default function SetupManager({
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Modal Tambah Kelas */}
       <Dialog open={isClassModalOpen} onOpenChange={setIsClassModalOpen}>

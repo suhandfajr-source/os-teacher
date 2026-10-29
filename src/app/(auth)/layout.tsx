@@ -34,7 +34,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       {/* ─────────────────────────────────────────────────────────────
           SISI KIRI: FORM & BRANDING (FULLSCREEN, CLEAN NO OVERFLOW)
       ───────────────────────────────────────────────────────────── */}
-      <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-10 flex flex-col justify-between z-10 bg-transparent min-h-svh lg:min-h-0 lg:h-full relative overflow-y-auto">
+      <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-10 flex flex-col justify-between z-10 bg-transparent min-h-svh lg:min-h-0 lg:h-full relative overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         
         {/* Top Brand Logo */}
         <div className="w-full max-w-[400px] mx-auto pt-1">

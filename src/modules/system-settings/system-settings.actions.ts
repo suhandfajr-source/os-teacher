@@ -3,261 +3,161 @@
 import { prisma } from "@/lib/auth";
 import { requireSuperAdmin } from "@/lib/superadmin";
 import { encryptSecret } from "@/lib/crypto";
-import {
-  getAdminLlmConfigView,
-  invalidateLlmSettingsCache,
-  SystemLlmConfig,
-} from "./system-settings.service";
-import { GoogleGenAI } from "@google/genai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { generateText } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText, tool } from "ai";
+import { z } from "zod";
+import {
+  decodeScopedLlmRecord, getAdminLlmConfigView, getScopedLlmConfig,
+  invalidateLlmSettingsCache, toLlmFeatureView, type SystemLlmConfig,
+} from "./system-settings.service";
+import {
+  llmScopeSchema, scopedLlmInputSchema, scopedSettingKey, settingsErrorMessage,
+  LlmSettingsError, type LlmScope, type ScopedLlmInput, type LlmRuntimeConfig,
+} from "./llm-settings.schema";
+import { createLlmEndpointFetch, resolveLlmEndpoint } from "./llm-endpoint.server";
 
 export async function getLlmSettingsAdminAction(): Promise<{
-  success: boolean;
-  data?: SystemLlmConfig;
-  error?: string;
+  success: boolean; data?: SystemLlmConfig; error?: string;
 }> {
   try {
     await requireSuperAdmin();
-    const config = await getAdminLlmConfigView();
-    return { success: true, data: config };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Gagal memuat konfigurasi." };
+    return { success: true, data: await getAdminLlmConfigView() };
+  } catch (error) {
+    return { success: false, error: settingsErrorMessage(error) };
   }
 }
 
-/**
- * Update batas pemakaian AI harian per guru (gabungan Agent + AI Studio + Quiz AI).
- * null = hapus override DB (kembali ke env/default). 0 = AI nonaktif untuk non-superadmin.
- */
-export async function updateAiUsageLimitAdminAction(payload: {
-  dailyLimit: number | null;
-}): Promise<{ success: boolean; error?: string }> {
+/** Daily quota remains shared across Studio, Agent and Quiz, as before. */
+export async function updateAiUsageLimitAdminAction(payload: { dailyLimit: number | null }) {
   try {
     const { userId } = await requireSuperAdmin();
-
-    if (
-      payload.dailyLimit !== null &&
-      (!Number.isInteger(payload.dailyLimit) || payload.dailyLimit < 0)
-    ) {
+    if (payload.dailyLimit !== null && (!Number.isInteger(payload.dailyLimit) || payload.dailyLimit < 0)) {
       return { success: false, error: "Batas harus berupa angka bulat >= 0." };
     }
-
     if (payload.dailyLimit === null) {
       await prisma.systemSetting.deleteMany({ where: { key: "ai_daily_limit" } });
     } else {
       await prisma.systemSetting.upsert({
         where: { key: "ai_daily_limit" },
         update: { value: String(payload.dailyLimit), updatedBy: userId },
-        create: {
-          key: "ai_daily_limit",
-          value: String(payload.dailyLimit),
-          description: "Batas pemakaian AI per guru per hari (WIB). 0 = nonaktif.",
-          updatedBy: userId,
-        },
+        create: { key: "ai_daily_limit", value: String(payload.dailyLimit), updatedBy: userId,
+          description: "Batas pemakaian AI per guru per hari (WIB). 0 = nonaktif." },
       });
     }
-
     invalidateLlmSettingsCache();
     return { success: true };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Gagal menyimpan batas." };
+  } catch (error) {
+    return { success: false, error: settingsErrorMessage(error) };
   }
 }
 
-/**
- * Updates API Keys with encryption. If empty string is passed, existing key is kept.
- */
-export async function updateApiKeysAdminAction(payload: {
-  geminiKey?: string;
-  glmKey?: string;
-  glmBaseUrl?: string;
-}): Promise<{ success: boolean; error?: string }> {
+function retainedKey(current: LlmRuntimeConfig, input: z.output<typeof scopedLlmInputSchema>): string {
+  if (input.apiKey) return input.apiKey;
+  if (current.source !== "database" && current.source !== "environment") {
+    throw new LlmSettingsError("Masukkan API key atau gunakan Salin konfigurasi lama terlebih dahulu.");
+  }
+  if (current.provider !== input.config.provider || current.baseURL !== input.config.baseURL) {
+    throw new LlmSettingsError("URL/provider berubah. Masukkan API key baru agar key lama tidak terkirim ke endpoint lain.");
+  }
+  if (!current.apiKey) throw new LlmSettingsError("API key belum tersedia.");
+  return current.apiKey;
+}
+
+async function persistFeature(input: z.output<typeof scopedLlmInputSchema>, userId: string, copying = false) {
+  await resolveLlmEndpoint(input.config.baseURL);
+  // A supplied new key also lets an administrator repair a malformed saved record.
+  const fallback = !input.apiKey ? await getScopedLlmConfig(input.scope, true) : undefined;
+  const saved = await prisma.$transaction(async (tx) => {
+    const key = scopedSettingKey(input.scope);
+    const row = await tx.systemSetting.findUnique({ where: { key } });
+    if (copying && row) throw new LlmSettingsError("Fitur ini sudah memiliki konfigurasi sendiri.");
+    const apiKey = input.apiKey || retainedKey(row ? decodeScopedLlmRecord(row.value) : fallback!, input);
+    const value = JSON.stringify({ config: input.config, encryptedKey: encryptSecret(apiKey) });
+    await tx.systemSetting.upsert({
+      where: { key }, update: { value, updatedBy: userId },
+      create: { key, value, updatedBy: userId, description: `Independent LLM configuration: ${input.scope}` },
+    });
+    await tx.auditLog.create({ data: {
+      actorType: "USER", actorId: userId,
+      action: copying ? "COPY_LEGACY_LLM_CONFIG" : "UPDATE_SCOPED_LLM_CONFIG",
+      targetType: "SYSTEM_SETTING",
+      metadata: { scope: input.scope, provider: input.config.provider, keyChanged: Boolean(input.apiKey) },
+    } });
+    return toLlmFeatureView({ ...input.config, apiKey, source: "database" });
+  }, { isolationLevel: "Serializable" });
+  invalidateLlmSettingsCache();
+  return saved;
+}
+
+export async function saveLlmFeatureAdminAction(payload: ScopedLlmInput) {
   try {
     const { userId } = await requireSuperAdmin();
-
-    const upsertSetting = async (key: string, value: string, description: string) => {
-      await prisma.systemSetting.upsert({
-        where: { key },
-        update: { value, updatedBy: userId },
-        create: { key, value, description, updatedBy: userId },
-      });
-    };
-
-    if (payload.geminiKey && payload.geminiKey.trim()) {
-      const encrypted = encryptSecret(payload.geminiKey.trim());
-      await upsertSetting("llm_key_gemini", encrypted, "Encrypted Gemini API Key");
-    }
-
-    if (payload.glmKey && payload.glmKey.trim()) {
-      const encrypted = encryptSecret(payload.glmKey.trim());
-      await upsertSetting("llm_key_glm", encrypted, "Encrypted Zhipu GLM API Key");
-    }
-
-    if (payload.glmBaseUrl && payload.glmBaseUrl.trim()) {
-      await upsertSetting("llm_base_url_glm", payload.glmBaseUrl.trim(), "GLM OpenAI Compatible Base URL");
-    }
-
-    // Record audit log
-    await prisma.auditLog.create({
-      data: {
-        actorType: "USER",
-        actorId: userId,
-        action: "UPDATE_LLM_API_KEYS",
-        targetType: "SYSTEM_SETTING",
-        metadata: {
-          updatedGeminiKey: Boolean(payload.geminiKey && payload.geminiKey.trim()),
-          updatedGlmKey: Boolean(payload.glmKey && payload.glmKey.trim()),
-          updatedGlmBaseUrl: Boolean(payload.glmBaseUrl && payload.glmBaseUrl.trim()),
-        },
-      },
-    });
-
-    invalidateLlmSettingsCache();
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Gagal menyimpan API Key." };
+    const input = scopedLlmInputSchema.parse(payload);
+    return { success: true as const, data: await persistFeature(input, userId) };
+  } catch (error) {
+    return { success: false as const, error: settingsErrorMessage(error) };
   }
 }
 
-/**
- * Updates AI Studio & KLASSA Agent configuration
- */
-export async function updateLlmModelsAdminAction(payload: {
-  aiStudio: {
-    provider: "google" | "openai-compatible";
-    model: string;
-    temperature: number;
-  };
-  agent: {
-    defaultModel: string;
-    allowedModels: string[];
-    allowTeacherCustomModel: boolean;
-  };
-}): Promise<{ success: boolean; error?: string }> {
+export async function copyLegacyLlmFeatureAdminAction(scope: LlmScope) {
   try {
     const { userId } = await requireSuperAdmin();
-
-    const upsertSetting = async (key: string, value: string, description: string) => {
-      await prisma.systemSetting.upsert({
-        where: { key },
-        update: { value, updatedBy: userId },
-        create: { key, value, description, updatedBy: userId },
-      });
-    };
-
-    await upsertSetting(
-      "llm_ai_studio",
-      JSON.stringify(payload.aiStudio),
-      "AI Studio Active LLM Configuration"
-    );
-
-    await upsertSetting(
-      "llm_agent",
-      JSON.stringify(payload.agent),
-      "KLASSA Agent Active Models Configuration"
-    );
-
-    // Record audit log
-    await prisma.auditLog.create({
-      data: {
-        actorType: "USER",
-        actorId: userId,
-        action: "UPDATE_LLM_MODELS",
-        targetType: "SYSTEM_SETTING",
-        metadata: {
-          aiStudio: payload.aiStudio,
-          agent: payload.agent,
-        },
-      },
-    });
-
-    invalidateLlmSettingsCache();
-    return { success: true };
-  } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Gagal memperbarui konfigurasi LLM." };
+    const parsedScope = llmScopeSchema.parse(scope);
+    const current = await getScopedLlmConfig(parsedScope, true);
+    if (current.source !== "legacy" || !current.apiKey) {
+      throw new LlmSettingsError("Tidak ada konfigurasi lama yang dapat disalin untuk fitur ini.");
+    }
+    const { apiKey, source: _source, ...config } = current;
+    const input = scopedLlmInputSchema.parse({ scope: parsedScope, config, apiKey });
+    return { success: true as const, data: await persistFeature(input, userId, true) };
+  } catch (error) {
+    return { success: false as const, error: settingsErrorMessage(error) };
   }
 }
 
-/**
- * Pre-flight test connection to verify API Key without saving
- */
-export async function testLlmConnectionAdminAction(params: {
-  provider: "google" | "openai-compatible";
-  apiKey?: string;
-  baseURL?: string;
-  model?: string;
-}): Promise<{ success: boolean; latencyMs?: number; message?: string; error?: string }> {
+/** Explicit draft test; no settings write and no real application tool execution. */
+export async function testLlmConnectionAdminAction(payload: ScopedLlmInput) {
   try {
     await requireSuperAdmin();
-
-    const startTime = Date.now();
-    if (params.provider === "google") {
-      let keyToTest = params.apiKey?.trim();
-      if (!keyToTest) {
-        const { getEffectiveGeminiKey } = await import("./system-settings.service");
-        keyToTest = await getEffectiveGeminiKey();
-      }
-      if (!keyToTest) {
-        return { success: false, error: "API Key Gemini kosong." };
-      }
-
-      const client = new GoogleGenAI({ apiKey: keyToTest });
-      const testModel = params.model || "gemini-2.5-flash";
-      const response = await client.models.generateContent({
-        model: testModel,
-        contents: "Tes koneksi super admin. Balas satu kata: OK.",
-      });
-
-      const latencyMs = Date.now() - startTime;
-      const text = response.text || "";
-      return {
-        success: true,
-        latencyMs,
-        message: `Koneksi Google Gemini sukses (${latencyMs}ms). Output: ${text.slice(0, 30)}`,
-      };
+    const input = scopedLlmInputSchema.parse(payload);
+    const apiKey = input.apiKey || retainedKey(await getScopedLlmConfig(input.scope, true), input);
+    await resolveLlmEndpoint(input.config.baseURL);
+    const model = input.config.provider === "google"
+      ? createGoogleGenerativeAI({ apiKey, fetch: (url, init) => fetch(url, { ...init, redirect: "error" }) })(input.config.model)
+      : createOpenAICompatible({
+          name: "scoped-connection-test", apiKey, baseURL: input.config.baseURL,
+          fetch: createLlmEndpointFetch(input.config.baseURL),
+        })(input.config.model);
+    const start = Date.now();
+    const response = await generateText({
+      model,
+      prompt: input.scope === "agent"
+        ? "Call connection_check with status OK. This is a harmless connectivity test."
+        : "Reply with OK. This is a connectivity test.",
+      maxOutputTokens: 128, maxRetries: 0,
+      abortSignal: AbortSignal.timeout(20_000),
+      ...(input.scope === "agent" ? {
+        tools: { connection_check: tool({
+          description: "Harmless connectivity check; no data access or changes.",
+          inputSchema: z.object({ status: z.literal("OK") }),
+        }) },
+        toolChoice: { type: "tool" as const, toolName: "connection_check" },
+      } : {}),
+    });
+    if (input.scope === "agent" && !response.toolCalls?.some((call) => call.toolName === "connection_check")) {
+      return { success: false as const, error: "Koneksi tersedia, tetapi dukungan tool calling Agent belum terverifikasi." };
     }
-
-    if (params.provider === "openai-compatible") {
-      let keyToTest = params.apiKey?.trim();
-      let baseUrlToTest = params.baseURL?.trim();
-      if (!keyToTest) {
-        const { getEffectiveGlmKey } = await import("./system-settings.service");
-        keyToTest = await getEffectiveGlmKey();
-      }
-      if (!baseUrlToTest) {
-        const { getEffectiveGlmBaseUrl } = await import("./system-settings.service");
-        baseUrlToTest = await getEffectiveGlmBaseUrl();
-      }
-      if (!keyToTest) {
-        return { success: false, error: "API Key GLM/OpenAI-compatible kosong." };
-      }
-
-      const client = createOpenAICompatible({
-        name: "test-client",
-        baseURL: baseUrlToTest,
-        apiKey: keyToTest,
-      });
-
-      const testModel = params.model || "glm-4-plus";
-      const response = await generateText({
-        model: client(testModel),
-        prompt: "Tes koneksi super admin. Balas satu kata: OK.",
-      });
-
-      const latencyMs = Date.now() - startTime;
-      return {
-        success: true,
-        latencyMs,
-        message: `Koneksi OpenAI-compatible sukses (${latencyMs}ms). Output: ${response.text.slice(0, 30)}`,
-      };
+    if (input.scope === "ai-studio" && !response.text.trim()) {
+      return { success: false as const, error: "Provider tidak menghasilkan teks. Periksa Model ID." };
     }
-
-    return { success: false, error: "Provider tidak dikenali." };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Gagal menguji koneksi.",
-    };
+    return { success: true as const, latencyMs: Date.now() - start,
+      message: input.scope === "agent" ? "Koneksi dan tool calling Agent berhasil." : "Koneksi AI Studio berhasil." };
+  } catch (error) {
+    console.error("[LLM Test Connection Error]:", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    return { success: false as const, error: error instanceof LlmSettingsError || error instanceof z.ZodError
+      ? settingsErrorMessage(error)
+      : `Tes gagal: ${detail.slice(0, 180)}` };
   }
 }

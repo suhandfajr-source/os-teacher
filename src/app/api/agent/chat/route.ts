@@ -3,7 +3,10 @@ import { streamText, isStepCount } from "ai";
 import { prisma } from "@/lib/auth";
 import { verifyActiveSchoolMembership, verifyClassRosterAccess } from "@/lib/authorization";
 import { getDynamicAgentLanguageModel } from "@/modules/agent/agent.router";
-import { consumeAiUsage, AiQuotaExceededError } from "@/modules/ai/ai-usage.service";
+import {
+  preCheckAiCredit,
+  recordAiTokenUsage,
+} from "@/modules/ai/credit/credit.service";
 import { buildAgentSystemPrompt, DEFAULT_AGENT_MODEL } from "@/modules/agent/agent.config";
 import type { TeacherMemoryDTO } from "@/modules/agent/memory/agent-memory.types";
 import {
@@ -20,6 +23,7 @@ import {
   proposeAssignmentDraftTool,
 } from "@/modules/agent/tools/agent-action.tools";
 import { updateTeacherMemoryPreferenceTool } from "@/modules/agent/memory/agent-memory.tools";
+import { routeAgentTools } from "@/modules/agent/agent-tool-router";
 
 export const dynamic = "force-dynamic";
 
@@ -45,22 +49,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 0. Kuota AI harian (gabungan semua fitur AI; superadmin bebas limit).
-    try {
-      await consumeAiUsage(profile.id);
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) {
-        return NextResponse.json(
-          {
-            error: err.message,
-            code: "AI_LIMIT_EXCEEDED",
-            used: err.used,
-            limit: err.limit,
-          },
-          { status: 429 }
-        );
-      }
-      throw err;
+    // 0. Token-Credit Pre-Check (Saldo Kredit Sekolah vs BYOK Guru)
+    let isByokSession = false;
+    let byokConfig: any = undefined;
+
+    const creditPreCheck = await preCheckAiCredit(profile.id);
+    if (!creditPreCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: creditPreCheck.reason || "Kredit AI harian sekolah Anda telah habis.",
+          code: "CREDIT_EXHAUSTED",
+        },
+        { status: 429 }
+      );
+    }
+
+    if (creditPreCheck.useByok && creditPreCheck.byokConfig) {
+      isByokSession = true;
+      byokConfig = creditPreCheck.byokConfig;
     }
 
     // Validasi wewenang kelas jika classContextId disertakan
@@ -127,12 +133,13 @@ export async function POST(req: NextRequest) {
         : undefined,
     });
 
-    // 4. Fetch recent conversation history
+    // 4. Fetch recent conversation history (sliding window: 8 pesan terakhir hemat token)
     const history = await prisma.agentMessage.findMany({
       where: { conversationId: convId },
-      orderBy: { createdAt: "asc" },
-      take: 20,
+      orderBy: { createdAt: "desc" },
+      take: 8,
     });
+    history.reverse();
 
     const modelMessages = history.map((m) => ({
       role: m.role as "user" | "assistant",
@@ -141,10 +148,12 @@ export async function POST(req: NextRequest) {
 
     // 5. Select Model
     const selectedModel = modelId || memory?.preferredModel || DEFAULT_AGENT_MODEL;
-    const languageModel = await getDynamicAgentLanguageModel(selectedModel);
+    const languageModel = await getDynamicAgentLanguageModel(selectedModel, byokConfig);
 
-    // 6. Tools registry
-    const tools = {
+    // 6. Dynamic Intent-Based Tool Routing & Gating
+    const routing = routeAgentTools(message, classContextId);
+
+    const allTools = {
       getTeacherClasses: getTeacherClassesTool,
       getClassDigest: getClassDigestTool,
       getClassStudents: getClassStudentsTool,
@@ -157,15 +166,18 @@ export async function POST(req: NextRequest) {
       updateTeacherMemoryPreference: updateTeacherMemoryPreferenceTool,
     };
 
-    // 6a. Jalur cepat sapaan ringan (smalltalk) — TANPA tools.
-    // Alasan reliabilitas: pesan seperti "halo" tidak butuh function-calling, sementara
-    // lane traffic tools pada model flash sering di-503 "high demand". Tanpa tools,
-    // respon sapaan mengalir di jalur model yang sehat (~2-4 detik ke token pertama).
-    const isSmalltalk = (() => {
-      const t = message.trim().toLowerCase();
-      if (t.length > 60) return false;
-      return /^((hal+o+|ha+i+|hi+|hey|hello|hallo|test|tes|ping|permisi|siapa kamu|siapa anda|apa kabar|pagi|siang|sore|malam|assalamu['a-z\s]*|salam[\s!.,]*)[\s!.,?*)]*|terima kasih+|makasih+|thanks?|thank you|ok(e|ey)?|sip|siap)[\s!.,?]*$/i.test(t);
-    })();
+    const activeTools: Record<string, any> = {};
+    for (const toolName of routing.toolNames) {
+      if ((allTools as any)[toolName]) {
+        activeTools[toolName] = (allTools as any)[toolName];
+      }
+    }
+
+    const effectiveSystemPrompt = routing.systemHint
+      ? `${systemPrompt}\n${routing.systemHint}`
+      : systemPrompt;
+
+    const hasTools = Object.keys(activeTools).length > 0;
 
     // 7. Call streamText
     let isPersisted = false;
@@ -201,12 +213,18 @@ export async function POST(req: NextRequest) {
       }
     };
 
+    console.log(
+      `[Agent Chat] Message: "${message.slice(0, 30)}" | Cluster: ${routing.cluster} | Tools Count: ${
+        Object.keys(activeTools).length
+      } | HasTools: ${hasTools}`
+    );
+
     const result = streamText({
       model: languageModel,
-      system: systemPrompt,
+      system: effectiveSystemPrompt,
       messages: modelMessages,
-      // Sapaan ringan dialirkan tanpa tools (jalur cepat); sisanya dengan tools penuh.
-      ...(isSmalltalk ? {} : { tools }),
+      // Intent-based tools gating: hanya lampirkan klaster tools yang relevan
+      ...(hasTools ? { tools: activeTools } : {}),
       stopWhen: isStepCount(10),
       // Failover antar-model sudah ditangani agent.router (tanpa backoff);
       // retry SDK dimatikan agar tidak menumpuk 50s+ exponential backoff saat provider 503.
@@ -215,8 +233,30 @@ export async function POST(req: NextRequest) {
         text?: string;
         toolCalls?: unknown[];
         toolResults?: unknown[];
+        usage?: {
+          promptTokens?: number;
+          completionTokens?: number;
+          totalTokens?: number;
+        };
       }) => {
         await persistAssistantMessage(event.text ?? "", event.toolCalls, event.toolResults);
+
+        // Post-Deduct Token & Ledger Audit
+        if (event.usage) {
+          try {
+            await recordAiTokenUsage({
+              teacherProfileId: profile.id,
+              feature: "AGENT",
+              promptTokens: event.usage.promptTokens ?? 0,
+              completionTokens: event.usage.completionTokens ?? 0,
+              totalTokens: event.usage.totalTokens ?? 0,
+              modelUsed: selectedModel,
+              isByok: isByokSession,
+            });
+          } catch (ledgerErr) {
+            console.error("[CreditLedger] Gagal mencatat token usage:", ledgerErr);
+          }
+        }
       },
     });
 

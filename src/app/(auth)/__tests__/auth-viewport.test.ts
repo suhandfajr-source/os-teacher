@@ -11,9 +11,19 @@ vi.mock("@/components/brand", () => ({
   AtomicEcosystemHero: () => "Hero",
 }));
 
+vi.mock("@/modules/student-auth/student-auth.actions", () => ({
+  loginStudent: vi.fn(),
+  lookupJoinCode: vi.fn(),
+  registerStudent: vi.fn(),
+}));
+vi.mock("@/modules/schools/schools.actions", () => ({
+  searchSchools: vi.fn(),
+}));
+
 import AuthLayout from "../layout";
 import LoginPage from "../login/page";
 import RegisterPage from "../register/page";
+import PortalSiswaAuthPage from "../../portal-siswa/page";
 
 describe("Auth viewport regression", () => {
   it.each([
@@ -39,5 +49,17 @@ describe("Auth viewport regression", () => {
     expect(html.indexOf("animate-mesh-shift")).toBeLessThan(html.indexOf("Beranda KLASSA"));
     expect(html).toContain("Masuk Portal Siswa");
     expect(html).toContain("Masuk ke Ruang Kerja");
+  });
+
+  it("aligns student portal layout, viewport, and hero artwork with teacher auth", () => {
+    const html = renderToStaticMarkup(createElement(PortalSiswaAuthPage));
+    const rootTag = html.slice(0, html.indexOf(">") + 1);
+    expect(rootTag).toContain("min-h-svh");
+    expect(rootTag).toContain("overflow-x-clip");
+    expect(rootTag).not.toMatch(/\boverflow-(?:hidden|y-hidden|y-auto)\b|\bh-screen\b/);
+    expect(html).not.toMatch(/autofocus/i);
+    expect(html).toContain('aria-hidden="true" class="pointer-events-none absolute inset-0 overflow-hidden"');
+    expect(html).toContain("Hero");
+    expect(html).toContain("Masuk Ruang Guru");
   });
 });

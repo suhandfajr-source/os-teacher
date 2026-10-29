@@ -155,9 +155,12 @@ export default function LoginPage() {
 
         {/* Forgot Password */}
         <div className="flex items-center justify-end text-xs text-slate-500 font-medium pt-0.5">
-          <span className="text-teal-700 hover:underline font-bold cursor-pointer">
+          <Link
+            href="/forgot-password"
+            className="text-teal-700 dark:text-teal-400 hover:underline font-bold cursor-pointer transition-colors"
+          >
             Lupa kata sandi?
-          </span>
+          </Link>
         </div>
 
         {/* Buttons Action Row */}

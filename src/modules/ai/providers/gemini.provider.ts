@@ -17,8 +17,13 @@ export class GeminiAiContentProvider implements AiContentProvider {
   private primaryModel: string;
   private candidateModels: string[];
   private ai: GoogleGenAI;
+  private options: { temperature?: number; exactModel?: boolean };
 
-  constructor(apiKey?: string, model?: string) {
+  constructor(
+    apiKey?: string,
+    model?: string,
+    options: { temperature?: number; exactModel?: boolean } = {}
+  ) {
     const key = apiKey || process.env.GEMINI_API_KEY;
     if (!key) {
       throw new Error(
@@ -26,18 +31,22 @@ export class GeminiAiContentProvider implements AiContentProvider {
       );
     }
     this.apiKey = key;
+    this.options = options;
     this.primaryModel = model || process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
     // Deduplicated fallback list with verified active Gemini 3.x / 2.5 models
-    this.candidateModels = Array.from(
-      new Set([
-        this.primaryModel,
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
-      ])
-    );
+    // Dedicated configurations must not fall back across arbitrary unconfigured models.
+    this.candidateModels = options.exactModel
+      ? [this.primaryModel]
+      : Array.from(
+          new Set([
+            this.primaryModel,
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+          ])
+        );
 
     this.ai = new GoogleGenAI({ apiKey: this.apiKey });
   }
@@ -130,7 +139,7 @@ export class GeminiAiContentProvider implements AiContentProvider {
             contents: prompt,
             config: {
               systemInstruction,
-              temperature: 0.7,
+              temperature: this.options.temperature ?? 0.7,
               maxOutputTokens: 16384,
               ...(responseMimeType ? { responseMimeType } : {}),
             },

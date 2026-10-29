@@ -6,8 +6,11 @@
 
 import { z } from "zod";
 import { verifyActiveSchoolMembership } from "@/lib/authorization";
-import { getAiContentProvider } from "@/modules/ai/providers/ai-provider.factory";
-import { consumeAiUsage, AiQuotaExceededError } from "@/modules/ai/ai-usage.service";
+import { getDynamicAiContentProvider } from "@/modules/ai/providers/ai-provider.factory";
+import {
+  preCheckAiCredit,
+  recordAiTokenUsage,
+} from "@/modules/ai/credit/credit.service";
 import {
   ExtractedQuestion,
   buildGenerateQuestionsPrompt,
@@ -43,18 +46,25 @@ export async function generateQuizQuestionsAction(input: unknown): Promise<{
     const params = generateInputSchema.parse(input);
     const { profile } = await verifyActiveSchoolMembership();
 
-    // Kuota AI harian (superadmin bebas limit).
-    try {
-      await consumeAiUsage(profile.id);
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
-      throw err;
+    // 0. Token-Credit Pre-Check (Saldo Kredit Sekolah vs BYOK Guru)
+    let isByokSession = false;
+    let byokConfig: any = undefined;
+
+    const creditPreCheck = await preCheckAiCredit(profile.id);
+    if (!creditPreCheck.allowed) {
+      return { success: false, error: creditPreCheck.reason || "Kredit AI harian sekolah Anda telah habis." };
     }
 
-    const provider = getAiContentProvider();
+    if (creditPreCheck.useByok && creditPreCheck.byokConfig) {
+      isByokSession = true;
+      byokConfig = creditPreCheck.byokConfig;
+    }
+
+    const provider = await getDynamicAiContentProvider(undefined, byokConfig);
     const prompt = buildGenerateQuestionsPrompt(params);
 
     let rawOutput: string;
+    let modelUsed = "gemini-2.5-flash";
     if (typeof provider.generateStructured === "function") {
       rawOutput = await provider.generateStructured(
         prompt,
@@ -69,6 +79,23 @@ export async function generateQuizQuestionsAction(input: unknown): Promise<{
         tone: "CONCISE",
       });
       rawOutput = result.content;
+      modelUsed = result.modelUsed;
+    }
+
+    // Ledger deduction
+    const estTokens = Math.round((prompt.length + rawOutput.length) * 0.35);
+    try {
+      await recordAiTokenUsage({
+        teacherProfileId: profile.id,
+        feature: "AI_STUDIO",
+        promptTokens: Math.round(estTokens * 0.3),
+        completionTokens: Math.round(estTokens * 0.7),
+        totalTokens: Math.max(250, estTokens),
+        modelUsed,
+        isByok: isByokSession,
+      });
+    } catch (ledgerErr) {
+      console.error("[CreditLedger] Gagal catat pemakaian token quiz generate:", ledgerErr);
     }
 
     return parseAiQuestionsJson(rawOutput, "Tidak ada soal valid yang dihasilkan. Coba lagi.");
@@ -97,18 +124,25 @@ export async function convertDocumentToQuizAction(input: unknown): Promise<{
       return { success: true, data: { questions: preParsed } };
     }
 
-    // Kuota AI harian — SETELAH fast-path (parse langsung tidak memakai AI).
-    try {
-      await consumeAiUsage(profile.id);
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
-      throw err;
+    // 0. Kuota AI harian & Kredit — SETELAH fast-path (parse langsung tidak memakai AI).
+    let isByokSession = false;
+    let byokConfig: any = undefined;
+
+    const creditPreCheck = await preCheckAiCredit(profile.id);
+    if (!creditPreCheck.allowed) {
+      return { success: false, error: creditPreCheck.reason || "Kredit AI harian sekolah Anda telah habis." };
     }
 
-    const provider = getAiContentProvider();
+    if (creditPreCheck.useByok && creditPreCheck.byokConfig) {
+      isByokSession = true;
+      byokConfig = creditPreCheck.byokConfig;
+    }
+
+    const provider = await getDynamicAiContentProvider(undefined, byokConfig);
     const prompt = buildConvertDocumentPrompt(params);
 
     let rawOutput: string;
+    let modelUsed = "gemini-2.5-flash";
     if (typeof provider.generateStructured === "function") {
       rawOutput = await provider.generateStructured(
         prompt,
@@ -122,6 +156,23 @@ export async function convertDocumentToQuizAction(input: unknown): Promise<{
         tone: "CONCISE",
       });
       rawOutput = result.content;
+      modelUsed = result.modelUsed;
+    }
+
+    // Ledger deduction
+    const estTokens = Math.round((prompt.length + rawOutput.length) * 0.35);
+    try {
+      await recordAiTokenUsage({
+        teacherProfileId: profile.id,
+        feature: "AI_STUDIO",
+        promptTokens: Math.round(estTokens * 0.5),
+        completionTokens: Math.round(estTokens * 0.5),
+        totalTokens: Math.max(300, estTokens),
+        modelUsed,
+        isByok: isByokSession,
+      });
+    } catch (ledgerErr) {
+      console.error("[CreditLedger] Gagal catat pemakaian token quiz convert:", ledgerErr);
     }
 
     return parseAiQuestionsJson(

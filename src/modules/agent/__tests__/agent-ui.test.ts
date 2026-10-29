@@ -38,13 +38,27 @@ vi.mock("@/lib/auth", () => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
-    // Story #5b — kuota AI harian (undefined-safe di ai-usage.service)
+    // Story #5b — kuota AI harian & credit
     teacherProfile: {
       findUnique: vi.fn(),
     },
     aiUsageCounter: {
       findUnique: vi.fn(),
       upsert: vi.fn(),
+    },
+    teacherCredit: {
+      findUnique: vi.fn(async () => ({
+        id: "credit-1",
+        teacherProfileId: "teacher-1",
+        balance: 50000,
+        dailyAllowance: 50000,
+        lastResetDate: "2026-10-26",
+      })),
+      create: vi.fn(async ({ data }) => data),
+      update: vi.fn(async ({ data }) => data),
+    },
+    teacherCreditLedger: {
+      create: vi.fn(async ({ data }) => ({ id: "ledger-1", ...data })),
     },
     $transaction: vi.fn((callback: any) => callback(prisma)),
   },

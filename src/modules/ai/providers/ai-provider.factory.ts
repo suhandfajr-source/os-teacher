@@ -4,8 +4,9 @@ import { OpenAiCompatibleAiContentProvider } from "./openai-compatible.provider"
 import { MockAiContentProvider, MockProviderOptions } from "./mock.provider";
 import {
   getEffectiveAiStudioConfig,
-  getEffectiveGlmBaseUrl,
 } from "@/modules/system-settings/system-settings.service";
+
+import { createLlmEndpointFetch } from "@/modules/system-settings/llm-endpoint.server";
 
 let customProviderInstance: AiContentProvider | null = null;
 
@@ -40,9 +41,17 @@ export function getAiContentProvider(mockOptions?: MockProviderOptions): AiConte
 }
 
 /**
- * Dynamic asynchronous resolver that respects database runtime settings configured by Super Admin.
+ * Dynamic asynchronous resolver that respects database runtime settings configured by Super Admin, or BYOK guru.
  */
-export async function getDynamicAiContentProvider(mockOptions?: MockProviderOptions): Promise<AiContentProvider> {
+export async function getDynamicAiContentProvider(
+  mockOptions?: MockProviderOptions,
+  byokConfig?: {
+    provider: "google" | "openai-compatible";
+    apiKey: string;
+    baseURL?: string;
+    model?: string;
+  }
+): Promise<AiContentProvider> {
   if (customProviderInstance) {
     return customProviderInstance;
   }
@@ -59,11 +68,27 @@ export async function getDynamicAiContentProvider(mockOptions?: MockProviderOpti
     return new MockAiContentProvider(mockOptions);
   }
 
-  const config = await getEffectiveAiStudioConfig();
-  if (config.provider === "openai-compatible") {
-    const baseUrl = await getEffectiveGlmBaseUrl();
-    return new OpenAiCompatibleAiContentProvider(config.apiKey, config.model, baseUrl);
+  // 0. Jika BYOK guru aktif
+  if (byokConfig?.apiKey) {
+    if (byokConfig.provider === "openai-compatible") {
+      return new OpenAiCompatibleAiContentProvider(
+        byokConfig.apiKey,
+        byokConfig.model || "glm-4-plus",
+        byokConfig.baseURL || "https://open.bigmodel.cn/api/paas/v4"
+      );
+    }
+    return new GeminiAiContentProvider(byokConfig.apiKey, byokConfig.model || "gemini-2.5-flash");
   }
 
-  return new GeminiAiContentProvider(config.apiKey, config.model);
+  const config = await getEffectiveAiStudioConfig();
+  if (!config.apiKey) throw new Error("API key AI Studio belum dikonfigurasi.");
+  const dedicated = config.source === "database" || config.source === "environment";
+  if (config.provider === "openai-compatible") {
+    return new OpenAiCompatibleAiContentProvider(config.apiKey, config.model, config.baseURL, {
+      fetch: dedicated ? createLlmEndpointFetch(config.baseURL) : undefined,
+      temperature: config.temperature,
+    });
+  }
+
+  return new GeminiAiContentProvider(config.apiKey, config.model, { temperature: config.temperature, exactModel: dedicated });
 }

@@ -4,10 +4,13 @@ import { LanguageModel } from "ai";
 import { DEFAULT_AGENT_MODEL } from "./agent.config";
 import {
   getEffectiveAgentConfig,
+  getScopedLlmConfig,
   getEffectiveGeminiKey,
   getEffectiveGlmKey,
   getEffectiveGlmBaseUrl,
 } from "@/modules/system-settings/system-settings.service";
+
+import { createLlmEndpointFetch } from "@/modules/system-settings/llm-endpoint.server";
 
 /** Tipe struktural minimal untuk mendispatch pemanggilan model (spec v2-v4 kompatibel). */
 interface DispatchableLanguageModel {
@@ -251,16 +254,49 @@ export function getAgentLanguageModel(modelId?: string): LanguageModel {
 }
 
 /**
- * Dynamic asynchronous resolver that respects database runtime settings & encrypted API keys.
+ * Dynamic asynchronous resolver that respects database runtime settings, encrypted API keys, or BYOK guru.
  * Failover cross-provider: target GLM → jatuh ke Gemini (jika key Gemini tersedia), dan sebaliknya.
  */
-export async function getDynamicAgentLanguageModel(modelId?: string): Promise<LanguageModel> {
+export async function getDynamicAgentLanguageModel(
+  modelId?: string,
+  byokConfig?: {
+    provider: "google" | "openai-compatible";
+    apiKey: string;
+    baseURL?: string;
+    model?: string;
+  }
+): Promise<LanguageModel> {
+  // 0. Jika BYOK Guru disertakan
+  if (byokConfig?.apiKey) {
+    const chosen = byokConfig.model || modelId || (byokConfig.provider === "google" ? "gemini-2.5-flash" : "glm-4-plus");
+    return byokConfig.provider === "google"
+      ? createGoogleGenerativeAI({ apiKey: byokConfig.apiKey })(chosen)
+      : createOpenAICompatible({
+          name: "teacher-byok",
+          apiKey: byokConfig.apiKey,
+          baseURL: byokConfig.baseURL || "https://open.bigmodel.cn/api/paas/v4",
+          fetch: byokConfig.baseURL ? createLlmEndpointFetch(byokConfig.baseURL) : undefined,
+        })(chosen);
+  }
+
+  const scoped = await getScopedLlmConfig("agent");
+  if (scoped.source === "database" || scoped.source === "environment") {
+    const chosen = scoped.allowTeacherCustomModel && modelId && scoped.allowedModels.includes(modelId)
+      ? modelId : scoped.model;
+    if (!scoped.apiKey) throw new Error("API key Klassa Agent belum dikonfigurasi.");
+    // Dedicated configs are authoritative: exact IDs, no prefix inference or shared failover.
+    return scoped.provider === "google"
+      ? createGoogleGenerativeAI({ apiKey: scoped.apiKey })(chosen)
+      : createOpenAICompatible({ name: "klassa-agent", apiKey: scoped.apiKey, baseURL: scoped.baseURL,
+          fetch: createLlmEndpointFetch(scoped.baseURL) })(chosen);
+  }
   const agentConfig = await getEffectiveAgentConfig();
   const effectiveGlmKey = await getEffectiveGlmKey();
   const effectiveGeminiKey = await getEffectiveGeminiKey();
   const effectiveGlmBaseUrl = await getEffectiveGlmBaseUrl();
 
-  const chosenModel = modelId || agentConfig.defaultModel;
+  const chosenModel = agentConfig.allowTeacherCustomModel && modelId && agentConfig.allowedModels.includes(modelId)
+    ? modelId : agentConfig.defaultModel;
   const targetModel = remapDeprecated(chosenModel);
 
   if (targetModel.startsWith("glm-")) {

@@ -24,7 +24,10 @@ import {
 } from "./ai.types";
 import { buildSafeContextPack, formatContextSummary } from "./ai.service";
 import { getDynamicAiContentProvider } from "./providers/ai-provider.factory";
-import { consumeAiUsage, AiQuotaExceededError } from "./ai-usage.service";
+import {
+  preCheckAiCredit,
+  recordAiTokenUsage,
+} from "./credit/credit.service";
 
 function formatActionError(error: unknown, fallback: string): string {
   if (error instanceof z.ZodError) {
@@ -90,15 +93,21 @@ export async function generateAiContentAction(
       }
     }
 
-    // Kuota AI harian (superadmin bebas limit).
-    try {
-      await consumeAiUsage(profile.id);
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
-      throw err;
+    // 0. Token-Credit Pre-Check (Saldo Kredit Sekolah vs BYOK Guru)
+    let isByokSession = false;
+    let byokConfig: any = undefined;
+
+    const creditPreCheck = await preCheckAiCredit(profile.id);
+    if (!creditPreCheck.allowed) {
+      return { success: false, error: creditPreCheck.reason || "Kredit AI harian sekolah Anda telah habis." };
     }
 
-    const provider = await getDynamicAiContentProvider();
+    if (creditPreCheck.useByok && creditPreCheck.byokConfig) {
+      isByokSession = true;
+      byokConfig = creditPreCheck.byokConfig;
+    }
+
+    const provider = await getDynamicAiContentProvider(undefined, byokConfig);
     const result = await provider.generate({
       contentType: input.contentType,
       topic: input.topic,
@@ -106,6 +115,22 @@ export async function generateAiContentAction(
       tone: input.tone,
       contextPack: safeContextPack,
     });
+
+    // Record token usage (estimasi 1 kata ~ 1.3 token)
+    const estTokens = Math.round((result.content.length + (input.instruction?.length || 0)) * 0.35);
+    try {
+      await recordAiTokenUsage({
+        teacherProfileId: profile.id,
+        feature: "AI_STUDIO",
+        promptTokens: Math.round(estTokens * 0.3),
+        completionTokens: Math.round(estTokens * 0.7),
+        totalTokens: Math.max(200, estTokens),
+        modelUsed: result.modelUsed,
+        isByok: isByokSession,
+      });
+    } catch (ledgerErr) {
+      console.error("[CreditLedger] Gagal catat pemakaian token AI Studio:", ledgerErr);
+    }
 
     const contextSummary = formatContextSummary(safeContextPack);
 
@@ -156,15 +181,21 @@ export async function refineAiContentAction(
       }
     }
 
-    // Kuota AI harian (superadmin bebas limit).
-    try {
-      await consumeAiUsage(profile.id);
-    } catch (err) {
-      if (err instanceof AiQuotaExceededError) return { success: false, error: err.message };
-      throw err;
+    // 0. Token-Credit Pre-Check (Saldo Kredit Sekolah vs BYOK Guru)
+    let isByokSession = false;
+    let byokConfig: any = undefined;
+
+    const creditPreCheck = await preCheckAiCredit(profile.id);
+    if (!creditPreCheck.allowed) {
+      return { success: false, error: creditPreCheck.reason || "Kredit AI harian sekolah Anda telah habis." };
     }
 
-    const provider = await getDynamicAiContentProvider();
+    if (creditPreCheck.useByok && creditPreCheck.byokConfig) {
+      isByokSession = true;
+      byokConfig = creditPreCheck.byokConfig;
+    }
+
+    const provider = await getDynamicAiContentProvider(undefined, byokConfig);
     const result = await provider.refine({
       contentType: input.contentType,
       currentTitle: input.currentTitle,
@@ -172,6 +203,23 @@ export async function refineAiContentAction(
       refinementInstruction: input.refinementInstruction,
       contextPack: safeContextPack,
     });
+
+    const estTokens = Math.round(
+      (result.content.length + input.currentContent.length + input.refinementInstruction.length) * 0.35
+    );
+    try {
+      await recordAiTokenUsage({
+        teacherProfileId: profile.id,
+        feature: "AI_STUDIO",
+        promptTokens: Math.round(estTokens * 0.4),
+        completionTokens: Math.round(estTokens * 0.6),
+        totalTokens: Math.max(200, estTokens),
+        modelUsed: result.modelUsed,
+        isByok: isByokSession,
+      });
+    } catch (ledgerErr) {
+      console.error("[CreditLedger] Gagal catat pemakaian token AI Studio refine:", ledgerErr);
+    }
 
     const contextSummary = formatContextSummary(safeContextPack);
 

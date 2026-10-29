@@ -18,10 +18,18 @@ export class OpenAiCompatibleAiContentProvider implements AiContentProvider {
   private model: string;
   private baseURL: string;
 
-  constructor(apiKey: string, model: string, baseURL?: string) {
+  private options: { fetch?: typeof fetch; temperature?: number };
+
+  constructor(
+    apiKey: string,
+    model: string,
+    baseURL?: string,
+    options: { fetch?: typeof fetch; temperature?: number } = {}
+  ) {
     this.apiKey = apiKey;
     this.model = model || "glm-4-plus";
     this.baseURL = baseURL || process.env.GLM_BASE_URL || "https://open.bigmodel.cn/api/paas/v4/";
+    this.options = options;
   }
 
   private getClient() {
@@ -29,6 +37,7 @@ export class OpenAiCompatibleAiContentProvider implements AiContentProvider {
       name: "custom-openai-compatible",
       baseURL: this.baseURL,
       apiKey: this.apiKey,
+      fetch: this.options.fetch,
     });
   }
 
@@ -42,6 +51,7 @@ export class OpenAiCompatibleAiContentProvider implements AiContentProvider {
     const client = this.getClient();
     const result = await generateText({
       model: client(this.model),
+      temperature: this.options.temperature,
       system,
       prompt,
     });
@@ -63,6 +73,7 @@ export class OpenAiCompatibleAiContentProvider implements AiContentProvider {
     const client = this.getClient();
     const result = await generateText({
       model: client(this.model),
+      temperature: this.options.temperature,
       system,
       prompt,
     });

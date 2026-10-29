@@ -30,7 +30,7 @@ import {
   type JoinCodeContext
 } from "@/modules/student-auth/student-auth.actions";
 import { searchSchools } from "@/modules/schools/schools.actions";
-import { KlassaLogo, ModularCockpitArtwork } from "@/components/brand";
+import { KlassaLogo, AtomicEcosystemHero } from "@/components/brand";
 import Link from "next/link";
 
 type SchoolOption = {
@@ -351,20 +351,22 @@ export default function PortalSiswaAuthPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 animate-gradient-pan text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row relative overflow-x-hidden font-sans selection:bg-teal-500 selection:text-white">
+    <div className="min-h-svh lg:h-svh w-full bg-gradient-to-br from-slate-50 via-teal-50/40 to-emerald-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-teal-950/20 text-slate-900 dark:text-slate-100 flex flex-col lg:flex-row relative overflow-x-clip font-sans selection:bg-teal-500 selection:text-white">
       
-      {/* Dynamic Animated Ambient Background Blobs (Shift, Float, Orbit) */}
-      <div className="absolute -top-28 -left-28 w-[420px] h-[420px] bg-teal-300/25 dark:bg-teal-800/15 rounded-full blur-3xl pointer-events-none animate-mesh-shift" />
-      <div className="absolute top-1/3 -left-16 w-80 h-80 bg-emerald-300/20 dark:bg-emerald-800/15 rounded-full blur-3xl pointer-events-none animate-mesh-shift-reverse" />
-      <div className="absolute -bottom-24 left-1/4 w-[460px] h-[460px] bg-cyan-300/20 dark:bg-cyan-800/15 rounded-full blur-3xl pointer-events-none animate-mesh-shift" />
+      {/* Dynamic Animated Ambient Background Blobs */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-28 -left-28 w-[420px] h-[420px] bg-teal-300/25 dark:bg-teal-800/15 rounded-full blur-3xl animate-mesh-shift" />
+        <div className="absolute top-1/3 -left-16 w-80 h-80 bg-emerald-300/20 dark:bg-emerald-800/15 rounded-full blur-3xl animate-mesh-shift-reverse" />
+        <div className="absolute -bottom-24 left-1/4 w-[460px] h-[460px] bg-cyan-300/20 dark:bg-cyan-800/15 rounded-full blur-3xl animate-mesh-shift" />
+      </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SISI KIRI (PADA PC) / FULL-SCREEN UNIFIED LOGIN (PADA MOBILE)
+          SISI KIRI: FORM & BRANDING (FULLSCREEN, CLEAN NO OVERFLOW)
       ───────────────────────────────────────────────────────────── */}
-      <div className="w-full lg:w-1/2 p-6 sm:p-10 lg:p-12 xl:p-16 flex flex-col justify-between z-10 bg-transparent min-h-screen relative">
+      <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-10 flex flex-col justify-between z-10 bg-transparent min-h-svh lg:min-h-0 lg:h-full relative overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         
         {/* Top Brand Logo */}
-        <div className="w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto pt-2">
+        <div className="w-full max-w-[400px] mx-auto pt-1">
           <div className="flex items-center justify-between">
             <Link 
               href="/" 
@@ -381,10 +383,10 @@ export default function PortalSiswaAuthPage() {
           </div>
         </div>
 
-        {/* Form Content Area (Centering with max-w-[380px] to avoid edge crowd) */}
-        <div className="my-auto py-5 w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto space-y-3.5">
+        {/* Form Content Area */}
+        <div className="my-auto py-4 w-full max-w-[400px] mx-auto space-y-3.5">
           
-          {/* Interactive Mobile Hero Card Banner (Menempel langsung di atas form wizard) */}
+          {/* Interactive Mobile Hero Card Banner (Ditempatkan langsung di atas form wizard) */}
           <div className="lg:hidden p-3.5 rounded-2xl bg-gradient-to-r from-teal-700 via-teal-600 to-teal-800 text-white shadow-lg shadow-teal-900/15 flex items-center justify-between gap-3 relative overflow-hidden">
             <div className="absolute -right-4 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none" />
             <div className="space-y-0.5 relative z-10">
@@ -400,18 +402,18 @@ export default function PortalSiswaAuthPage() {
               </p>
             </div>
             <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 text-white font-black text-xs shadow-inner">
-              10
+              AI
             </div>
           </div>
 
-          {/* Header Text & Branding (Desktop) */}
-          <div className="hidden lg:block space-y-1.5">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 text-[11px] font-extrabold tracking-wider uppercase border border-teal-200/60">
+          {/* Header Text (Desktop Only) */}
+          <div className="hidden lg:block space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-300 text-[10px] font-extrabold tracking-wider uppercase border border-teal-200/60">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-600 animate-pulse"></span>
               <span>{mode === "join" ? "PENDAFTARAN & GABUNG ROMBEL" : "PORTAL BELAJAR SISWA"}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
               {mode === "join" ? (
                 <>
                   Gabung Rombel Baru, <br />
@@ -425,7 +427,7 @@ export default function PortalSiswaAuthPage() {
               )}
             </h1>
 
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal font-medium">
               {mode === "join"
                 ? "Daftarkan identitas dan buat PIN untuk bergabung ke rombel kelas."
                 : "Pantau materi, kumpulkan tugas mandiri, dan pantau progres belajarmu di KLASSA."}
@@ -688,7 +690,6 @@ export default function PortalSiswaAuthPage() {
                         placeholder="CONTOH: 7K2M9P"
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                        autoFocus
                         className="w-full h-11 pl-11 pr-4 bg-slate-100/80 hover:bg-slate-100 focus:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-800 dark:focus:bg-slate-900 text-sm font-mono font-black tracking-widest text-slate-900 rounded-2xl border border-transparent focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all outline-none uppercase text-center"
                       />
                     </div>
@@ -1025,23 +1026,23 @@ export default function PortalSiswaAuthPage() {
 
         </div>
 
-        {/* Bottom Footer & Link to Teacher Login */}
-        <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 w-full max-w-[380px] mx-auto lg:mr-auto lg:ml-auto pb-2">
+        {/* Bottom Micro Switcher & Copyright */}
+        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 w-full max-w-[400px] mx-auto pb-1">
           <span>&copy; {new Date().getFullYear()} KLASSA &bull; Siswa</span>
-          <a
+          <Link
             href="/login"
-            className="font-bold text-[#0F766E] hover:underline"
+            className="font-bold text-[#0F766E] dark:text-teal-400 hover:underline"
           >
             Masuk Ruang Guru &rarr;
-          </a>
+          </Link>
         </div>
 
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          SISI KANAN: S-CURVE WAVE + 3D MODULAR COCKPIT SISWA (DESKTOP SAJA)
+          SISI KANAN: KLASSA ATOMIC ECOSYSTEM HERO (DESKTOP)
       ───────────────────────────────────────────────────────────── */}
-      <ModularCockpitArtwork theme="teal" portalType="student" className="hidden lg:flex" />
+      <AtomicEcosystemHero className="hidden lg:flex" />
 
     </div>
   );
