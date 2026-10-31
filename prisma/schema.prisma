@@ -174,8 +174,15 @@ model User {
   banned             Boolean   @default(false)
   banReason          String?
   banExpires         DateTime?
+
+  // KLASSA Subscription Fields
+  subscriptionPlan      String?   // bulanan | semester | tahunan
+  subscriptionStatus    String    @default("UNPAID") // UNPAID | ACTIVE | EXPIRED
+  subscriptionExpiresAt DateTime?
+
   sessions           Session[]
   accounts           Account[]
+  paymentOrders      PaymentOrder[]
 
   teacherProfile    TeacherProfile?
   parentProfile     ParentProfile?
@@ -1511,6 +1518,48 @@ model BugReport {
   @@index([createdAt])
   @@map("bug_report")
 }
+
+// -------------------------------------------------
+// DOKU PAYMENT & SUBSCRIPTION SCHEMA
+// -------------------------------------------------
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  EXPIRED
+  FAILED
+}
+
+model PaymentOrder {
+  id               String        @id @default(cuid())
+  invoiceNumber    String        @unique
+  userId           String?
+  customerName     String
+  customerEmail    String
+  customerPhone    String
+  planId           String        // bulanan | semester | tahunan
+  amount           Int           // IDR integer
+  status           PaymentStatus @default(PENDING)
+  paymentMethod    String?       // QRIS, VIRTUAL_ACCOUNT, etc (from DOKU callback)
+  dokuPaymentUrl   String?       @db.Text
+  paidAt           DateTime?
+
+  // Aktivasi Akun
+  activationToken  String?       @unique
+  tokenExpiresAt   DateTime?
+  activatedAt      DateTime?
+
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([customerEmail])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payment_order")
+}
+
 
 
 
