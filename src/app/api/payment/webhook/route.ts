@@ -15,10 +15,16 @@ export async function POST(req: NextRequest) {
     const requestTimestamp = headers.get("request-timestamp") || "";
     const signature = headers.get("signature") || "";
 
-    const { secretKey, isProduction } = getDokuConfig();
+    const { secretKey, clientId: expectedClientId } = getDokuConfig();
 
-    // Verifikasi Signature DOKU di mode Production
-    if (isProduction && secretKey) {
+    // Fail closed in every environment: unsigned notifications must never mark an order paid.
+    if (!secretKey || !expectedClientId) {
+      return NextResponse.json({ error: "Payment verification unavailable" }, { status: 503 });
+    }
+    if (clientId !== expectedClientId || !requestId || !requestTimestamp || !signature) {
+      return NextResponse.json({ error: "Invalid notification headers" }, { status: 400 });
+    }
+    {
       const isValid = verifyDokuNotificationSignature({
         clientId,
         requestId,
@@ -35,8 +41,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const payload = JSON.parse(rawBody);
-    console.log("📥 [DOKU Webhook Notification Received]:", payload);
+    let payload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    if (!payload || typeof payload !== "object") {
+      return NextResponse.json({ error: "Invalid notification" }, { status: 400 });
+    }
 
     // Ambil data transaksi dari DOKU
     const orderData = payload.order || {};
@@ -44,7 +57,7 @@ export async function POST(req: NextRequest) {
     const invoiceNumber = orderData.invoice_number;
     const paymentStatus = transactionData.status || payload.status; // SUCCESS / FAILED
 
-    if (!invoiceNumber) {
+    if (typeof invoiceNumber !== "string" || !invoiceNumber) {
       return NextResponse.json({ error: "Invoice number missing" }, { status: 400 });
     }
 
@@ -58,18 +71,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
-    // Jika status bukan SUCCESS, catat statusnya
-    if (paymentStatus !== "SUCCESS") {
-      await prisma.paymentOrder.update({
-        where: { id: order.id },
-        data: { status: "FAILED" },
-      });
-      return NextResponse.json({ message: "Recorded as failed" });
-    }
-
-    // Hindari double processing jika sudah PAID
+    // Paid orders are terminal; delayed failure/pending notifications cannot downgrade them.
     if (order.status === "PAID") {
       return NextResponse.json({ message: "Order already processed" });
+    }
+    if (paymentStatus !== "SUCCESS") {
+      if (paymentStatus === "FAILED" || paymentStatus === "EXPIRED") {
+        await prisma.paymentOrder.updateMany({
+          where: { id: order.id, status: { not: "PAID" } },
+          data: { status: paymentStatus },
+        });
+      }
+      return NextResponse.json({ message: "Non-success notification recorded" });
+    }
+    const amount = typeof orderData.amount === "number" ? orderData.amount
+      : typeof orderData.amount === "string" && /^\d+(\.0+)?$/.test(orderData.amount) ? Number(orderData.amount) : NaN;
+    if (!Number.isSafeInteger(amount) || amount !== order.amount) {
+      return NextResponse.json({ error: "Payment amount mismatch" }, { status: 400 });
     }
 
     // 1. Update Order jadi PAID
@@ -80,8 +98,8 @@ export async function POST(req: NextRequest) {
     const plan = getPricingPlan(order.planId);
     const durationDays = plan?.durationDays || 30;
 
-    await prisma.paymentOrder.update({
-      where: { id: order.id },
+    const claimed = await prisma.paymentOrder.updateMany({
+      where: { id: order.id, status: { not: "PAID" } },
       data: {
         status: "PAID",
         paymentMethod: transactionData.payment_channel || "DOKU",
@@ -90,6 +108,10 @@ export async function POST(req: NextRequest) {
         tokenExpiresAt,
       },
     });
+
+    if (claimed.count !== 1) {
+      return NextResponse.json({ message: "Order already processed" });
+    }
 
     // 2. Cek apakah User sudah ada di database
     const existingUser = await prisma.user.findUnique({
@@ -134,8 +156,8 @@ export async function POST(req: NextRequest) {
       status: "SUCCESS",
       message: "Order updated, activation sent.",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ [DOKU Webhook Error]:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Payment processing failed" }, { status: 500 });
   }
 }

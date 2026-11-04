@@ -115,6 +115,23 @@ Berikut adalah daftar tugas terencana yang akan dikerjakan:
 
 ---
 
+## 10. Meta Pixel — Verifikasi Setelah Deploy
+- **Status:** ⏸️ BELUM SELESAI / DITUNDA atas permintaan owner. Jangan lanjutkan tes sampai owner selesai menyiapkan peristiwa Meta dan deploy perubahan ke production.
+- **Pixel ID:** `1293603226231313`.
+- **Implementasi lokal:** `PageView` pada landing page, `Lead` setelah sesi checkout DOKU berhasil dibuat, `Purchase` setelah pembayaran terverifikasi, serta kebijakan privasi tanpa banner. Melibatkan repo ini dan `../Landing Page Klassa/`.
+- **Hasil pemeriksaan terakhir:** 48 tes otomatis lulus; pemeriksaan TypeScript dan lint terarah lulus. Ini bukan bukti event sudah masuk ke Meta.
+- **Prasyarat melanjutkan:** owner mengonfirmasi pengaturan peristiwa Meta selesai dan perubahan kedua project sudah di-deploy.
+- **Sisa tugas:**
+  - [ ] Konfirmasi deployment landing page dan aplikasi beserta konfigurasi production.
+  - [ ] Selesaikan tes browser end-to-end: pending → paid, status gagal/tidak terverifikasi, retry, refresh tanpa duplikasi, serta tracking diblokir.
+  - [ ] Verifikasi `PageView`, `Lead`, dan `Purchase` melalui Meta Test Events / Pixel Helper, termasuk ID paket, nominal `IDR`, dan event ID untuk ketiga paket.
+  - [ ] Selesaikan review perubahan dan catat bukti hasil verifikasi sebelum menandai fitur selesai.
+- **Catatan resume:** percobaan Playwright sebelumnya gagal memulai server port 3002 karena dev server port 2001 sudah aktif. Konfigurasi `playwright.meta-pixel.config.ts` sudah disiapkan untuk port 2001 tetapi belum dijalankan. Browser interaktif juga terhambat restore-policy tool. Tidak perlu mematikan server owner.
+- **Di luar tahap ini:** Conversions API belum dipasang; pembeli yang tidak kembali ke halaman sukses atau memblokir Pixel dapat tidak tercatat di Meta.
+- **Spec:** `_bmad-output/implementation-artifacts/spec-meta-pixel-payment-funnel.md`.
+
+---
+
 ## Urutan Eksekusi Disepakati
 1. **#4 Deployment** (fondasi semua — BLOCKED: nunggu credential owner)
 2. **#3 Perapihan Mode PC & Mobile** (Portal Orang Tua saja; Superadmin di-skip) / **#9 Perapihan Output Download** (bisa jalan sambil nunggu)

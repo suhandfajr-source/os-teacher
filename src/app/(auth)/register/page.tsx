@@ -173,6 +173,18 @@ export default function RegisterPage() {
             Masuk
           </Link>
         </div>
+
+        <p className="text-[11px] text-slate-400 text-center leading-relaxed pt-1">
+          Dengan mendaftar, Anda menyetujui{" "}
+          <Link href="/terms" target="_blank" className="text-teal-700 font-semibold underline hover:text-teal-800">
+            Syarat &amp; Ketentuan
+          </Link>{" "}
+          dan{" "}
+          <Link href="/privacy" target="_blank" className="text-teal-700 font-semibold underline hover:text-teal-800">
+            Kebijakan Privasi
+          </Link>{" "}
+          kami.
+        </p>
       </form>
     </div>
   );

@@ -73,8 +73,11 @@ export async function createDokuCheckout(
   // Mode mock/sandbox jika credentials belum diatur di .env
   if (!clientId || !secretKey) {
     console.warn("⚠️ [DOKU] DOKU_CLIENT_ID atau DOKU_SECRET_KEY belum diatur di .env. Mengembalikan Mock Payment URL.");
+    const mockUrl = new URL(params.callbackUrl);
+    mockUrl.searchParams.set("mock_invoice", params.invoiceNumber);
+    mockUrl.searchParams.set("mock_paid", "true");
     return {
-      paymentUrl: `${params.callbackUrl}?mock_invoice=${params.invoiceNumber}&mock_paid=true`,
+      paymentUrl: mockUrl.toString(),
       raw: { mock: true },
     };
   }
@@ -164,5 +167,7 @@ export function verifyDokuNotificationSignature(params: {
     secretKey: params.secretKey,
   });
 
-  return params.receivedSignature === expectedSignature;
+  const received = Buffer.from(params.receivedSignature);
+  const expected = Buffer.from(expectedSignature);
+  return received.length === expected.length && crypto.timingSafeEqual(received, expected);
 }

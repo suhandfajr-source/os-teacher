@@ -60,14 +60,21 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         </div>
 
         {/* Bottom Micro Switcher & Copyright */}
-        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 w-full max-w-[400px] mx-auto pb-1">
-          <span>&copy; {new Date().getFullYear()} KLASSA &bull; Guru</span>
-          <Link
-            href="/portal-siswa"
-            className="font-bold text-[#0F766E] dark:text-teal-400 hover:underline"
-          >
-            Masuk Portal Siswa &rarr;
-          </Link>
+        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800/80 flex flex-col gap-1.5 text-xs text-slate-400 dark:text-slate-500 w-full max-w-[400px] mx-auto pb-1">
+          <div className="flex items-center justify-between">
+            <span>&copy; {new Date().getFullYear()} KLASSA &bull; Guru</span>
+            <Link
+              href="/portal-siswa"
+              className="font-bold text-[#0F766E] dark:text-teal-400 hover:underline"
+            >
+              Masuk Portal Siswa &rarr;
+            </Link>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-slate-400">
+            <Link href="/terms" className="hover:text-teal-700 hover:underline">Syarat &amp; Ketentuan</Link>
+            <span>&bull;</span>
+            <Link href="/privacy" className="hover:text-teal-700 hover:underline">Kebijakan Privasi</Link>
+          </div>
         </div>
 
       </div>

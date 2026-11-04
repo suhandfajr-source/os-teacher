@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getPricingPlan } from "@/lib/pricing-plans";
-import { createDokuCheckout } from "@/lib/doku";
+import { createDokuCheckout, getDokuConfig } from "@/lib/doku";
+import { createPaymentReceipt, conversionData } from "@/lib/payment-tracking-token";
 
 // CORS Headers helper agar Landing Page di domain lain bisa fetch
 function setCorsHeaders(response: NextResponse) {
@@ -51,7 +52,12 @@ export async function POST(req: NextRequest) {
     });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://klassa-edutech.com";
-    const callbackUrl = `${appUrl}/payment/success`;
+    const config = getDokuConfig();
+    const live = config.isProduction && Boolean(config.clientId && config.secretKey);
+    const receipt = createPaymentReceipt(invoiceNumber, live);
+    const callback = new URL("/api/payment/return", appUrl);
+    if (receipt) callback.searchParams.set("receipt", receipt);
+    const callbackUrl = callback.toString();
 
     // 3. Request ke DOKU Checkout API
     const dokuRes = await createDokuCheckout({
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 4. Simpan Order Status PENDING di Database
-    await prisma.paymentOrder.create({
+    const order = await prisma.paymentOrder.create({
       data: {
         invoiceNumber,
         userId: existingUser?.id || null,
@@ -82,13 +88,16 @@ export async function POST(req: NextRequest) {
       success: true,
       invoiceNumber,
       paymentUrl: dokuRes.paymentUrl,
+      tracking: live && !dokuRes.raw?.mock
+        ? conversionData(order, plan.name, "Lead")
+        : null,
     });
 
     return setCorsHeaders(successRes);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("❌ [Checkout API Error]:", error);
     const errorRes = NextResponse.json(
-      { error: error.message || "Gagal memproses pembayaran" },
+      { error: error instanceof Error ? error.message : "Gagal memproses pembayaran" },
       { status: 500 }
     );
     return setCorsHeaders(errorRes);
