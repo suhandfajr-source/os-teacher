@@ -77,7 +77,7 @@ describe("iPaymu checkout", () => {
     fetcher.mockImplementation(async () => {
       expect(db.paymentOrder.create).toHaveBeenCalledOnce();
       expect(order.status).toBe("PENDING");
-      return Response.json({ Status: 200, Data: { SessionID: "SESSION-2", Url: "https://my.ipaymu.com/payment/SESSION-2" } });
+      return Response.json({ Status: 200, Data: { SessionID: "SESSION-2", Url: "https://payment.ipaymu.com/#/SESSION-2" } });
     });
     const res = await buy({ amount: 1 });
     expect(res.status).toBe(200);
@@ -91,7 +91,7 @@ describe("iPaymu checkout", () => {
   });
   it("suppresses sandbox Lead and uses separate endpoint", async () => {
     vi.stubEnv("IPAYMU_ENV", "sandbox");
-    fetcher.mockResolvedValue(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url: "https://sandbox.ipaymu.com/payment/SESSION-1" } }));
+    fetcher.mockResolvedValue(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url: "https://payment.ipaymu.com/#/SESSION-1" } }));
     expect(await (await buy()).json()).toMatchObject({ tracking: null, environment: "sandbox" });
     expect(fetcher.mock.calls[0][0]).toBe("https://sandbox.ipaymu.com/api/v2/payment");
   });
@@ -110,7 +110,7 @@ describe("iPaymu checkout", () => {
     const response = await buy();
     expect(response.status).toBe(500); expect(JSON.stringify(await response.json())).not.toContain("private key");
     expect(order.status).toBe("PENDING");
-    fetcher.mockResolvedValueOnce(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url: "https://my.ipaymu.com/payment/SESSION-1" } }));
+    fetcher.mockResolvedValueOnce(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url: "https://payment.ipaymu.com/#/SESSION-1" } }));
     db.paymentOrder.update.mockRejectedValueOnce(new Error("DB unavailable"));
     expect((await buy()).status).toBe(500);
   });

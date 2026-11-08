@@ -24,8 +24,8 @@ describe("iPaymu official contracts", () => {
     expect(signIpaymuRequest(json + " ", config)).not.toBe(reference);
   });
   it("sends required arrays, invoice, signed headers and binds returned session", async () => {
-    fetcher.mockResolvedValue(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url: config.baseUrl + "/payment/SESSION-1" } }));
-    expect(await createIpaymuCheckout(input, config)).toEqual({ sessionId: "SESSION-1", paymentUrl: config.baseUrl + "/payment/SESSION-1" });
+    fetcher.mockResolvedValue(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url: "https://payment.ipaymu.com/#/SESSION-1" } }));
+    expect(await createIpaymuCheckout(input, config)).toEqual({ sessionId: "SESSION-1", paymentUrl: "https://payment.ipaymu.com/#/SESSION-1" });
     const [url, options] = fetcher.mock.calls[0];
     expect(url).toBe(config.baseUrl + "/api/v2/payment");
     expect(options).toMatchObject({ method: "POST", redirect: "error", cache: "no-store" });
@@ -33,7 +33,7 @@ describe("iPaymu official contracts", () => {
     expect(options.headers.timestamp).toMatch(/^\d{14}$/);
     expect(JSON.parse(options.body)).toMatchObject({ product: [input.productName], price: ["1000"], qty: ["1"], description: [expect.any(String)], referenceId: input.invoiceNumber, notifyUrl: input.notifyUrl, cancelUrl: input.callbackUrl });
   });
-  it.each(["https://evil.test/payment/SESSION-1", "http://sandbox.ipaymu.com/payment/SESSION-1", "https://sandbox.ipaymu.com.evil.test/payment/SESSION-1", "https://user:pass@sandbox.ipaymu.com/payment/SESSION-1", "https://my.ipaymu.com/payment/SESSION-1", "https://sandbox.ipaymu.com/login"])("rejects untrusted checkout URL %s", async Url => {
+  it.each(["https://evil.test/payment/SESSION-1", "http://payment.ipaymu.com/#/SESSION-1", "https://payment.ipaymu.com.evil.test/#/SESSION-1", "https://user:pass@payment.ipaymu.com/#/SESSION-1", "https://other.com/pay"])("rejects untrusted checkout URL %s", async Url => {
     fetcher.mockResolvedValue(Response.json({ Status: 200, Data: { SessionID: "SESSION-1", Url } }));
     await expect(createIpaymuCheckout(input, config)).rejects.toThrow("belum tersedia");
   });

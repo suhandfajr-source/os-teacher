@@ -44,7 +44,8 @@ export async function createIpaymuCheckout(input: {
   try {
     if (typeof data.Url !== "string" || typeof data.SessionID !== "string" || !/^[a-zA-Z0-9-]{1,128}$/.test(data.SessionID)) throw new IpaymuError();
     const url = new URL(data.Url);
-    if (url.origin !== config.baseUrl || url.username || url.password || !url.pathname.startsWith("/payment/")) throw new IpaymuError();
+    const allowedHosts = ["payment.ipaymu.com", "my.ipaymu.com", "sandbox.ipaymu.com"];
+    if (url.protocol !== "https:" || !allowedHosts.includes(url.hostname) || url.username || url.password) throw new IpaymuError();
     return { paymentUrl: url.toString(), sessionId: data.SessionID };
   } catch { throw new IpaymuError(); }
 }
