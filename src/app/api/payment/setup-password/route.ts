@@ -1,152 +1,46 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { hashPassword } from "better-auth/crypto";
 import { getPricingPlan } from "@/lib/pricing-plans";
-import crypto from "crypto";
+import { paymentTransaction } from "@/lib/payment-fulfillment";
 
+class InvalidActivation extends Error {}
 export async function POST(req: NextRequest) {
   try {
     const { token, password } = await req.json();
-
-    if (!token || !password) {
-      return NextResponse.json(
-        { error: "Token aktivasi dan kata sandi wajib diisi." },
-        { status: 400 }
-      );
+    if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token) || typeof password !== "string" || password.length < 8 || password.length > 128) {
+      return NextResponse.json({ error: "Token atau kata sandi tidak valid (8–128 karakter)." }, { status: 400 });
     }
-
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: "Kata sandi minimal 8 karakter." },
-        { status: 400 }
-      );
-    }
-
-    // 1. Cari Order by Token
-    const order = await prisma.paymentOrder.findUnique({
-      where: { activationToken: token },
-    });
-
-    if (!order) {
-      return NextResponse.json({ error: "Tautan aktivasi tidak valid." }, { status: 404 });
-    }
-
-    if (order.status !== "PAID") {
-      return NextResponse.json({ error: "Pesanan belum lunas." }, { status: 400 });
-    }
-
-    if (order.activatedAt) {
-      return NextResponse.json(
-        { error: "Akun ini sudah pernah diaktifkan. Silakan langsung login." },
-        { status: 400 }
-      );
-    }
-
-    if (order.tokenExpiresAt && order.tokenExpiresAt < new Date()) {
-      return NextResponse.json(
-        { error: "Tautan aktivasi telah kedaluwarsa." },
-        { status: 400 }
-      );
-    }
-
-    const plan = getPricingPlan(order.planId);
-    const durationDays = plan?.durationDays || 30;
-    const expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
     const hashedPassword = await hashPassword(password);
-    const now = new Date();
-
-    // 2. Cek apakah User sudah ada di database
-    let user = await prisma.user.findUnique({
-      where: { email: order.customerEmail },
-    });
-
-    if (!user) {
-      // User baru: create User + Account kredensial Better Auth
-      const userId = `usr_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
-      user = await prisma.user.create({
-        data: {
-          id: userId,
-          name: order.customerName,
-          email: order.customerEmail,
-          emailVerified: true,
-          platformRole: "USER",
-          role: "USER",
-          registrationOrigin: "PUBLIC_REGISTER",
-          subscriptionPlan: order.planId,
-          subscriptionStatus: "ACTIVE",
-          subscriptionExpiresAt: expiresAt,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      await prisma.account.create({
-        data: {
-          id: `acc_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`,
-          accountId: order.customerEmail,
-          providerId: "credential",
-          userId: user.id,
-          password: hashedPassword,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-    } else {
-      // User lama: update subscription + update password
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          subscriptionPlan: order.planId,
-          subscriptionStatus: "ACTIVE",
-          subscriptionExpiresAt: expiresAt,
-          emailVerified: true,
-        },
-      });
-
-      // Update atau buat credential account
-      const existingAccount = await prisma.account.findFirst({
-        where: { userId: user.id, providerId: "credential" },
-      });
-
-      if (existingAccount) {
-        await prisma.account.update({
-          where: { id: existingAccount.id },
-          data: {
-            password: hashedPassword,
-            updatedAt: now,
-          },
-        });
+    const result = await paymentTransaction(async tx => {
+      const order = await tx.paymentOrder.findUnique({ where: { activationToken: token } });
+      const now = new Date();
+      if (!order || order.status !== "PAID" || order.paymentEnvironment !== "production" || order.activatedAt || !order.tokenExpiresAt || order.tokenExpiresAt <= now) throw new InvalidActivation();
+      const plan = getPricingPlan(order.planId);
+      if (!plan) throw new InvalidActivation();
+      // Claim the entitlement and all account writes together. Serializable retries handle races.
+      const claimed = await tx.paymentOrder.updateMany({ where: { id: order.id, activatedAt: null, status: "PAID", paymentEnvironment: "production" }, data: { activatedAt: now } });
+      if (claimed.count !== 1) throw new InvalidActivation();
+      let user = await tx.user.findUnique({ where: { email: order.customerEmail } });
+      const existing = Boolean(user);
+      if (user) {
+        const base = Math.max(now.getTime(), user.subscriptionExpiresAt?.getTime() || 0);
+        user = await tx.user.update({ where: { id: user.id }, data: { subscriptionPlan: order.planId, subscriptionStatus: "ACTIVE", subscriptionExpiresAt: new Date(base + plan.durationDays * 86400000) } });
+        // A purchase token must not reset an existing account's password.
       } else {
-        await prisma.account.create({
-          data: {
-            id: `acc_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`,
-            accountId: user.email,
-            providerId: "credential",
-            userId: user.id,
-            password: hashedPassword,
-            createdAt: now,
-            updatedAt: now,
-          },
-        });
+        user = await tx.user.create({ data: {
+          id: `usr_${randomUUID()}`, name: order.customerName, email: order.customerEmail, emailVerified: true,
+          platformRole: "USER", role: "USER", registrationOrigin: "PUBLIC_REGISTER",
+          subscriptionPlan: order.planId, subscriptionStatus: "ACTIVE", subscriptionExpiresAt: new Date(now.getTime() + plan.durationDays * 86400000),
+          createdAt: now, updatedAt: now,
+        } });
+        await tx.account.create({ data: { id: `acc_${randomUUID()}`, accountId: order.customerEmail, providerId: "credential", userId: user.id, password: hashedPassword, createdAt: now, updatedAt: now } });
       }
-    }
-
-    // 3. Update Order jadi Activated
-    await prisma.paymentOrder.update({
-      where: { id: order.id },
-      data: {
-        activatedAt: now,
-        userId: user.id,
-      },
+      await tx.paymentOrder.update({ where: { id: order.id }, data: { userId: user.id, activationToken: null, tokenExpiresAt: null } });
+      return { email: user.email, existing };
     });
-
-    return NextResponse.json({
-      success: true,
-      message: "Akun berhasil diaktifkan.",
-      email: user.email,
-    });
-  } catch (error: any) {
-    console.error("❌ [Setup Password Error]:", error);
-    return NextResponse.json({ error: error.message || "Gagal mengaktifkan akun" }, { status: 500 });
+    return NextResponse.json({ success: true, email: result.email, message: result.existing ? "Paket aktif. Masuk menggunakan kata sandi akun Anda yang sebelumnya." : "Akun berhasil diaktifkan." });
+  } catch (error) {
+    return NextResponse.json({ error: "Aktivasi belum dapat diproses. Tautan mungkin tidak valid, sudah digunakan, atau kedaluwarsa." }, { status: error instanceof InvalidActivation || error instanceof SyntaxError ? 400 : 503 });
   }
 }

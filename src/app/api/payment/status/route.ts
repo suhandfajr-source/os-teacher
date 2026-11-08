@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getPricingPlan } from "@/lib/pricing-plans";
-import { getDokuConfig } from "@/lib/doku";
 import { PAYMENT_PRIVATE_HEADERS, PAYMENT_RECEIPT_COOKIE, verifyPaymentReceipt, conversionData } from "@/lib/payment-tracking-token";
 
 export async function GET(req: NextRequest) {
@@ -11,15 +10,15 @@ export async function GET(req: NextRequest) {
   try {
     const order = await prisma.paymentOrder.findUnique({
       where: { invoiceNumber: receipt.invoice },
-      select: { invoiceNumber: true, planId: true, amount: true, status: true, paidAt: true },
+      select: { invoiceNumber: true, planId: true, amount: true, status: true, paidAt: true, paymentEnvironment: true },
     });
     if (!order) return respond({ status: "UNVERIFIED" }, 404);
     const paid = order.status === "PAID" && order.paidAt !== null;
-    const config = getDokuConfig();
-    const live = receipt.live && config.isProduction && Boolean(config.clientId && config.secretKey);
+    const live = receipt.live && order.paymentEnvironment === "production";
     return respond({
       status: order.status === "PAID" && !paid ? "PENDING" : order.status,
       live,
+      environment: order.paymentEnvironment,
       tracking: paid && live ? conversionData(order, getPricingPlan(order.planId)?.name || order.planId, "Purchase") : null,
     });
   } catch {

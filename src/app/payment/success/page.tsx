@@ -9,11 +9,13 @@ import { disableMarketingTracking, type PaymentState } from "@/lib/meta-pixel";
 export default function PaymentSuccessPage() {
   const [status, setStatus] = useState<PaymentState>("CHECKING");
   const [attempt, setAttempt] = useState(0);
+  const [environment, setEnvironment] = useState("unknown");
+  const sandbox = environment === "sandbox";
   const [trackingOff, setTrackingOff] = useState(false);
   const paid = status === "PAID";
   const messages: Record<PaymentState, string> = {
     CHECKING: "Memeriksa status pembayaran…",
-    PENDING: "Menunggu konfirmasi pembayaran DOKU",
+    PENDING: "Menunggu konfirmasi penyedia pembayaran",
     PAID: "Pembayaran berhasil dikonfirmasi",
     FAILED: "Pembayaran belum berhasil",
     EXPIRED: "Sesi pembayaran telah kedaluwarsa",
@@ -22,7 +24,7 @@ export default function PaymentSuccessPage() {
   };
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <PaymentTracking onStatus={setStatus} attempt={attempt} />
+      <PaymentTracking onStatus={setStatus} onEnvironment={setEnvironment} attempt={attempt} />
       <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 p-8 shadow-sm text-center">
         
         {/* Success Icon */}
@@ -31,7 +33,7 @@ export default function PaymentSuccessPage() {
         </div>
 
         <span role="status" aria-live="polite" className="inline-block bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-3">
-          {messages[status]}
+          {sandbox ? `MODE UJI — ${messages[status]}` : messages[status]}
         </span>
 
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
@@ -39,20 +41,20 @@ export default function PaymentSuccessPage() {
         </h1>
 
         <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-          {paid
-            ? "Silakan periksa email untuk tautan aktivasi akun. Pengiriman dapat memerlukan beberapa saat; periksa juga folder spam."
-            : "Halaman ini belum menjadi bukti pembayaran lunas. Jika Anda sudah membayar, tunggu konfirmasi DOKU lalu periksa kembali. Jangan melakukan pembayaran ulang hanya karena status belum diperbarui."}
+          {sandbox ? "Ini transaksi sandbox. Tidak ada langganan production yang diaktifkan atau email aktivasi yang dikirim."
+            : paid ? "Silakan periksa email untuk aktivasi akun baru atau konfirmasi perpanjangan paket. Pengiriman dapat memerlukan beberapa saat; periksa juga folder spam."
+            : "Halaman ini belum menjadi bukti pembayaran lunas. Jika Anda sudah membayar, tunggu konfirmasi penyedia pembayaran lalu periksa kembali. Jangan melakukan pembayaran ulang hanya karena status belum diperbarui."}
         </p>
 
         {/* Info Box */}
-        {paid && <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-left mb-6 space-y-2.5">
+        {paid && !sandbox && <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 text-left mb-6 space-y-2.5">
           <div className="flex items-start gap-2.5 text-xs text-slate-700">
             <span className="font-bold text-teal-600 mt-0.5">1.</span>
             <span>Buka inbox atau folder spam email Anda.</span>
           </div>
           <div className="flex items-start gap-2.5 text-xs text-slate-700">
             <span className="font-bold text-teal-600 mt-0.5">2.</span>
-            <span>Klik tautan <strong>&quot;Aktifkan Akun &amp; Buat Password&quot;</strong>.</span>
+            <span>Ikuti tautan aktivasi untuk akun baru. Untuk akun lama, langsung masuk dengan kata sandi Anda.</span>
           </div>
           <div className="flex items-start gap-2.5 text-xs text-slate-700">
             <span className="font-bold text-teal-600 mt-0.5">3.</span>

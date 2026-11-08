@@ -4,7 +4,7 @@ import Script from "next/script";
 import { useEffect, useState } from "react";
 import { trackPaidResult, type PaymentState, type PaymentStatusResult } from "@/lib/meta-pixel";
 
-export function PaymentTracking({ onStatus, attempt }: { onStatus: (status: PaymentState) => void; attempt: number }) {
+export function PaymentTracking({ onStatus, onEnvironment, attempt }: { onStatus: (status: PaymentState) => void; onEnvironment?: (environment: string) => void; attempt: number }) {
   const [result, setResult] = useState<PaymentStatusResult | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
 
@@ -29,13 +29,14 @@ export function PaymentTracking({ onStatus, attempt }: { onStatus: (status: Paym
       if (controller.signal.aborted) return;
       setResult(next);
       onStatus(next.status);
+      onEnvironment?.(next.environment || "unknown");
       if ((next.status === "PENDING" || next.status === "UNAVAILABLE") && checks < 15) {
         timer = setTimeout(poll, 2000);
       }
     }
     void poll();
     return () => { controller.abort(); clearTimeout(timer); };
-  }, [attempt, onStatus]);
+  }, [attempt, onStatus, onEnvironment]);
 
   useEffect(() => {
     if (scriptReady && result) void trackPaidResult(result).catch(() => { /* tracking is optional */ });

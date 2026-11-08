@@ -5,6 +5,11 @@ interface SendActivationEmailParams {
   name: string;
   planName: string;
   activationUrl: string;
+  renewal?: boolean;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
 }
 
 export async function sendActivationEmail({
@@ -12,6 +17,7 @@ export async function sendActivationEmail({
   name,
   planName,
   activationUrl,
+  renewal = false,
 }: SendActivationEmailParams): Promise<void> {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT) || 465;
@@ -19,25 +25,19 @@ export async function sendActivationEmail({
   const pass = process.env.SMTP_PASS;
   const from = process.env.SMTP_FROM || `"KLASSA Edutech" <${user || "support@klassa-edutech.com"}>`;
 
-  // Fallback Dev Mode: jika SMTP belum diatur di .env
-  if (!host || !user || !pass) {
-    console.log("--------------------------------------------------");
-    console.log("🎉 [DEV/FALLBACK EMAIL AKTIVASI AKUN KLASSA]");
-    console.log(`Kepada: ${name} <${to}>`);
-    console.log(`Paket: ${planName}`);
-    console.log(`Tautan Aktivasi: ${activationUrl}`);
-    console.log("--------------------------------------------------");
-    return;
-  }
+  if (!host || !user || !pass) throw new Error("Activation email not configured");
+  name = escapeHtml(name);
+  planName = escapeHtml(planName);
+  const safeUrl = escapeHtml(activationUrl);
 
   const transporter = nodemailer.createTransport({
     host,
     port,
     secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
+    auth: { user, pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
 
   const html = `
@@ -65,17 +65,17 @@ export async function sendActivationEmail({
         <div class="logo">KLASSA</div>
         <div class="badge">PEMBAYARAN BERHASIL</div>
         <h1>Selamat Datang, Bapak/Ibu ${name}!</h1>
-        <p>Pembayaran untuk <strong>${planName}</strong> telah berhasil kami terima. Satu langkah lagi untuk mengaktifkan ruang kerja Anda.</p>
+        <p>Pembayaran untuk <strong>${planName}</strong> telah berhasil kami terima. ${renewal ? "Masa langganan Anda telah diperpanjang." : "Satu langkah lagi untuk mengaktifkan ruang kerja Anda."}</p>
         
-        <p>Klik tombol di bawah ini untuk membuat kata sandi dan memulai pengisian data mengajar:</p>
+        <p>${renewal ? "Masuk menggunakan kata sandi akun Anda yang sebelumnya:" : "Klik tombol di bawah ini untuk membuat kata sandi dan memulai pengisian data mengajar:"}</p>
         <div class="btn-wrapper">
-          <a href="${activationUrl}" class="btn" target="_blank" rel="noopener noreferrer">Aktifkan Akun & Buat Password</a>
+          <a href="${safeUrl}" class="btn" target="_blank" rel="noopener noreferrer">${renewal ? "Masuk ke KLASSA" : "Aktifkan Akun & Buat Password"}</a>
         </div>
 
         <p>Jika tombol di atas tidak dapat diklik, salin dan buka tautan berikut:</p>
-        <p class="break-word">${activationUrl}</p>
+        <p class="break-word">${safeUrl}</p>
 
-        <p style="font-size: 13px; color: #64748b;">Tautan ini berlaku selama 7 hari. Setelah membuat kata sandi, Anda akan dipandu melalui onboarding singkat untuk menyesuaikan mata pelajaran dan kelas Anda.</p>
+        <p style="font-size: 13px; color: #64748b;">${renewal ? "Tidak perlu membuat atau mengganti kata sandi untuk perpanjangan paket." : "Tautan ini berlaku selama 7 hari. Setelah membuat kata sandi, Anda akan dipandu melalui onboarding singkat."}</p>
         
         <div class="footer">
           &copy; ${new Date().getFullYear()} KLASSA Edutech. Ekosistem Kerja Digital Guru Indonesia.

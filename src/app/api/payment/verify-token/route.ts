@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
         customerName: true,
         planId: true,
         status: true,
+        paymentEnvironment: true,
         tokenExpiresAt: true,
         activatedAt: true,
       },
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Tautan aktivasi tidak ditemukan." }, { status: 404 });
     }
 
-    if (order.status !== "PAID") {
+    if (order.status !== "PAID" || order.paymentEnvironment !== "production") {
       return NextResponse.json({ error: "Pesanan ini belum diselesaikan pembayarannya." }, { status: 400 });
     }
 

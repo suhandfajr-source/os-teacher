@@ -1542,6 +1542,13 @@ model PaymentOrder {
   status           PaymentStatus @default(PENDING)
   paymentMethod    String?       // QRIS, VIRTUAL_ACCOUNT, etc (from DOKU callback)
   dokuPaymentUrl   String?       @db.Text
+  paymentProvider  String        @default("DOKU")
+  paymentEnvironment String      @default("unknown")
+  paymentUrl       String?       @db.Text
+  gatewaySessionId String?
+  gatewayTransactionId String?
+  activationEmailSentAt DateTime?
+  activationEmailLeaseAt DateTime?
   paidAt           DateTime?
 
   // Aktivasi Akun
@@ -1557,6 +1564,8 @@ model PaymentOrder {
   @@index([customerEmail])
   @@index([status])
   @@index([createdAt])
+  @@unique([paymentProvider, paymentEnvironment, gatewayTransactionId], map: "payment_order_provider_environment_transaction_key")
+  @@unique([paymentProvider, paymentEnvironment, gatewaySessionId], map: "payment_order_provider_environment_session_key")
   @@map("payment_order")
 }
 

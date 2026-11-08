@@ -9,14 +9,15 @@ import { POST as checkout } from "@/app/api/payment/checkout/route";
 import { POST as webhook } from "@/app/api/payment/webhook/route";
 
 const db = vi.hoisted(() => ({
-  paymentOrder: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+  paymentOrder: { findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   user: { findUnique: vi.fn(), update: vi.fn() },
+  $transaction: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => ({ default: db }));
 vi.mock("@/lib/activation-email", () => ({ sendActivationEmail: vi.fn() }));
 
 const invoice = "INV-KLASSA-123456-TEST";
-const order = { id: "order-1", invoiceNumber: invoice, planId: "semester", amount: 199000, status: "PAID", paidAt: new Date(), customerEmail: "private@example.test", customerName: "Private" };
+const order = { id: "order-1", invoiceNumber: invoice, planId: "semester", amount: 199000, status: "PAID", paidAt: new Date(), customerEmail: "private@example.test", customerName: "Private", paymentProvider: "DOKU", paymentEnvironment: "production", activationEmailSentAt: new Date() };
 const request = (token?: string) => new NextRequest("https://klassa-edutech.com/api/payment/status?invoice=forged", {
   headers: token ? { cookie: `${PAYMENT_RECEIPT_COOKIE}=${token}` } : {},
 });
@@ -31,6 +32,10 @@ function notification(status = "SUCCESS", amount: unknown = order.amount, signed
 }
 
 beforeEach(() => {
+  vi.stubEnv("PAYMENT_PROVIDER", "doku");
+  db.$transaction.mockImplementation(work => work(db));
+  db.paymentOrder.findUniqueOrThrow.mockImplementation(() => db.paymentOrder.findUnique());
+  db.paymentOrder.update.mockResolvedValue({ ...order });
   vi.stubEnv("BETTER_AUTH_SECRET", "receipt-test-secret");
   vi.stubEnv("DOKU_SECRET_KEY", "doku-test-secret");
   vi.stubEnv("DOKU_CLIENT_ID", "test-client");

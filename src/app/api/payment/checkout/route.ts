@@ -1,105 +1,62 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getPricingPlan } from "@/lib/pricing-plans";
-import { createDokuCheckout, getDokuConfig } from "@/lib/doku";
+import { createDokuCheckout } from "@/lib/doku";
+import { createIpaymuCheckout, isRecord } from "@/lib/ipaymu";
+import { getPaymentProvider, paymentAppUrl } from "@/lib/payment-provider";
 import { createPaymentReceipt, conversionData } from "@/lib/payment-tracking-token";
 
-// CORS Headers helper agar Landing Page di domain lain bisa fetch
-function setCorsHeaders(response: NextResponse) {
+function respond(body: object, status = 200) {
+  const response = NextResponse.json(body, { status });
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.headers.set("Cache-Control", "no-store");
   return response;
 }
-
-export async function OPTIONS() {
-  const response = new NextResponse(null, { status: 200 });
-  return setCorsHeaders(response);
-}
+export async function OPTIONS() { return respond({}); }
 
 export async function POST(req: NextRequest) {
+  let body: unknown;
+  try { body = await req.json(); } catch { return respond({ error: "Data pembayaran tidak valid." }, 400); }
+  if (!isRecord(body) || ["planId", "name", "email", "phone"].some(key => typeof body[key] !== "string" || !body[key].trim() || body[key].length > 254)) {
+    return respond({ error: "Mohon lengkapi seluruh formulir data diri Anda." }, 400);
+  }
+  const { planId, name, email, phone } = body as Record<string, string>;
+  const plan = getPricingPlan(planId);
+  if (!plan || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return respond({ error: "Paket atau email tidak valid." }, 400);
   try {
-    const body = await req.json();
-    const { planId, name, email, phone } = body;
-
-    // 1. Validasi Input
-    if (!planId || !name || !email || !phone) {
-      const errorRes = NextResponse.json(
-        { error: "Mohon lengkapi seluruh formulir data diri Anda." },
-        { status: 400 }
-      );
-      return setCorsHeaders(errorRes);
-    }
-
-    const plan = getPricingPlan(planId);
-    if (!plan) {
-      const errorRes = NextResponse.json(
-        { error: "Paket langganan tidak valid." },
-        { status: 400 }
-      );
-      return setCorsHeaders(errorRes);
-    }
-
-    // 2. Buat Nomor Invoice Unik
-    const timestamp = Date.now().toString().slice(-6);
-    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const invoiceNumber = `INV-KLASSA-${timestamp}-${randomHex}`;
-
-    // Cek apakah email sudah punya akun terdaftar
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
-      select: { id: true },
-    });
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://klassa-edutech.com";
-    const config = getDokuConfig();
-    const live = config.isProduction && Boolean(config.clientId && config.secretKey);
-    const receipt = createPaymentReceipt(invoiceNumber, live);
+    const provider = getPaymentProvider(); // Fail before persistence/network if iPaymu is unconfigured.
+    const appUrl = paymentAppUrl();
+    const invoiceNumber = `INV-KLASSA-${randomUUID().toUpperCase()}`;
+    const receipt = createPaymentReceipt(invoiceNumber, provider.live);
+    if (provider.provider === "IPAYMU" && !receipt) return respond({ error: "Konfigurasi pembayaran belum lengkap." }, 503);
     const callback = new URL("/api/payment/return", appUrl);
     if (receipt) callback.searchParams.set("receipt", receipt);
-    const callbackUrl = callback.toString();
-
-    // 3. Request ke DOKU Checkout API
-    const dokuRes = await createDokuCheckout({
-      invoiceNumber,
-      amount: plan.price,
-      customerName: name.trim(),
-      customerEmail: email.trim().toLowerCase(),
-      customerPhone: phone.trim(),
-      callbackUrl,
-    });
-
-    // 4. Simpan Order Status PENDING di Database
-    const order = await prisma.paymentOrder.create({
-      data: {
-        invoiceNumber,
-        userId: existingUser?.id || null,
-        customerName: name.trim(),
-        customerEmail: email.trim().toLowerCase(),
-        customerPhone: phone.trim(),
-        planId: plan.id,
-        amount: plan.price,
-        status: "PENDING",
-        dokuPaymentUrl: dokuRes.paymentUrl,
-      },
-    });
-
-    const successRes = NextResponse.json({
-      success: true,
-      invoiceNumber,
-      paymentUrl: dokuRes.paymentUrl,
-      tracking: live && !dokuRes.raw?.mock
-        ? conversionData(order, plan.name, "Lead")
-        : null,
-    });
-
-    return setCorsHeaders(successRes);
-  } catch (error: unknown) {
-    console.error("❌ [Checkout API Error]:", error);
-    const errorRes = NextResponse.json(
-      { error: error instanceof Error ? error.message : "Gagal memproses pembayaran" },
-      { status: 500 }
-    );
-    return setCorsHeaders(errorRes);
+    const existingUser = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true } });
+    const order = await prisma.paymentOrder.create({ data: {
+      invoiceNumber, userId: existingUser?.id || null, customerName: name.trim(), customerEmail: email.trim().toLowerCase(), customerPhone: phone.trim(),
+      planId: plan.id, amount: plan.price, status: "PENDING", paymentProvider: provider.provider, paymentEnvironment: provider.environment,
+    } });
+    const input = { invoiceNumber, amount: plan.price, customerName: order.customerName, customerEmail: order.customerEmail, customerPhone: order.customerPhone, callbackUrl: callback.toString() };
+    let paymentUrl: string;
+    let mock = false;
+    if (provider.provider === "IPAYMU") {
+      const result = await createIpaymuCheckout({ ...input, productName: plan.name, notifyUrl: new URL("/api/payment/ipaymu/webhook", appUrl).toString() }, provider.config);
+      paymentUrl = result.paymentUrl;
+      // No browser can pay until session identity is durably attached to this order.
+      await prisma.paymentOrder.update({ where: { id: order.id }, data: { paymentUrl, gatewaySessionId: result.sessionId } });
+    } else {
+      const result = await createDokuCheckout(input);
+      paymentUrl = result.paymentUrl;
+      mock = Boolean(result.raw?.mock);
+      await prisma.paymentOrder.update({ where: { id: order.id }, data: { dokuPaymentUrl: paymentUrl, paymentUrl, ...(mock ? { paymentEnvironment: "sandbox" } : {}) } });
+    }
+    return respond({ success: true, invoiceNumber, paymentUrl, environment: mock ? "sandbox" : provider.environment,
+      tracking: provider.live && !mock ? conversionData(order, plan.name, "Lead") : null });
+  } catch {
+    // Unknown gateway outcomes stay PENDING for reconciliation; never retry creation automatically.
+    return respond({ error: "Pembayaran belum dapat diproses. Jika sudah membayar, hubungi bantuan sebelum mencoba kembali." }, 500);
   }
 }

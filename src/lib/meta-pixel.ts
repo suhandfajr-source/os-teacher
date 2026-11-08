@@ -4,7 +4,7 @@ export type ConversionData = {
 };
 
 export type PaymentState = "CHECKING" | "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "UNVERIFIED" | "UNAVAILABLE";
-export type PaymentStatusResult = { status: PaymentState; live?: boolean; tracking?: ConversionData | null };
+export type PaymentStatusResult = { status: PaymentState; live?: boolean; environment?: string; tracking?: ConversionData | null };
 
 declare global {
   interface Window {
