@@ -84,7 +84,7 @@ export default function PrivacyPage() {
             </p>
             <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs space-y-1 text-slate-600">
               <p><strong>Alamat Usaha:</strong> Jl. Kalisari III RT 006 / RW 002, Kel. Kalisari, Kec. Pasar Rebo, Jakarta Timur, DKI Jakarta 13790</p>
-              <p><strong>Email:</strong> admin@klassa-edutech.com / privacy@klassa-edutech.com</p>
+              <p><strong>Email:</strong> admin@klassa-edutech.com</p>
               <p><strong>WhatsApp:</strong> +62 815-8695-1677</p>
               <p><strong>Website:</strong> https://klassa-edutech.com</p>
             </div>
